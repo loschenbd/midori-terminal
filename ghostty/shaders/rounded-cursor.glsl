@@ -20,6 +20,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (halfSize.x <= 0.0 || halfSize.y <= 0.0) return;
 
     vec2 center = iCurrentCursor.xy + vec2(halfSize.x, -halfSize.y);
+    // Baseline lock: lift the cursor so its bottom edge rests on the text
+    // baseline (= a dot row of the Midori grid) instead of the cell bottom.
+    // Offset = (font descent + vertical centering pad) as a fraction of cell
+    // height: 14pt M PLUS 1 Code + adjust-cell-height 38.9% -> 13.3/48 = 0.277.
+    // Measured from a @2x screenshot (dots at y=15/63, cursor at 29-76).
+    // Scales with the cell, so it holds on 1x and 2x displays. Set to 0.0 to
+    // restore the stock cell-aligned cursor.
+    center.y += 0.277 * iCurrentCursor.w;
     vec2 p = fragCoord - center;
     if (any(greaterThan(abs(p), halfSize + 2.0))) return;
 
