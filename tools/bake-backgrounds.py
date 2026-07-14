@@ -56,14 +56,9 @@ MODES = {
 # Per-scale defaults: tile size, dot solid/fade radii, calibrated dot center.
 # cy values were measured from screenshots on the original displays (16"
 # MacBook Pro retina @2x; LG ultrawide @1x) — see README for the procedure.
-# CALIBRATED FOR CHROMELESS WINDOWS (macos-titlebar-style = hidden): Ghostty
-# anchors the background to the window top INCLUDING chrome, so a titlebar
-# shifts the dots by its height mod the pitch (~12px @2x). Titled-window
-# values were cy 11.5 (2x) / 10.75 (1x); hidden-titlebar = those - 12 / - 6.
-# The 1x value is PREDICTED, not yet verified on the LG — recalibrate there.
 SCALES = {
-    "2x": {"tile": 48, "r_in": 2.0, "r_out": 2.7, "cx": 24.0, "cy": 47.5},
-    "1x": {"tile": 24, "r_in": 1.0, "r_out": 1.35, "cx": 12.0, "cy": 4.75},
+    "2x": {"tile": 48, "r_in": 2.0, "r_out": 2.7, "cx": 24.0, "cy": 11.5},
+    "1x": {"tile": 24, "r_in": 1.0, "r_out": 1.35, "cx": 12.0, "cy": 10.75},
 }
 
 
