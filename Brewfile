@@ -1,0 +1,4 @@
+cask "ghostty"
+brew "tmux"
+brew "fzf"
+brew "oh-my-posh"

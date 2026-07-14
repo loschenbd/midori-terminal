@@ -1,0 +1,39 @@
+/* Match benjaminloschen.com typography: M PLUS 1p body, Spectral display
+   headings (both installed system-wide). !important needed: Vivaldi's own
+   UI font rules otherwise win the cascade.
+
+   Font roles follow Ben's pattern — Spectral is the NAMING voice (headers,
+   labels, wayfinding, identity-of-the-moment), M PLUS is the WORKING voice
+   (entries, readings, controls). Size doesn't decide; role does. */
+#browser,
+#browser input,
+#browser button,
+#browser select,
+#browser textarea {
+  font-family: "M PLUS 1p", -apple-system, "Helvetica Neue", sans-serif !important;
+}
+
+/* Naming voice → Spectral */
+#browser h1,
+#browser h2,
+#browser h3,
+#browser .dialog-header,
+#browser .dashboard-widget h1.title,
+#browser .Dashboard-Date .date-display,
+#browser .Dashboard-Date .week-display,
+#browser .Dashboard-WeatherWidget .current,
+#browser .weather-wrapper .heading,
+#browser .weather-wrapper .date,
+#browser .startpage-navigation .button-startpage,
+#browser .cal-tasks-row-doy,
+#browser .workspace-name,
+#browser .workspace-button,
+#browser .settings-navigation-header,
+#browser .settings-navigation .category,
+#browser .quick-command-sectionheader,
+#browser .dial-title {
+  font-family: "Spectral", ui-serif, Georgia, serif !important;
+  /* 600 not 500: main display is a 1x ultrawide (no subpixel AA on macOS);
+     the SemiBold's thicker strokes keep serifs crisp at ~96 DPI. */
+  font-weight: 600;
+}

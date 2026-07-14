@@ -1,0 +1,59 @@
+# midori-paper — from benjaminloschen.com (Midori MD Paper light mode)
+# Tokens: app/globals.css :root — cream paper, soft ink, muted sage accent,
+# Midori "Color Dot" set (indigo / olive / wine / ochre / sage), terracotta warms.
+# Magenta (5/13) is derived (wine × indigo plum) — the site has no purple token.
+
+# 0/8: ink + muted ink (--foreground, --muted)
+palette = 0=#2a2825
+palette = 8=#524d46
+# 1/9: midori-wine (+lifted)
+palette = 1=#7a4a4a
+palette = 9=#9d6161
+# 2/10: sage accent / midori-olive
+palette = 2=#5f6f5e
+palette = 10=#6c7d52
+# 3/11: midori-ochre (+brightened)
+palette = 3=#b88a3a
+palette = 11=#cc9c42
+# 4/12: midori-indigo (+lifted)
+palette = 4=#3a5572
+palette = 12=#4d7095
+# 5/13: derived plum (+lifted)
+palette = 5=#664f63
+palette = 13=#8a6d85
+# 6/14: dot-grid mint (--page-dot), deepened to read on cream
+palette = 6=#548373
+palette = 14=#6f9c8d
+# 7/15: warm light gray / card white (--card)
+palette = 7=#c9c4b8
+palette = 15=#faf9f6
+
+background = #f3f1eb
+foreground = #2a2825
+# cursor: sage accent (--ring / focus outline color on the site)
+cursor-color = #5f6f5e
+cursor-text = #f3f1eb
+# selection: sage wash (~25% --accent over --background)
+selection-background = #ced1c8
+selection-foreground = #2a2825
+
+# unfocused split tint: mid warm grey (halfway --muted → --background)
+unfocused-split-fill = #a29f98
+# split boundary: --border composited over --background
+split-divider-color = #e1dfd9
+
+# Midori dot grid (.page-grid-overlay): 24pt step, mint dots, tiled at native px
+# glow + dots baked at 3456x2234 (16" retina): --page-glow washes under the dot grid.
+# fit=none keeps dots at 24pt; position=top-center anchors the site's top halo;
+# smaller windows crop the bottom. Plain-dots fallback:
+#background-image = __HOME__/.config/ghostty/backgrounds/midori-paper-dots.png
+#background-image-repeat = true
+background-image = __HOME__/.config/ghostty/backgrounds/midori-paper-glow.png
+background-image-fit = none
+background-image-position = top-center
+background-image-repeat = false
+
+# Derive the 256-color cube + grayscale ramp from the midori base 16 so
+# 256-color apps inherit the palette; harmonious inverts the ramps for light bg.
+palette-generate = true
+palette-harmonious = true

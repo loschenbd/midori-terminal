@@ -1,0 +1,58 @@
+# midori-night — from benjaminloschen.com (Midori MD Paper dark mode)
+# Tokens: app/globals.css .dark — warm charcoal paper, bone ink, lifted sage,
+# luminous Midori "Color Dot" set, terracotta warms.
+# Magenta (5/13) is derived (wine × indigo plum) — the site has no purple token.
+
+# 0/8: card surface + muted ink (--card, --muted)
+palette = 0=#22211e
+palette = 8=#9c958a
+# 1/9: midori-wine (+lifted)
+palette = 1=#b8868a
+palette = 9=#d0a2a6
+# 2/10: sage accent / midori-olive
+palette = 2=#9aab97
+palette = 10=#9eaf85
+# 3/11: midori-ochre (+lifted)
+palette = 3=#d8b06a
+palette = 11=#e6c489
+# 4/12: midori-indigo (+lifted)
+palette = 4=#6c87a4
+palette = 12=#8ba3bd
+# 5/13: derived plum (+lifted)
+palette = 5=#a48ba3
+palette = 13=#c3a8c0
+# 6/14: dot-grid mint (--page-dot, works as-is on dark paper)
+palette = 6=#9ebfb4
+palette = 14=#bad5cb
+# 7/15: warm light gray / card white
+palette = 7=#c5bfb4
+palette = 15=#faf9f6
+
+background = #1a1917
+foreground = #ebe8e2
+# cursor: lifted sage accent (--ring)
+cursor-color = #9aab97
+cursor-text = #1a1917
+# selection: sage lift (~30% --accent over --background)
+selection-background = #40453d
+selection-foreground = #ebe8e2
+
+# unfocused split tint: sage-tinted elevated surface (matches selection lift)
+unfocused-split-fill = #40453d
+# split boundary: --border composited over --background
+split-divider-color = #2f2e2b
+
+# Midori dot grid (.page-grid-overlay): 24pt step, softened mint on dark paper
+# glow + dots baked at 3456x2234 (16" retina): --page-glow washes under the dot grid.
+# fit=none keeps dots at 24pt; position=top-center anchors the site's top halo;
+# smaller windows crop the bottom. Plain-dots fallback:
+#background-image = __HOME__/.config/ghostty/backgrounds/midori-night-dots.png
+#background-image-repeat = true
+background-image = __HOME__/.config/ghostty/backgrounds/midori-night-glow.png
+background-image-fit = none
+background-image-position = top-center
+background-image-repeat = false
+
+# Derive the 256-color cube + grayscale ramp from the midori base 16 so
+# 256-color apps inherit the palette.
+palette-generate = true

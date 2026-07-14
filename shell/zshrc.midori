@@ -1,0 +1,13 @@
+# Midori terminal theme — shell fragment
+# Sourced from ~/.zshrc by midori-terminal/install.sh. Everything here speaks
+# ANSI-16 color names/indices, so it retints automatically when the Ghostty
+# theme pair (midori-paper / midori-night) flips with macOS appearance.
+
+# Manuscript-style prompt: underlined sage path, middle-dot separators,
+# plain foreground colors only (no filled powerline blocks).
+if command -v oh-my-posh >/dev/null 2>&1; then
+  eval "$(oh-my-posh init zsh --config ~/.config/midori.omp.json)"
+fi
+
+# fzf on the terminal's own 16-color palette (correct in both modes).
+export FZF_DEFAULT_OPTS="--color=16,fg:-1,bg:-1,gutter:-1,hl:4,fg+:-1,bg+:-1,hl+:12,prompt:2,pointer:1,marker:3,spinner:6,info:8,header:8,border:8"

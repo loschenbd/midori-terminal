@@ -1,0 +1,65 @@
+/* Bring the start page closer to benjaminloschen.com: --page-glow layered
+   over the dot tile, inputs and widgets on the site's card recipe, subtle
+   scrollbars. Theme-scoped via #browser.theme-light/.theme-dark. */
+
+/* Page glow — site --page-glow layered over the dot tile */
+#browser.theme-light .startpage {
+  background-image:
+    radial-gradient(ellipse 100% 55% at 50% -15%, rgb(255 252 247 / 0.95), transparent 52%),
+    radial-gradient(ellipse 55% 40% at 0% 100%, rgb(236 233 224 / 0.55), transparent 50%),
+    radial-gradient(ellipse 45% 45% at 100% 60%, rgb(232 236 229 / 0.4), transparent 48%),
+    var(--browserBackgroundImage) !important;
+  background-size: 100% 100%, 100% 100%, 100% 100%, var(--browserBackgroundSize, 24px 24px) !important;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat !important;
+}
+#browser.theme-dark .startpage {
+  background-image:
+    radial-gradient(ellipse 100% 55% at 50% -15%, rgb(45 44 40 / 0.9), transparent 52%),
+    radial-gradient(ellipse 55% 40% at 0% 100%, rgb(55 52 46 / 0.45), transparent 50%),
+    radial-gradient(ellipse 45% 45% at 100% 60%, rgb(48 52 46 / 0.35), transparent 48%),
+    var(--browserBackgroundImage) !important;
+  background-size: 100% 100%, 100% 100%, 100% 100%, var(--browserBackgroundSize, 24px 24px) !important;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat !important;
+}
+
+/* Search field: site input recipe instead of black/white pill */
+#browser .SpeedDialView-SearchField {
+  background: var(--colorBgLightIntense) !important;
+  border: 1px solid var(--colorBorderSubtle) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.04) !important;
+  color: var(--colorFg) !important;
+}
+
+/* Widgets as opaque site cards */
+#browser .dashboard-widget {
+  background: var(--colorBgLightIntense) !important;
+  border: 1px solid var(--colorBorderSubtle) !important;
+  border-radius: 8px !important;
+}
+#browser.theme-light .dashboard-widget { box-shadow: 0 1px 0 rgb(60 58 54 / 0.04) !important; }
+#browser.theme-dark .dashboard-widget { box-shadow: 0 1px 0 rgb(0 0 0 / 0.35) !important; }
+
+/* Subtle scrollbars inside widgets */
+#browser .dashboard-widget ::-webkit-scrollbar { width: 8px; }
+#browser .dashboard-widget ::-webkit-scrollbar-track { background: transparent; }
+#browser .dashboard-widget ::-webkit-scrollbar-thumb {
+  background: var(--colorBorder);
+  border-radius: 100px;
+}
+
+/* Address field + startpage add-buttons on the site input recipe */
+#browser .UrlBar-AddressField {
+  background: var(--colorBgLightIntense) !important;
+  border: 1px solid var(--colorBorderSubtle) !important;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.04) !important;
+}
+#browser .UrlBar-AddressField:focus-within {
+  outline: none !important;
+  border-color: var(--colorAccentBorder) !important;
+  box-shadow: 0 0 0 1px var(--colorAccentBorder) !important;
+}
+#browser .SpeedDial-Add-Button {
+  background: var(--colorBgLightIntense) !important;
+  border: 1px solid var(--colorBorderSubtle) !important;
+}
