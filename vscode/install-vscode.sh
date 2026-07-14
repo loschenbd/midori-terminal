@@ -43,3 +43,14 @@ if [ "$installed" -eq 0 ]; then
 fi
 
 echo "Done. Reload the editor(s), then pick Midori Paper / Midori Night."
+echo
+echo "To wire everything up (auto light/dark + icons + matching terminal font),"
+echo "merge this into the editor's settings.json:"
+cat <<'EOF'
+  "window.autoDetectColorScheme": true,
+  "workbench.preferredLightColorTheme": "Midori Paper",
+  "workbench.preferredDarkColorTheme": "Midori Night",
+  "workbench.iconTheme": "midori-icons",
+  "workbench.productIconTheme": "midori-product-icons",
+  "terminal.integrated.fontFamily": "'M Plus 1 Code', 'FiraCode Nerd Font'",
+EOF

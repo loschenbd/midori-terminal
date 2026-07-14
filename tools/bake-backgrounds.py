@@ -126,8 +126,12 @@ def bake_dots(mode, scale, outdir):
     return path
 
 
-def bake_glow(mode, scale, width, height, outdir):
-    """Full-screen opaque bake: bg color + --page-glow washes + dot lattice.
+def bake_glow(mode, scale, width, height, outdir, with_dots=True):
+    """Full-screen opaque bake: bg color + --page-glow washes (+ dot lattice).
+
+    with_dots=False bakes the washes only — for setups where the dots are
+    drawn by the cursor-anchored custom shader (self-aligning; see
+    ghostty/shaders/rounded-cursor.glsl) instead of the image.
 
     Perf: gradients are computed at 1/4 resolution and block-expanded (they
     are low-frequency), then the sparse dot lattice is overlaid per row.
@@ -172,7 +176,7 @@ def bake_glow(mode, scale, width, height, outdir):
         expanded.append(full[:width * 3])
 
     # per-tile-row sparse dot entries
-    amap = dot_alpha_map(sc, mode)
+    amap = dot_alpha_map(sc, mode) if with_dots else {}
     t = sc["tile"]
     by_row = {}
     for (x, y), a in amap.items():
@@ -211,6 +215,8 @@ def main():
                          "omit to skip the glow bake")
     ap.add_argument("--dot-cy", type=float,
                     help="override calibrated dot center y within the tile")
+    ap.add_argument("--without-dots", action="store_true",
+                    help="bake glow washes only (dots come from the shader)")
     ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent
                                          / "ghostty" / "backgrounds"))
     args = ap.parse_args()
@@ -227,7 +233,8 @@ def main():
         print(f"baked {p}")
         if args.glow_size:
             w, h = (int(v) for v in args.glow_size.lower().split("x"))
-            p = bake_glow(mode, args.scale, w, h, outdir)
+            p = bake_glow(mode, args.scale, w, h, outdir,
+                          with_dots=not args.without_dots)
             print(f"baked {p}")
 
     print("Reminder: Ghostty re-reads images only on config reload (Cmd+Shift+,).")

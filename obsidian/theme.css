@@ -1,0 +1,279 @@
+/* ==========================================================================
+   Dot Grid — an Obsidian theme extracted from benjaminloschen.com
+   Warm paper neutrals, sage-green accent, warm-tan secondary accent,
+   Spectral for prose, M PLUS 1p for UI, M PLUS 1 Code for mono.
+   Install fonts from Google Fonts for full fidelity; falls back gracefully.
+   ========================================================================== */
+
+body {
+  --font-text-theme: "Spectral", ui-serif, Georgia, serif;
+  --font-interface-theme: "M PLUS 1p", ui-sans-serif, system-ui, sans-serif;
+  --font-monospace-theme: "M PLUS 1 Code", ui-monospace, SFMono-Regular, monospace;
+  --bold-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Light — benjaminloschen.com light palette
+   -------------------------------------------------------------------------- */
+.theme-light {
+  --accent-h: 117;
+  --accent-s: 8%;
+  --accent-l: 40%;
+
+  --background-primary: #f3f1eb;          /* --background */
+  --background-primary-alt: #faf9f6;      /* --card */
+  --background-secondary: #edeae2;        /* sidebar: background nudged down */
+  --background-secondary-alt: #faf9f6;
+  --background-modifier-border: rgba(60, 58, 54, 0.1);   /* --border */
+  --background-modifier-hover: rgba(60, 58, 54, 0.05);
+
+  --text-normal: #3d3933;                 /* body: --foreground lifted a step */
+  --text-muted: #524d46;                  /* --muted */
+  --text-faint: #8a847b;
+
+  --text-accent: #5f6f5e;                 /* --accent (sage) */
+  --text-accent-hover: #4a5749;           /* --accent-hover */
+  --interactive-accent: #5f6f5e;
+  --interactive-accent-hover: #4a5749;
+
+  --link-color: #5f6f5e;
+  --link-color-hover: #4a5749;
+  --link-external-color: #b06d4a;         /* --accent-warm-strong */
+  --link-external-color-hover: #8f4f38;   /* --accent-warm-deep */
+  --link-unresolved-color: #6b5f52;       /* --accent-mythic */
+
+  --text-selection: rgba(201, 145, 107, 0.25);  /* --accent-warm @ 25% */
+  --text-highlight-bg: #f0e0d4;                 /* --accent-warm-wash */
+
+  --hr-color: rgba(60, 58, 54, 0.1);
+  --blockquote-border-color: #c9916b;     /* --accent-warm */
+  --code-background: #faf9f6;
+  --code-normal: #8f4f38;                 /* --accent-warm-deep */
+
+  --tag-color: #5f6f5e;
+  --tag-background: rgba(95, 111, 94, 0.1);
+
+  --checkbox-color: #5f6f5e;
+  --checkbox-color-hover: #4a5749;
+  --checkbox-border-color: #8a847b;
+  --checklist-done-color: #8a847b;
+
+  --h1-color: #2a2825;
+  --h2-color: #2a2825;
+  --h3-color: #524d46;
+  --h4-color: #6b5f52;                    /* --accent-mythic */
+  --h5-color: #6b5f52;
+  --h6-color: #8a847b;
+
+  --scrollbar-thumb-bg: rgba(60, 58, 54, 0.15);
+  --scrollbar-active-thumb-bg: rgba(60, 58, 54, 0.3);
+  --divider-color: rgba(60, 58, 54, 0.1);
+
+  --titlebar-background: #edeae2;
+  --titlebar-background-focused: #edeae2;
+  --titlebar-text-color: #524d46;
+
+  --dotgrid-dot: rgba(60, 58, 54, 0.09);
+}
+
+/* --------------------------------------------------------------------------
+   Dark — benjaminloschen.com dark palette
+   -------------------------------------------------------------------------- */
+.theme-dark {
+  --accent-h: 111;
+  --accent-s: 11%;
+  --accent-l: 63%;
+
+  --background-primary: #1a1917;          /* --background */
+  --background-primary-alt: #22211e;      /* --card */
+  --background-secondary: #161513;        /* sidebar: background nudged down */
+  --background-secondary-alt: #22211e;
+  --background-modifier-border: rgba(235, 232, 226, 0.1);  /* --border */
+  --background-modifier-hover: rgba(235, 232, 226, 0.05);
+
+  --text-normal: #ebe8e2;                 /* --foreground */
+  --text-muted: #9c958a;                  /* --muted */
+  --text-faint: #6e685f;
+
+  --text-accent: #9aab97;                 /* --accent (sage) */
+  --text-accent-hover: #b4c0b0;           /* --accent-hover */
+  --interactive-accent: #9aab97;
+  --interactive-accent-hover: #b4c0b0;
+
+  --link-color: #9aab97;
+  --link-color-hover: #b4c0b0;
+  --link-external-color: #d4a07a;         /* --accent-warm */
+  --link-external-color-hover: #e0b899;   /* --accent-warm-strong */
+  --link-unresolved-color: #c4b8a8;       /* --accent-mythic */
+
+  --text-selection: rgba(212, 160, 122, 0.25); /* --accent-warm @ 25% */
+  --text-highlight-bg: #3e3530;                /* --accent-warm-light */
+
+  --hr-color: rgba(235, 232, 226, 0.1);
+  --blockquote-border-color: #d4a07a;     /* --accent-warm */
+  --code-background: #22211e;
+  --code-normal: #e0b899;                 /* --accent-warm-strong */
+
+  --tag-color: #9aab97;
+  --tag-background: rgba(154, 171, 151, 0.12);
+
+  --checkbox-color: #9aab97;
+  --checkbox-color-hover: #b4c0b0;
+  --checkbox-border-color: #6e685f;
+  --checklist-done-color: #6e685f;
+
+  --h1-color: #ebe8e2;
+  --h2-color: #ebe8e2;
+  --h3-color: #9c958a;
+  --h4-color: #c4b8a8;                    /* --accent-mythic */
+  --h5-color: #c4b8a8;
+  --h6-color: #6e685f;
+
+  --scrollbar-thumb-bg: rgba(235, 232, 226, 0.12);
+  --scrollbar-active-thumb-bg: rgba(235, 232, 226, 0.25);
+  --divider-color: rgba(235, 232, 226, 0.1);
+
+  --titlebar-background: #161513;
+  --titlebar-background-focused: #161513;
+  --titlebar-text-color: #9c958a;
+
+  --dotgrid-dot: rgba(235, 232, 226, 0.07);
+}
+
+/* --------------------------------------------------------------------------
+   Signature: the 24px dot grid, in editing and reading panes only.
+   Painted on the sizer (not the scroller) so the dots scroll WITH the text,
+   and offset to match the 24px top padding so row 1 starts on a grid line.
+   -------------------------------------------------------------------------- */
+.markdown-source-view.mod-cm6 .cm-sizer,
+.markdown-reading-view .markdown-preview-sizer {
+  background-image: radial-gradient(circle at 1px 1px, var(--dotgrid-dot) 1px, transparent 1.4px);
+  background-size: 24px 24px;
+  background-position: 0 0;
+}
+
+/* --------------------------------------------------------------------------
+   24px baseline grid — text sits in exact grid rows, like the site's
+   leading-6 rhythm. Assumes base font size 15–16px (Settings → Appearance).
+   -------------------------------------------------------------------------- */
+/* Content starts one full grid row down, so line boxes align with dot rows */
+.markdown-source-view.mod-cm6 .cm-content {
+  padding-top: 24px;
+}
+.markdown-reading-view .markdown-preview-sizer {
+  padding-top: 24px;
+}
+
+/* Body lines: exactly one 24px row each (editor lines have no margins,
+   so this alone locks live-preview prose to the grid) */
+.markdown-source-view.mod-cm6 .cm-line {
+  line-height: 24px;
+}
+.markdown-preview-view p,
+.markdown-preview-view li,
+.markdown-preview-view blockquote,
+.markdown-preview-view th,
+.markdown-preview-view td {
+  line-height: 24px;
+}
+
+/* Reading view block rhythm: spacing in whole grid rows */
+.markdown-preview-view p,
+.markdown-preview-view ul,
+.markdown-preview-view ol,
+.markdown-preview-view blockquote,
+.markdown-preview-view pre,
+.markdown-preview-view table {
+  margin-block: 0 24px;
+}
+
+/* Headings: line boxes and margins in whole/half grid steps
+   (the site's scale allows 12px half-rows: grid-half) */
+.markdown-preview-view h1, .HyperMD-header-1 { line-height: 48px; }
+.markdown-preview-view h2, .HyperMD-header-2 { line-height: 36px; }
+.markdown-preview-view h3, .HyperMD-header-3,
+.markdown-preview-view h4, .HyperMD-header-4,
+.markdown-preview-view h5, .HyperMD-header-5,
+.markdown-preview-view h6, .HyperMD-header-6 { line-height: 24px; }
+.markdown-preview-view h1,
+.markdown-preview-view h2,
+.markdown-preview-view h3,
+.markdown-preview-view h4,
+.markdown-preview-view h5,
+.markdown-preview-view h6 {
+  margin-block: 24px 12px;
+}
+.inline-title {
+  line-height: 48px;
+  margin-bottom: 24px;
+}
+
+/* Headings in Spectral with the site's display weights */
+.markdown-preview-view h1, .HyperMD-header-1,
+.markdown-preview-view h2, .HyperMD-header-2 {
+  font-family: "Spectral", ui-serif, Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.markdown-preview-view h3, .HyperMD-header-3,
+.markdown-preview-view h4, .HyperMD-header-4 {
+  font-family: "Spectral", ui-serif, Georgia, serif;
+  font-weight: 500;
+}
+
+/* Eyebrow-style H5/H6: small caps tracking like .type-eyebrow on the site */
+.markdown-preview-view h5, .HyperMD-header-5,
+.markdown-preview-view h6, .HyperMD-header-6 {
+  font-family: "M PLUS 1p", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.85em;
+}
+
+/* Blockquotes: warm rule, serif italic, like the site's pull quotes */
+.markdown-preview-view blockquote,
+.HyperMD-quote {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+/* Tag pills */
+.tag, .cm-hashtag {
+  border-radius: 9999px;
+  padding: 0.05em 0.6em;
+  font-family: "M PLUS 1p", ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.85em;
+}
+
+/* Inline title matches H1 treatment */
+.inline-title {
+  font-family: "Spectral", ui-serif, Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Quieter, flatter UI chrome to match the site's calm surfaces */
+.workspace-tab-header.is-active {
+  color: var(--text-accent);
+}
+.workspace-tab-header-container,
+.workspace-ribbon {
+  background-color: var(--background-secondary);
+}
+.status-bar {
+  background-color: var(--background-secondary);
+  border-color: var(--divider-color);
+  color: var(--text-muted);
+}
+body {
+  --inline-title-color: var(--h1-color);
+}
+
+/* Caret: sage accent */
+body {
+  --caret-color: var(--interactive-accent);
+}
+.markdown-source-view .cm-content {
+  caret-color: var(--interactive-accent);
+}

@@ -16,7 +16,9 @@ cd midori-terminal
 ```
 
 Then restart Ghostty. For the Vivaldi themes: quit Vivaldi and run
-`./vivaldi/install-vivaldi.sh`.
+`./vivaldi/install-vivaldi.sh`. For Cursor/VS Code: `./vscode/install-vscode.sh`
+(it prints the settings snippet to wire up auto light/dark + icons). For
+Obsidian: `./obsidian/install-obsidian.sh`.
 
 Safe to re-run `./install.sh` any time (it's idempotent) — that's also the
 update path: `git pull && ./install.sh`.
@@ -53,7 +55,8 @@ this layer to re-skin everything without touching the infrastructure.
 | `shell/zshrc.midori` | omp init + fzf ANSI palette (sourced from `.zshrc`) |
 | `tmux/midori.tmux.conf` | Pane borders, status/message styles (sourced from `.tmux.conf`) |
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |
-| `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes + Phosphor Duotone file icons (`build-icons.py` regenerates), installer |
+| `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, Phosphor Duotone file icons, Phosphor product icons for the workbench chrome (`build-icons.py` / `build-product-icons.py` regenerate), installer |
+| `obsidian/` | "Dot Grid" Obsidian theme (Midori palette, Spectral/M PLUS fonts), installer for iCloud vaults |
 | `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
 | `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
 

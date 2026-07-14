@@ -1,0 +1,209 @@
+{
+  "fonts": [
+    {
+      "id": "midori-product",
+      "src": [
+        {
+          "path": "./midori-product.woff",
+          "format": "woff"
+        }
+      ],
+      "weight": "normal",
+      "style": "normal"
+    }
+  ],
+  "iconDefinitions": {
+    "account": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf130"
+    },
+    "add": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf12f"
+    },
+    "arrow-down": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf12e"
+    },
+    "arrow-left": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf12d"
+    },
+    "arrow-right": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf12c"
+    },
+    "arrow-up": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf12b"
+    },
+    "bell": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf129"
+    },
+    "bell-dot": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf12a"
+    },
+    "bookmark": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf128"
+    },
+    "check": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf127"
+    },
+    "chevron-down": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf126"
+    },
+    "chevron-left": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf125"
+    },
+    "chevron-right": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf124"
+    },
+    "chevron-up": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf123"
+    },
+    "close": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf122"
+    },
+    "copy": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf121"
+    },
+    "debug-alt": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf120"
+    },
+    "edit": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf11f"
+    },
+    "ellipsis": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf11e"
+    },
+    "error": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf11d"
+    },
+    "extensions": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf11c"
+    },
+    "files": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf11b"
+    },
+    "filter": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf11a"
+    },
+    "folder": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf118"
+    },
+    "folder-opened": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf119"
+    },
+    "gear": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf117"
+    },
+    "git-commit": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf116"
+    },
+    "git-merge": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf115"
+    },
+    "git-pull-request": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf114"
+    },
+    "globe": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf113"
+    },
+    "history": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf112"
+    },
+    "home": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf111"
+    },
+    "info": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf110"
+    },
+    "lightbulb": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf10f"
+    },
+    "link": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf10e"
+    },
+    "new-file": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf10d"
+    },
+    "new-folder": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf10c"
+    },
+    "play": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf10b"
+    },
+    "refresh": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf10a"
+    },
+    "remote": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf109"
+    },
+    "search": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf108"
+    },
+    "settings-gear": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf107"
+    },
+    "source-control": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf106"
+    },
+    "split-horizontal": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf105"
+    },
+    "sync": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf104"
+    },
+    "terminal": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf103"
+    },
+    "trash": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf102"
+    },
+    "warning": {
+      "fontId": "midori-product",
+      "fontCharacter": "\uf101"
+    }
+  }
+}
