@@ -56,12 +56,12 @@ MODES = {
 # Per-scale defaults: tile size, dot solid/fade radii, calibrated dot center.
 # cy values were measured from screenshots on the original displays (16"
 # MacBook Pro retina @2x; LG ultrawide @1x) — see README for the procedure.
-# NOTE: the phase is coupled to Ghostty's window-chrome anchor, which has
-# been observed to SHIFT across app restarts (11.5 was correct in the
-# morning; +4.5px drift after quit/reopen the same day). If the grid looks
-# off after a Ghostty restart, re-measure and rebake — or see the repo
-# README for the cursor-anchored shader idea that would remove this
-# dependency entirely.
+# NOTE: if the grid looks off, FIRST verify the terminal row pitch equals
+# the dot pitch (two prompt underlines N rows apart = N * pitch exactly).
+# A mis-rounded adjust-cell-height (e.g. 48.03px ceiled to a 49px cell)
+# produces +1px/row cumulative drift that masquerades as a constant phase
+# error at whatever row you measure. Only rebake the phase once the pitch
+# is exact.
 SCALES = {
     "2x": {"tile": 48, "r_in": 2.0, "r_out": 2.7, "cx": 24.0, "cy": 16.0},
     "1x": {"tile": 24, "r_in": 1.0, "r_out": 1.35, "cx": 12.0, "cy": 13.0},
