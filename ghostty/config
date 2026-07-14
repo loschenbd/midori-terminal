@@ -13,6 +13,14 @@ window-title-font-family = Spectral Bold
 # which breaks the 48px cell = dot-grid lock below).
 font-family = "M PLUS 1 Code"
 
+# Hidden titlebar: uniform (zero) window chrome. REQUIRED for the dot grid:
+# Ghostty anchors the background image to the window top INCLUDING chrome,
+# so titled vs fullscreen/tabbed windows shift the dots by titlebar height
+# mod 48 (~12px @2x) and one baked image can't align in both. Chromeless
+# windows all share one phase — the backgrounds are calibrated for it.
+# Needs a full Ghostty restart (not just config reload) to apply.
+macos-titlebar-style = hidden
+
 window-padding-x = 12
 window-padding-y = 12
 # Lock rows to the 24pt Midori dot grid: M PLUS 1 Code cell at 14pt is
