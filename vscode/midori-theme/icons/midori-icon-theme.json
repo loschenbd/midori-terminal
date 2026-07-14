@@ -1,0 +1,425 @@
+{
+  "iconDefinitions": {
+    "l_folder": {
+      "iconPath": "./light/folder.svg"
+    },
+    "d_folder": {
+      "iconPath": "./dark/folder.svg"
+    },
+    "l_folder-open": {
+      "iconPath": "./light/folder-open.svg"
+    },
+    "d_folder-open": {
+      "iconPath": "./dark/folder-open.svg"
+    },
+    "l_folder-git": {
+      "iconPath": "./light/folder-git.svg"
+    },
+    "d_folder-git": {
+      "iconPath": "./dark/folder-git.svg"
+    },
+    "l_folder-quiet": {
+      "iconPath": "./light/folder-quiet.svg"
+    },
+    "d_folder-quiet": {
+      "iconPath": "./dark/folder-quiet.svg"
+    },
+    "l_file": {
+      "iconPath": "./light/file.svg"
+    },
+    "d_file": {
+      "iconPath": "./dark/file.svg"
+    },
+    "l_code": {
+      "iconPath": "./light/code.svg"
+    },
+    "d_code": {
+      "iconPath": "./dark/code.svg"
+    },
+    "l_markup": {
+      "iconPath": "./light/markup.svg"
+    },
+    "d_markup": {
+      "iconPath": "./dark/markup.svg"
+    },
+    "l_style": {
+      "iconPath": "./light/style.svg"
+    },
+    "d_style": {
+      "iconPath": "./dark/style.svg"
+    },
+    "l_data": {
+      "iconPath": "./light/data.svg"
+    },
+    "d_data": {
+      "iconPath": "./dark/data.svg"
+    },
+    "l_text": {
+      "iconPath": "./light/text.svg"
+    },
+    "d_text": {
+      "iconPath": "./dark/text.svg"
+    },
+    "l_image": {
+      "iconPath": "./light/image.svg"
+    },
+    "d_image": {
+      "iconPath": "./dark/image.svg"
+    },
+    "l_shell": {
+      "iconPath": "./light/shell.svg"
+    },
+    "d_shell": {
+      "iconPath": "./dark/shell.svg"
+    },
+    "l_lock": {
+      "iconPath": "./light/lock.svg"
+    },
+    "d_lock": {
+      "iconPath": "./dark/lock.svg"
+    },
+    "l_env": {
+      "iconPath": "./light/env.svg"
+    },
+    "d_env": {
+      "iconPath": "./dark/env.svg"
+    },
+    "l_config": {
+      "iconPath": "./light/config.svg"
+    },
+    "d_config": {
+      "iconPath": "./dark/config.svg"
+    },
+    "l_test": {
+      "iconPath": "./light/test.svg"
+    },
+    "d_test": {
+      "iconPath": "./dark/test.svg"
+    },
+    "l_package": {
+      "iconPath": "./light/package.svg"
+    },
+    "d_package": {
+      "iconPath": "./dark/package.svg"
+    },
+    "l_db": {
+      "iconPath": "./light/db.svg"
+    },
+    "d_db": {
+      "iconPath": "./dark/db.svg"
+    },
+    "l_sheet": {
+      "iconPath": "./light/sheet.svg"
+    },
+    "d_sheet": {
+      "iconPath": "./dark/sheet.svg"
+    },
+    "l_git": {
+      "iconPath": "./light/git.svg"
+    },
+    "d_git": {
+      "iconPath": "./dark/git.svg"
+    }
+  },
+  "folder": "d_folder",
+  "folderExpanded": "d_folder-open",
+  "rootFolder": "d_folder",
+  "rootFolderExpanded": "d_folder-open",
+  "file": "d_file",
+  "fileExtensions": {
+    "ts": "d_code",
+    "tsx": "d_code",
+    "js": "d_code",
+    "jsx": "d_code",
+    "mjs": "d_code",
+    "cjs": "d_code",
+    "py": "d_code",
+    "go": "d_code",
+    "rs": "d_code",
+    "rb": "d_code",
+    "php": "d_code",
+    "swift": "d_code",
+    "java": "d_code",
+    "kt": "d_code",
+    "c": "d_code",
+    "h": "d_code",
+    "cc": "d_code",
+    "cpp": "d_code",
+    "hpp": "d_code",
+    "m": "d_code",
+    "mm": "d_code",
+    "lua": "d_code",
+    "zig": "d_code",
+    "html": "d_markup",
+    "htm": "d_markup",
+    "xml": "d_markup",
+    "vue": "d_markup",
+    "svelte": "d_markup",
+    "astro": "d_markup",
+    "erb": "d_markup",
+    "ejs": "d_markup",
+    "css": "d_style",
+    "scss": "d_style",
+    "sass": "d_style",
+    "less": "d_style",
+    "styl": "d_style",
+    "json": "d_data",
+    "jsonc": "d_data",
+    "json5": "d_data",
+    "yaml": "d_data",
+    "yml": "d_data",
+    "toml": "d_data",
+    "ini": "d_data",
+    "plist": "d_data",
+    "md": "d_text",
+    "mdx": "d_text",
+    "txt": "d_text",
+    "rst": "d_text",
+    "log": "d_text",
+    "png": "d_image",
+    "jpg": "d_image",
+    "jpeg": "d_image",
+    "gif": "d_image",
+    "webp": "d_image",
+    "avif": "d_image",
+    "svg": "d_image",
+    "ico": "d_image",
+    "icns": "d_image",
+    "bmp": "d_image",
+    "tiff": "d_image",
+    "sh": "d_shell",
+    "zsh": "d_shell",
+    "bash": "d_shell",
+    "fish": "d_shell",
+    "ps1": "d_shell",
+    "bat": "d_shell",
+    "cmd": "d_shell",
+    "lock": "d_lock",
+    "env": "d_env",
+    "test.ts": "d_test",
+    "test.tsx": "d_test",
+    "test.js": "d_test",
+    "test.jsx": "d_test",
+    "spec.ts": "d_test",
+    "spec.tsx": "d_test",
+    "spec.js": "d_test",
+    "spec.jsx": "d_test",
+    "sql": "d_db",
+    "sqlite": "d_db",
+    "db": "d_db",
+    "db3": "d_db",
+    "csv": "d_sheet",
+    "tsv": "d_sheet",
+    "conf": "d_config",
+    "config": "d_config"
+  },
+  "fileNames": {
+    "package.json": "d_package",
+    "package-lock.json": "d_lock",
+    "pnpm-lock.yaml": "d_lock",
+    "yarn.lock": "d_lock",
+    "bun.lockb": "d_lock",
+    "Cargo.lock": "d_lock",
+    ".env": "d_env",
+    ".env.local": "d_env",
+    ".env.development": "d_env",
+    ".env.production": "d_env",
+    ".env.example": "d_env",
+    ".gitignore": "d_git",
+    ".gitattributes": "d_git",
+    ".gitmodules": "d_git",
+    "Dockerfile": "d_config",
+    "docker-compose.yml": "d_config",
+    "compose.yml": "d_config",
+    "Makefile": "d_config",
+    "tsconfig.json": "d_config",
+    "jsconfig.json": "d_config",
+    ".editorconfig": "d_config",
+    "next.config.js": "d_config",
+    "next.config.ts": "d_config",
+    "next.config.mjs": "d_config",
+    "vite.config.ts": "d_config",
+    "vite.config.js": "d_config",
+    "tailwind.config.js": "d_config",
+    "tailwind.config.ts": "d_config",
+    "postcss.config.js": "d_config",
+    "postcss.config.mjs": "d_config",
+    "eslint.config.js": "d_config",
+    ".eslintrc": "d_config",
+    ".eslintrc.json": "d_config",
+    ".prettierrc": "d_config",
+    "prettier.config.js": "d_config"
+  },
+  "folderNames": {
+    ".git": "d_folder-git",
+    "node_modules": "d_folder-quiet",
+    "dist": "d_folder-quiet",
+    "build": "d_folder-quiet",
+    ".next": "d_folder-quiet",
+    "out": "d_folder-quiet",
+    ".turbo": "d_folder-quiet",
+    ".cache": "d_folder-quiet"
+  },
+  "folderNamesExpanded": {
+    ".git": "d_folder-git",
+    "node_modules": "d_folder-quiet",
+    "dist": "d_folder-quiet",
+    "build": "d_folder-quiet",
+    ".next": "d_folder-quiet",
+    "out": "d_folder-quiet",
+    ".turbo": "d_folder-quiet",
+    ".cache": "d_folder-quiet"
+  },
+  "light": {
+    "folder": "l_folder",
+    "folderExpanded": "l_folder-open",
+    "rootFolder": "l_folder",
+    "rootFolderExpanded": "l_folder-open",
+    "file": "l_file",
+    "fileExtensions": {
+      "ts": "l_code",
+      "tsx": "l_code",
+      "js": "l_code",
+      "jsx": "l_code",
+      "mjs": "l_code",
+      "cjs": "l_code",
+      "py": "l_code",
+      "go": "l_code",
+      "rs": "l_code",
+      "rb": "l_code",
+      "php": "l_code",
+      "swift": "l_code",
+      "java": "l_code",
+      "kt": "l_code",
+      "c": "l_code",
+      "h": "l_code",
+      "cc": "l_code",
+      "cpp": "l_code",
+      "hpp": "l_code",
+      "m": "l_code",
+      "mm": "l_code",
+      "lua": "l_code",
+      "zig": "l_code",
+      "html": "l_markup",
+      "htm": "l_markup",
+      "xml": "l_markup",
+      "vue": "l_markup",
+      "svelte": "l_markup",
+      "astro": "l_markup",
+      "erb": "l_markup",
+      "ejs": "l_markup",
+      "css": "l_style",
+      "scss": "l_style",
+      "sass": "l_style",
+      "less": "l_style",
+      "styl": "l_style",
+      "json": "l_data",
+      "jsonc": "l_data",
+      "json5": "l_data",
+      "yaml": "l_data",
+      "yml": "l_data",
+      "toml": "l_data",
+      "ini": "l_data",
+      "plist": "l_data",
+      "md": "l_text",
+      "mdx": "l_text",
+      "txt": "l_text",
+      "rst": "l_text",
+      "log": "l_text",
+      "png": "l_image",
+      "jpg": "l_image",
+      "jpeg": "l_image",
+      "gif": "l_image",
+      "webp": "l_image",
+      "avif": "l_image",
+      "svg": "l_image",
+      "ico": "l_image",
+      "icns": "l_image",
+      "bmp": "l_image",
+      "tiff": "l_image",
+      "sh": "l_shell",
+      "zsh": "l_shell",
+      "bash": "l_shell",
+      "fish": "l_shell",
+      "ps1": "l_shell",
+      "bat": "l_shell",
+      "cmd": "l_shell",
+      "lock": "l_lock",
+      "env": "l_env",
+      "test.ts": "l_test",
+      "test.tsx": "l_test",
+      "test.js": "l_test",
+      "test.jsx": "l_test",
+      "spec.ts": "l_test",
+      "spec.tsx": "l_test",
+      "spec.js": "l_test",
+      "spec.jsx": "l_test",
+      "sql": "l_db",
+      "sqlite": "l_db",
+      "db": "l_db",
+      "db3": "l_db",
+      "csv": "l_sheet",
+      "tsv": "l_sheet",
+      "conf": "l_config",
+      "config": "l_config"
+    },
+    "fileNames": {
+      "package.json": "l_package",
+      "package-lock.json": "l_lock",
+      "pnpm-lock.yaml": "l_lock",
+      "yarn.lock": "l_lock",
+      "bun.lockb": "l_lock",
+      "Cargo.lock": "l_lock",
+      ".env": "l_env",
+      ".env.local": "l_env",
+      ".env.development": "l_env",
+      ".env.production": "l_env",
+      ".env.example": "l_env",
+      ".gitignore": "l_git",
+      ".gitattributes": "l_git",
+      ".gitmodules": "l_git",
+      "Dockerfile": "l_config",
+      "docker-compose.yml": "l_config",
+      "compose.yml": "l_config",
+      "Makefile": "l_config",
+      "tsconfig.json": "l_config",
+      "jsconfig.json": "l_config",
+      ".editorconfig": "l_config",
+      "next.config.js": "l_config",
+      "next.config.ts": "l_config",
+      "next.config.mjs": "l_config",
+      "vite.config.ts": "l_config",
+      "vite.config.js": "l_config",
+      "tailwind.config.js": "l_config",
+      "tailwind.config.ts": "l_config",
+      "postcss.config.js": "l_config",
+      "postcss.config.mjs": "l_config",
+      "eslint.config.js": "l_config",
+      ".eslintrc": "l_config",
+      ".eslintrc.json": "l_config",
+      ".prettierrc": "l_config",
+      "prettier.config.js": "l_config"
+    },
+    "folderNames": {
+      ".git": "l_folder-git",
+      "node_modules": "l_folder-quiet",
+      "dist": "l_folder-quiet",
+      "build": "l_folder-quiet",
+      ".next": "l_folder-quiet",
+      "out": "l_folder-quiet",
+      ".turbo": "l_folder-quiet",
+      ".cache": "l_folder-quiet"
+    },
+    "folderNamesExpanded": {
+      ".git": "l_folder-git",
+      "node_modules": "l_folder-quiet",
+      "dist": "l_folder-quiet",
+      "build": "l_folder-quiet",
+      ".next": "l_folder-quiet",
+      "out": "l_folder-quiet",
+      ".turbo": "l_folder-quiet",
+      ".cache": "l_folder-quiet"
+    }
+  },
+  "hidesExplorerArrows": false
+}
