@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""Generate the Midori file-icon theme from Phosphor Duotone icons.
+"""Generate the Midori file-icon theme from Material Symbols Rounded icons.
 
-Fetches Phosphor "duotone" weight SVGs (MIT license) from unpkg — the same
-icon family the Vivaldi start-page mods use (midori-phosphor-icons.css uses
-regular weight; duotone is the same glyphs with a 20% interior wash, echoing
-the site's color-mix washes). Recolors them per the Midori Color Dot palette
-and emits light + dark variants plus the icon-theme JSON into
-midori-theme/icons/. One icon theme serves both modes via the "light"
-override block that VS Code file icon themes support.
+Fetches Material Symbols "rounded" style, fill variant SVGs (Apache-2.0)
+from unpkg — soft rounded corners, solid fills — recolors them per the
+Midori Color Dot palette, and emits light + dark variants plus the
+icon-theme JSON into midori-theme/icons/. One icon theme serves both modes
+via the "light" override block that VS Code file icon themes support.
+(The workbench-chrome icons stay Phosphor — see build-product-icons.py.)
 
 Run from anywhere:  python3 vscode/build-icons.py
 Then repackage/reinstall via install-vscode.sh.
@@ -35,29 +34,29 @@ ROLES = {
     "faint":  ("#a29f98", "#5d574e"),  # locks, vendored dirs
 }
 
-# definition name -> (phosphor icon candidates in preference order, role).
-# The "-duotone" weight suffix is appended automatically.
+# definition name -> (material symbol candidates in preference order, role).
+# The "-fill" variant suffix is appended automatically.
 DEFS = {
     "folder":       (["folder"], "sage"),
-    "folder-open":  (["folder-open"], "sage"),
-    "folder-git":   (["folder"], "warm"),
-    "folder-quiet": (["folder-dashed", "folder-simple-dashed", "folder"], "faint"),
-    "file":         (["file"], "muted"),
-    "code":         (["file-code"], "indigo"),
-    "markup":       (["file-html", "file-code"], "wine"),
-    "style":        (["file-css", "paint-brush"], "plum"),
-    "data":         (["brackets-curly", "file"], "ochre"),
-    "text":         (["file-text"], "muted"),
-    "image":        (["file-image", "image"], "mint"),
-    "shell":        (["terminal-window", "terminal"], "olive"),
-    "lock":         (["file-lock", "lock-simple"], "faint"),
+    "folder-open":  (["folder_open"], "sage"),
+    "folder-git":   (["folder_data", "folder"], "warm"),
+    "folder-quiet": (["folder_managed", "rule_folder", "folder"], "faint"),
+    "file":         (["draft", "description"], "muted"),
+    "code":         (["code_blocks", "code"], "indigo"),
+    "markup":       (["html", "code"], "wine"),
+    "style":        (["css", "palette"], "plum"),
+    "data":         (["data_object"], "ochre"),
+    "text":         (["article", "description"], "muted"),
+    "image":        (["image"], "mint"),
+    "shell":        (["terminal"], "olive"),
+    "lock":         (["lock"], "faint"),
     "env":          (["key"], "warm"),
-    "config":       (["gear", "gear-six"], "ochre"),
-    "test":         (["flask", "test-tube"], "wine"),
-    "package":      (["package"], "ochre"),
+    "config":       (["settings"], "ochre"),
+    "test":         (["science"], "wine"),
+    "package":      (["package_2", "deployed_code", "inventory_2"], "ochre"),
     "db":           (["database"], "plum"),
-    "sheet":        (["file-csv", "table"], "olive"),
-    "git":          (["git-branch"], "warm"),
+    "sheet":        (["csv", "table"], "olive"),
+    "git":          (["account_tree", "merge"], "warm"),
 }
 
 EXT = {
@@ -110,7 +109,7 @@ def fetch(candidates: list) -> str:
         cached = CACHE / f"{icon}-fill.svg"
         if cached.exists():
             return cached.read_text()
-        url = f"https://unpkg.com/@phosphor-icons/core/assets/duotone/{icon}-duotone.svg"
+        url = f"https://unpkg.com/@material-symbols/svg-400/rounded/{icon}-fill.svg"
         try:
             with urllib.request.urlopen(url, timeout=20) as r:
                 svg = r.read().decode()
@@ -120,14 +119,15 @@ def fetch(candidates: list) -> str:
             return svg
         except Exception:
             continue
-    raise SystemExit(f"could not fetch phosphor icon (tried {candidates})")
+    raise SystemExit(f"could not fetch material symbol (tried {candidates})")
 
 
 def recolor(svg: str, color: str) -> str:
-    # Duotone SVGs are fill="currentColor" on the root with a built-in
-    # opacity="0.2" wash layer, so one color swap tints outline + interior.
-    assert 'fill="currentColor"' in svg, "unexpected phosphor svg format"
-    return svg.replace('fill="currentColor"', f'fill="{color}"')
+    # Material Symbols SVGs carry no fill attribute (default black); set the
+    # color on the root so the path inherits it.
+    assert svg.startswith("<svg ") and "fill=" not in svg.split(">", 1)[0], \
+        "unexpected material symbols svg format"
+    return svg.replace("<svg ", f'<svg fill="{color}" ', 1)
 
 
 def main() -> None:
