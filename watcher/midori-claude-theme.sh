@@ -167,6 +167,31 @@ write_dark() {
 EOF
 }
 
+# Self-heal ~/.claude/settings.json: picking a stock preset in /theme silently
+# overwrites "custom:midori" and everything looks broken until someone
+# remembers this file. Re-pin it (cheap grep short-circuits the common case;
+# python rewrite only on actual mismatch, so we don't race Claude Code's own
+# writes on every tick).
+heal_theme_setting() {
+  local settings="$HOME/.claude/settings.json"
+  [ -f "$settings" ] || return 0
+  grep -q '"theme"[[:space:]]*:[[:space:]]*"custom:midori"' "$settings" && return 0
+  /usr/bin/python3 - "$settings" <<'PYEOF' 2>/dev/null
+import json, sys
+path = sys.argv[1]
+try:
+    with open(path) as f:
+        settings = json.load(f)
+except Exception:
+    sys.exit(0)  # malformed/mid-write: skip, retry next pass
+if settings.get("theme") != "custom:midori":
+    settings["theme"] = "custom:midori"
+    with open(path, "w") as f:
+        json.dump(settings, f, indent=2)
+        f.write("\n")
+PYEOF
+}
+
 while :; do
   if defaults read -g AppleInterfaceStyle 2>/dev/null | grep -qi dark; then
     MODE="dark"
@@ -184,7 +209,10 @@ while :; do
     LAST="$MODE"
   fi
   # display-scale check every 10th tick (~30s); system_profiler is too slow for 3s
-  if [ $((TICK % 10)) -eq 0 ]; then check_scale; fi
+  if [ $((TICK % 10)) -eq 0 ]; then
+    check_scale
+    heal_theme_setting
+  fi
   TICK=$((TICK + 1))
   sleep 3
 done
