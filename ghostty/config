@@ -16,10 +16,13 @@ font-family = "M PLUS 1 Code"
 window-padding-x = 12
 window-padding-y = 12
 # Lock rows to the 24pt Midori dot grid: M PLUS 1 Code cell at 14pt is
-# 34.6px (2x); +38.9% = 48px = one dot step. window-padding-y = 12 is half a
-# step, so row bottoms (and prompt underlines) land exactly on dot rows.
-# COUPLED to font-size: 14pt -> 38.9%, 15pt -> 29.7%, 16pt -> 21.6%.
-adjust-cell-height = 38.9%
+# 34.585px (2x); target is EXACTLY one 48px dot step. CRITICAL: 38.9% gives
+# 48.03px which Ghostty CEILS to a 49px cell — a 1px/row cumulative drift
+# against the 48px lattice (verified 2026-07-14: underlines 17 rows apart
+# measured 833px = 17*49). 38.75% gives 47.99px -> ceils to exactly 48.
+# COUPLED to font-size; re-derive if font-size changes and VERIFY the row
+# pitch from two prompts many rows apart, not from a single row.
+adjust-cell-height = 38.75%
 
 # Rounded cursor: native cursor hidden (opacity 0), the shader draws a
 # rounded replacement from the cursor uniforms. Steady (no blink).
