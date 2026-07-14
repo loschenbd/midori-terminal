@@ -30,8 +30,8 @@ palette = 15=#faf9f6
 
 background = #f3f1eb
 foreground = #2a2825
-# cursor: sage accent (--ring / focus outline color on the site)
-cursor-color = #5f6f5e
+# cursor: indigo ink (--ink-indigo — fountain-pen blue, like Lamy blue)
+cursor-color = #3a5572
 cursor-text = #f3f1eb
 # selection: sage wash (~25% --accent over --background)
 selection-background = #ced1c8
