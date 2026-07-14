@@ -1,0 +1,36 @@
+# Ghostty config — Midori terminal theme system
+# Installed by midori-terminal/install.sh (which replaces __HOME__).
+# Theme pair carries palette + background image per mode; macOS appearance
+# flips both automatically.
+theme = light:midori-paper,dark:midori-night
+
+font-size = 14
+font-variation = wght=400
+
+window-title-font-family = Spectral Bold
+# Exact family name required: "M PLUS 1 Code" (NOT "M PLUS 1 mono"/"Mono" —
+# no such family is installed; Ghostty silently falls back to JetBrains Mono,
+# which breaks the 48px cell = dot-grid lock below).
+font-family = "M PLUS 1 Code"
+
+window-padding-x = 12
+window-padding-y = 12
+# Lock rows to the 24pt Midori dot grid: M PLUS 1 Code cell at 14pt is
+# 34.6px (2x); +38.9% = 48px = one dot step. window-padding-y = 12 is half a
+# step, so row bottoms (and prompt underlines) land exactly on dot rows.
+# COUPLED to font-size: 14pt -> 38.9%, 15pt -> 29.7%, 16pt -> 21.6%.
+adjust-cell-height = 38.9%
+
+# Rounded cursor: native cursor hidden (opacity 0), the shader draws a
+# rounded replacement from the cursor uniforms. Steady (no blink).
+# To revert: delete these two lines.
+custom-shader = __HOME__/.config/ghostty/shaders/rounded-cursor.glsl
+cursor-opacity = 0
+
+unfocused-split-opacity = 0.9
+# unfocused-split-fill + split-divider-color live per-mode in the
+# midori-paper / midori-night themes
+
+focus-follows-mouse = true
+
+desktop-notifications = true

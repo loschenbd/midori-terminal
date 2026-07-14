@@ -1,0 +1,16 @@
+/* Sidebar as a floating sheet/card over the dot-grid paper, matching the
+   site's --card treatment. --colorBgLightIntense ≈ card tone in both themes. */
+#browser.tabs-left #tabs-tabbar-container.left {
+  margin: 8px 2px 8px 8px;
+  background: var(--colorBgLightIntense);
+  border: 1px solid var(--colorBorderSubtle);
+  border-radius: 8px;
+  box-shadow: 0 1px 0 rgb(60 58 54 / 0.05), 0 8px 24px -14px rgb(60 58 54 / 0.25);
+}
+#browser.tabs-right #tabs-tabbar-container.right {
+  margin: 8px 8px 8px 2px;
+  background: var(--colorBgLightIntense);
+  border: 1px solid var(--colorBorderSubtle);
+  border-radius: 8px;
+  box-shadow: 0 1px 0 rgb(60 58 54 / 0.05), 0 8px 24px -14px rgb(60 58 54 / 0.25);
+}
