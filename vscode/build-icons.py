@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Generate the Midori file-icon theme from Phosphor Fill icons.
+"""Generate the Midori file-icon theme from Phosphor Duotone icons.
 
-Fetches Phosphor "fill" weight SVGs (MIT license) from unpkg — the same icon
-family the Vivaldi CSS mods use — recolors them per the Midori Color Dot
-palette, and emits light + dark variants plus the icon-theme JSON into
+Fetches Phosphor "duotone" weight SVGs (MIT license) from unpkg — the same
+icon family the Vivaldi start-page mods use (midori-phosphor-icons.css uses
+regular weight; duotone is the same glyphs with a 20% interior wash, echoing
+the site's color-mix washes). Recolors them per the Midori Color Dot palette
+and emits light + dark variants plus the icon-theme JSON into
 midori-theme/icons/. One icon theme serves both modes via the "light"
 override block that VS Code file icon themes support.
 
@@ -34,7 +36,7 @@ ROLES = {
 }
 
 # definition name -> (phosphor icon candidates in preference order, role).
-# The "-fill" weight suffix is appended automatically.
+# The "-duotone" weight suffix is appended automatically.
 DEFS = {
     "folder":       (["folder"], "sage"),
     "folder-open":  (["folder-open"], "sage"),
@@ -108,7 +110,7 @@ def fetch(candidates: list) -> str:
         cached = CACHE / f"{icon}-fill.svg"
         if cached.exists():
             return cached.read_text()
-        url = f"https://unpkg.com/@phosphor-icons/core/assets/fill/{icon}-fill.svg"
+        url = f"https://unpkg.com/@phosphor-icons/core/assets/duotone/{icon}-duotone.svg"
         try:
             with urllib.request.urlopen(url, timeout=20) as r:
                 svg = r.read().decode()
@@ -122,6 +124,8 @@ def fetch(candidates: list) -> str:
 
 
 def recolor(svg: str, color: str) -> str:
+    # Duotone SVGs are fill="currentColor" on the root with a built-in
+    # opacity="0.2" wash layer, so one color swap tints outline + interior.
     assert 'fill="currentColor"' in svg, "unexpected phosphor svg format"
     return svg.replace('fill="currentColor"', f'fill="{color}"')
 
