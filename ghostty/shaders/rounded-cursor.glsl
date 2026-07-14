@@ -1,7 +1,7 @@
 // rounded-cursor.glsl — draws the cursor as a rounded rect.
 // Pairs with `cursor-opacity = 0` in the config: the native (square) cursor
 // is hidden and this shader renders it instead, using the live uniforms:
-//   iCurrentCursor.xy = bottom-left corner (y-DOWN coords), .zw = width/height
+//   iCurrentCursor.xy = top-left corner (y-up coords), .zw = width/height
 //   iCurrentCursorColor = current cursor color (follows midori themes)
 //   iCurrentCursorStyle.x = 1 -> hollow (unfocused window) -> draw outline
 // Radius scales with the cursor, so it adapts across 1x/2x displays and
@@ -20,15 +20,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (halfSize.x <= 0.0 || halfSize.y <= 0.0) return;
 
     vec2 center = iCurrentCursor.xy + vec2(halfSize.x, -halfSize.y);
-    // Baseline lock: lift the cursor so its top edge touches the upper dot
-    // row and its bottom rests on the baseline dot row (cursor height = one
-    // grid step, so both align at once). Offset ~= font descent + vertical
-    // centering pad (14pt M PLUS 1 Code + adjust-cell-height 38.9%), tuned
-    // to 0.30 from @2x screenshot measurements. NOTE this coordinate space
-    // is y-DOWN (iCurrentCursor.xy is the bottom-left corner): SUBTRACT to
-    // move the cursor up-screen. Cell-proportional, so it holds on 1x and
-    // 2x displays. Set to 0.0 to restore the stock cell-aligned cursor.
-    center.y -= 0.30 * iCurrentCursor.w;
     vec2 p = fragCoord - center;
     if (any(greaterThan(abs(p), halfSize + 2.0))) return;
 
