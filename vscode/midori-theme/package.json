@@ -2,7 +2,7 @@
   "name": "midori-theme",
   "displayName": "Midori",
   "description": "Midori MD Paper — cream paper light + warm charcoal night, from benjaminloschen.com. Color Dot syntax set: indigo / olive / wine / ochre / sage.",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "publisher": "benjaminloschen",
   "license": "MIT",
   "engines": {
@@ -22,6 +22,13 @@
         "label": "Midori Night",
         "uiTheme": "vs-dark",
         "path": "./themes/midori-night-color-theme.json"
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "midori-icons",
+        "label": "Midori Icons",
+        "path": "./icons/midori-icon-theme.json"
       }
     ]
   }
