@@ -2,7 +2,8 @@
 
 A complete terminal theme system based on [benjaminloschen.com](https://benjaminloschen.com)'s
 "Midori MD Paper" design language — Ghostty, Claude Code, tmux, fzf, oh-my-posh,
-and Vivaldi, all switching light/dark together with macOS appearance.
+Vivaldi, and Cursor/VS Code, all switching light/dark together with macOS
+appearance.
 
 **Midori Paper** (light) · **Midori Night** (dark)
 
@@ -52,6 +53,7 @@ this layer to re-skin everything without touching the infrastructure.
 | `shell/zshrc.midori` | omp init + fzf ANSI palette (sourced from `.zshrc`) |
 | `tmux/midori.tmux.conf` | Pane borders, status/message styles (sourced from `.tmux.conf`) |
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |
+| `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes + Phosphor Duotone file icons (`build-icons.py` regenerates), installer |
 | `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
 | `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
 
