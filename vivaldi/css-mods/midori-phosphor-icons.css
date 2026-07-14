@@ -1,0 +1,100 @@
+/* Midori icons on Phosphor (regular weight) — the icon library
+   benjaminloschen.com actually uses (@phosphor-icons/react). Replaces the
+   hand-drawn weather glyphs and skins the startpage nav. MIT licensed.
+   Scoped to the Midori theme ids so Mud & Silicon keeps its Lucide set. */
+
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation button[title^="Bookmarks"] svg, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation button[title^="Bookmarks"] svg { display: none !important; }
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation button[title^="Bookmarks"]::before, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation button[title^="Bookmarks"]::before {
+  content: "";
+  display: block;
+  width: 16px; height: 16px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M184%2C32H72A16%2C16%2C0%2C0%2C0%2C56%2C48V224a8%2C8%2C0%2C0%2C0%2C12.24%2C6.78L128%2C193.43l59.77%2C37.35A8%2C8%2C0%2C0%2C0%2C200%2C224V48A16%2C16%2C0%2C0%2C0%2C184%2C32Zm0%2C177.57-51.77-32.35a8%2C8%2C0%2C0%2C0-8.48%2C0L72%2C209.57V48H184Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
+
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation button[title^="History"] svg, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation button[title^="History"] svg { display: none !important; }
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation button[title^="History"]::before, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation button[title^="History"]::before {
+  content: "";
+  display: block;
+  width: 16px; height: 16px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M136%2C80v43.47l36.12%2C21.67a8%2C8%2C0%2C0%2C1-8.24%2C13.72l-40-24A8%2C8%2C0%2C0%2C1%2C120%2C128V80a8%2C8%2C0%2C0%2C1%2C16%2C0Zm-8-48A95.44%2C95.44%2C0%2C0%2C0%2C60.08%2C60.15C52.81%2C67.51%2C46.35%2C74.59%2C40%2C82V64a8%2C8%2C0%2C0%2C0-16%2C0v40a8%2C8%2C0%2C0%2C0%2C8%2C8H72a8%2C8%2C0%2C0%2C0%2C0-16H49c7.15-8.42%2C14.27-16.35%2C22.39-24.57a80%2C80%2C0%2C1%2C1%2C1.66%2C114.75%2C8%2C8%2C0%2C1%2C0-11%2C11.64A96%2C96%2C0%2C1%2C0%2C128%2C32Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
+
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation button[title^="Notes"] svg, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation button[title^="Notes"] svg { display: none !important; }
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation button[title^="Notes"]::before, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation button[title^="Notes"]::before {
+  content: "";
+  display: block;
+  width: 16px; height: 16px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M229.66%2C58.34l-32-32a8%2C8%2C0%2C0%2C0-11.32%2C0l-96%2C96A8%2C8%2C0%2C0%2C0%2C88%2C128v32a8%2C8%2C0%2C0%2C0%2C8%2C8h32a8%2C8%2C0%2C0%2C0%2C5.66-2.34l96-96A8%2C8%2C0%2C0%2C0%2C229.66%2C58.34ZM124.69%2C152H104V131.31l64-64L188.69%2C88ZM200%2C76.69%2C179.31%2C56%2C192%2C43.31%2C212.69%2C64ZM224%2C128v80a16%2C16%2C0%2C0%2C1-16%2C16H48a16%2C16%2C0%2C0%2C1-16-16V48A16%2C16%2C0%2C0%2C1%2C48%2C32h80a8%2C8%2C0%2C0%2C1%2C0%2C16H48V208H208V128a8%2C8%2C0%2C0%2C1%2C16%2C0Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
+
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation button[title^="Calendar"] svg, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation button[title^="Calendar"] svg { display: none !important; }
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation button[title^="Calendar"]::before, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation button[title^="Calendar"]::before {
+  content: "";
+  display: block;
+  width: 16px; height: 16px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M208%2C32H184V24a8%2C8%2C0%2C0%2C0-16%2C0v8H88V24a8%2C8%2C0%2C0%2C0-16%2C0v8H48A16%2C16%2C0%2C0%2C0%2C32%2C48V208a16%2C16%2C0%2C0%2C0%2C16%2C16H208a16%2C16%2C0%2C0%2C0%2C16-16V48A16%2C16%2C0%2C0%2C0%2C208%2C32ZM72%2C48v8a8%2C8%2C0%2C0%2C0%2C16%2C0V48h80v8a8%2C8%2C0%2C0%2C0%2C16%2C0V48h24V80H48V48ZM208%2C208H48V96H208V208Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
+
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation button[title^="Mail"] svg, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation button[title^="Mail"] svg { display: none !important; }
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation button[title^="Mail"]::before, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation button[title^="Mail"]::before {
+  content: "";
+  display: block;
+  width: 16px; height: 16px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M224%2C48H32a8%2C8%2C0%2C0%2C0-8%2C8V192a16%2C16%2C0%2C0%2C0%2C16%2C16H216a16%2C16%2C0%2C0%2C0%2C16-16V56A8%2C8%2C0%2C0%2C0%2C224%2C48ZM203.43%2C64%2C128%2C133.15%2C52.57%2C64ZM216%2C192H40V74.19l82.59%2C75.71a8%2C8%2C0%2C0%2C0%2C10.82%2C0L216%2C74.19V192Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
+
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation .add-set svg, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation .add-set svg { display: none !important; }
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .startpage-navigation .add-set::before, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .startpage-navigation .add-set::before {
+  content: "";
+  display: block;
+  width: 16px; height: 16px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M224%2C128a8%2C8%2C0%2C0%2C1-8%2C8H136v80a8%2C8%2C0%2C0%2C1-16%2C0V136H40a8%2C8%2C0%2C0%2C1%2C0-16h80V40a8%2C8%2C0%2C0%2C1%2C16%2C0v80h80A8%2C8%2C0%2C0%2C1%2C224%2C128Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
+
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .SpeedDialView-Settings-Button svg, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .SpeedDialView-Settings-Button svg { display: none !important; }
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .SpeedDialView-Settings-Button::before, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .SpeedDialView-Settings-Button::before {
+  content: "";
+  display: block;
+  width: 16px; height: 16px;
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M128%2C80a48%2C48%2C0%2C1%2C0%2C48%2C48A48.05%2C48.05%2C0%2C0%2C0%2C128%2C80Zm0%2C80a32%2C32%2C0%2C1%2C1%2C32-32A32%2C32%2C0%2C0%2C1%2C128%2C160Zm109.94-52.79a8%2C8%2C0%2C0%2C0-3.89-5.4l-29.83-17-.12-33.62a8%2C8%2C0%2C0%2C0-2.83-6.08%2C111.91%2C111.91%2C0%2C0%2C0-36.72-20.67%2C8%2C8%2C0%2C0%2C0-6.46.59L128%2C41.85%2C97.88%2C25a8%2C8%2C0%2C0%2C0-6.47-.6A112.1%2C112.1%2C0%2C0%2C0%2C54.73%2C45.15a8%2C8%2C0%2C0%2C0-2.83%2C6.07l-.15%2C33.65-29.83%2C17a8%2C8%2C0%2C0%2C0-3.89%2C5.4%2C106.47%2C106.47%2C0%2C0%2C0%2C0%2C41.56%2C8%2C8%2C0%2C0%2C0%2C3.89%2C5.4l29.83%2C17%2C.12%2C33.62a8%2C8%2C0%2C0%2C0%2C2.83%2C6.08%2C111.91%2C111.91%2C0%2C0%2C0%2C36.72%2C20.67%2C8%2C8%2C0%2C0%2C0%2C6.46-.59L128%2C214.15%2C158.12%2C231a7.91%2C7.91%2C0%2C0%2C0%2C3.9%2C1%2C8.09%2C8.09%2C0%2C0%2C0%2C2.57-.42%2C112.1%2C112.1%2C0%2C0%2C0%2C36.68-20.73%2C8%2C8%2C0%2C0%2C0%2C2.83-6.07l.15-33.65%2C29.83-17a8%2C8%2C0%2C0%2C0%2C3.89-5.4A106.47%2C106.47%2C0%2C0%2C0%2C237.94%2C107.21Zm-15%2C34.91-28.57%2C16.25a8%2C8%2C0%2C0%2C0-3%2C3c-.58%2C1-1.19%2C2.06-1.81%2C3.06a7.94%2C7.94%2C0%2C0%2C0-1.22%2C4.21l-.15%2C32.25a95.89%2C95.89%2C0%2C0%2C1-25.37%2C14.3L134%2C199.13a8%2C8%2C0%2C0%2C0-3.91-1h-.19c-1.21%2C0-2.43%2C0-3.64%2C0a8.08%2C8.08%2C0%2C0%2C0-4.1%2C1l-28.84%2C16.1A96%2C96%2C0%2C0%2C1%2C67.88%2C201l-.11-32.2a8%2C8%2C0%2C0%2C0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09%2C8.09%2C0%2C0%2C0-3-3.06l-28.6-16.29a90.49%2C90.49%2C0%2C0%2C1%2C0-28.26L61.67%2C97.63a8%2C8%2C0%2C0%2C0%2C3-3c.58-1%2C1.19-2.06%2C1.81-3.06a7.94%2C7.94%2C0%2C0%2C0%2C1.22-4.21l.15-32.25a95.89%2C95.89%2C0%2C0%2C1%2C25.37-14.3L122%2C56.87a8%2C8%2C0%2C0%2C0%2C4.1%2C1c1.21%2C0%2C2.43%2C0%2C3.64%2C0a8.08%2C8.08%2C0%2C0%2C0%2C4.1-1l28.84-16.1A96%2C96%2C0%2C0%2C1%2C188.12%2C55l.11%2C32.2a8%2C8%2C0%2C0%2C0%2C1.22%2C4.22c.62%2C1%2C1.23%2C2%2C1.8%2C3.06a8.09%2C8.09%2C0%2C0%2C0%2C3%2C3.06l28.6%2C16.29A90.49%2C90.49%2C0%2C0%2C1%2C222.9%2C142.12Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
+
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .forecast-details > span:nth-child(1) svg, #browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .forecast-details > span:nth-child(4) svg, #browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .forecast-details > span:nth-child(7) svg, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .forecast-details > span:nth-child(1) svg, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .forecast-details > span:nth-child(4) svg, #browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .forecast-details > span:nth-child(7) svg { display: none; }
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .forecast-details > span:nth-child(1)::before,
+#browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .forecast-details > span:nth-child(1)::before {
+  content: "";
+  display: inline-block;
+  width: 15px; height: 15px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M136%2C153V88a8%2C8%2C0%2C0%2C0-16%2C0v65a32%2C32%2C0%2C1%2C0%2C16%2C0Zm-8%2C47a16%2C16%2C0%2C1%2C1%2C16-16A16%2C16%2C0%2C0%2C1%2C128%2C200Zm40-66V48a40%2C40%2C0%2C0%2C0-80%2C0v86a64%2C64%2C0%2C1%2C0%2C80%2C0Zm-40%2C98a48%2C48%2C0%2C0%2C1-27.42-87.4A8%2C8%2C0%2C0%2C0%2C104%2C138V48a24%2C24%2C0%2C0%2C1%2C48%2C0v90a8%2C8%2C0%2C0%2C0%2C3.42%2C6.56A48%2C48%2C0%2C0%2C1%2C128%2C232Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .forecast-details > span:nth-child(4)::before,
+#browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .forecast-details > span:nth-child(4)::before {
+  content: "";
+  display: inline-block;
+  width: 15px; height: 15px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M240%2C126.63A112.44%2C112.44%2C0%2C0%2C0%2C51.75%2C53.75a111.56%2C111.56%2C0%2C0%2C0-35.7%2C72.88A16%2C16%2C0%2C0%2C0%2C32%2C144h88v56a32%2C32%2C0%2C0%2C0%2C64%2C0%2C8%2C8%2C0%2C0%2C0-16%2C0%2C16%2C16%2C0%2C0%2C1-32%2C0V144h88a16%2C16%2C0%2C0%2C0%2C16-17.37ZM32%2C128l0%2C0A96.43%2C96.43%2C0%2C0%2C1%2C193.4%2C65.52%2C95.32%2C95.32%2C0%2C0%2C1%2C224%2C128Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
+#browser.theme-id-6e280136-c9ea-49f1-a783-9ce1faf9b2bf .forecast-details > span:nth-child(7)::before,
+#browser.theme-id-b528ef74-c371-4b23-966c-ff1ac093f50c .forecast-details > span:nth-child(7)::before {
+  content: "";
+  display: inline-block;
+  width: 15px; height: 15px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M184%2C184a32%2C32%2C0%2C0%2C1-32%2C32c-13.7%2C0-26.95-8.93-31.5-21.22a8%2C8%2C0%2C0%2C1%2C15-5.56C137.74%2C195.27%2C145%2C200%2C152%2C200a16%2C16%2C0%2C0%2C0%2C0-32H40a8%2C8%2C0%2C0%2C1%2C0-16H152A32%2C32%2C0%2C0%2C1%2C184%2C184Zm-64-80a32%2C32%2C0%2C0%2C0%2C0-64c-13.7%2C0-26.95%2C8.93-31.5%2C21.22a8%2C8%2C0%2C0%2C0%2C15%2C5.56C105.74%2C60.73%2C113%2C56%2C120%2C56a16%2C16%2C0%2C0%2C1%2C0%2C32H24a8%2C8%2C0%2C0%2C0%2C0%2C16Zm88-32c-13.7%2C0-26.95%2C8.93-31.5%2C21.22a8%2C8%2C0%2C0%2C0%2C15%2C5.56C193.74%2C92.73%2C201%2C88%2C208%2C88a16%2C16%2C0%2C0%2C1%2C0%2C32H32a8%2C8%2C0%2C0%2C0%2C0%2C16H208a32%2C32%2C0%2C0%2C0%2C0-64Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
