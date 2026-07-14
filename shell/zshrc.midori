@@ -11,3 +11,9 @@ fi
 
 # fzf on the terminal's own 16-color palette (correct in both modes).
 export FZF_DEFAULT_OPTS="--color=16,fg:-1,bg:-1,gutter:-1,hl:4,fg+:-1,bg+:-1,hl+:12,prompt:2,pointer:1,marker:3,spinner:6,info:8,header:8,border:8"
+
+# Reset the cursor color to the theme's (OSC 112) before every prompt —
+# full-screen apps (Claude Code among them) set their own cursor color via
+# OSC 12 and can leave it behind on exit, turning the indigo cursor dark.
+_midori_cursor_reset() { printf '\e]112\a'; }
+precmd_functions+=(_midori_cursor_reset)

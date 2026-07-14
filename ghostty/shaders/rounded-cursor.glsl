@@ -20,6 +20,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (halfSize.x <= 0.0 || halfSize.y <= 0.0) return;
 
     vec2 center = iCurrentCursor.xy + vec2(halfSize.x, -halfSize.y);
+    // Baseline lock: lift so the bottom edge rests on the baseline dot row
+    // and the top touches the previous dot row (height = one grid step).
+    // 0.27 = (font descent + cell-centering pad) / cell height for 14pt
+    // M PLUS 1 Code with adjust-cell-height 38.9%. This coordinate space is
+    // y-DOWN, so SUBTRACT to move up-screen. Requires the dot grid itself
+    // to be calibrated (baselines on dot rows) — see tools/bake-backgrounds.
+    // Set to 0.0 for the stock cell-aligned cursor.
+    center.y -= 0.27 * iCurrentCursor.w;
     vec2 p = fragCoord - center;
     if (any(greaterThan(abs(p), halfSize + 2.0))) return;
 
