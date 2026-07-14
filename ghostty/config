@@ -1,5 +1,5 @@
 # Ghostty config — Midori terminal theme system
-# Installed by midori-terminal/install.sh (which replaces __HOME__).
+# Installed by midori-terminal/install.sh (which fills in absolute paths).
 # Theme pair carries palette + background image per mode; macOS appearance
 # flips both automatically.
 theme = light:midori-paper,dark:midori-night
