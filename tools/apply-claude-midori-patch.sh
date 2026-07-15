@@ -41,9 +41,14 @@ esac
 
 VERSION="$("$CLAUDE_BIN" --version 2>/dev/null | awk '{print $1}')"
 
-# Already patched? (a Midori light constant present) -> nothing to do.
-if LC_ALL=C grep -q -a -F "201,206,187" "$CLAUDE_BIN" 2>/dev/null; then
-  echo "-- Claude Code $VERSION already carries the Midori diff patch."
+# Marker = signature of the NEWEST patch (codespan inline-code). Keying the
+# idempotency check on this means adding a patch to patch-claude-diffs.py forces
+# re-application over a binary that only has the older patches.
+MARKER='?"#6c87a4":"#3a5572"'
+
+# Fully patched already? -> nothing to do.
+if LC_ALL=C grep -q -a -F "$MARKER" "$CLAUDE_BIN" 2>/dev/null; then
+  echo "-- Claude Code $VERSION already carries the Midori patch set."
   mkdir -p "$(dirname "$STAMP")"; printf '%s\n' "$CLAUDE_BIN" > "$STAMP"
   exit 0
 fi
@@ -67,8 +72,8 @@ python3 "$PATCHER" "$WORK/cc.js"
 npx --yes tweakcc@4.3.1 repack "$WORK/cc.js" "$CLAUDE_BIN" >/dev/null
 
 # Verify the patch actually landed and the binary still runs.
-if ! LC_ALL=C grep -q -a -F "201,206,187" "$CLAUDE_BIN"; then
-  echo "!! verification failed (Midori constant absent) — restoring stock binary." >&2
+if ! LC_ALL=C grep -q -a -F "$MARKER" "$CLAUDE_BIN"; then
+  echo "!! verification failed (Midori marker absent) — restoring stock binary." >&2
   cp "$BACKUP" "$CLAUDE_BIN"
   exit 1
 fi
