@@ -129,6 +129,21 @@ Residual gotchas:
   restore stock with `brew reinstall claude-code`. Stock binary is backed up
   under `~/.config/midori/claude-backup/`.
 
+## Shell & tmux fragments are additive
+
+The shell and tmux pieces install as **fragments** that your own rc files
+`source` — the installer never overwrites `~/.zshrc` or `~/.tmux.conf`, it just
+appends one `source` line (detected by the exact fragment path, so it's
+idempotent). Everything midori-specific lives in the fragment
+(`shell/zshrc.midori`, `tmux/midori.tmux.conf`); your personal config stays
+yours. That means the fragment is the single source of truth: edit it in the
+repo, run `./install.sh`, and the change reaches every machine that sources it.
+
+Corollary for the Claude Code self-heal: the `claude` wrapper that re-patches the
+binary after updates lives **in the shell fragment**. If your `~/.zshrc` inlines
+midori bits instead of sourcing the fragment, that wrapper never loads and
+updates silently revert to stock diffs — so keep the `source` line, don't inline.
+
 ## Keeping machines in sync
 
 On the machine where the theme evolves:
