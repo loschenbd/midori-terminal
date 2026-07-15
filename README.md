@@ -106,6 +106,16 @@ Residual gotchas:
 - The watcher owns `~/.claude/themes/midori.json`; don't hand-edit it (edits
   are clobbered on the next appearance flip). Change the token maps in
   `watcher/midori-claude-theme.sh` instead, then re-run `./install.sh`.
+- **Inside tmux, diffs need two env vars or they render muddy.** Claude Code
+  deliberately clamps its colour depth to 256 whenever `$TMUX` is set (upstream
+  issue #35148, verified in the 2.1.210 binary: `if(env.TMUX && chalk.level>2)
+  chalk.level=2`), which collapses the Midori washes to their nearest 256-color
+  cube entry (terracotta `#ddc7b7` → `#d7af87`). The fix is two exports, both in
+  `shell/zshrc.midori` (and pinned in the tmux configs): `COLORTERM=truecolor`
+  (raises chalk to 24-bit) **and** `CLAUDE_CODE_TMUX_TRUECOLOR=1` (the
+  undocumented escape hatch that disables the clamp). Either alone still renders
+  256-color — you need both, exported from the shell (the clamp reads them at
+  module load). Ghostty-direct is unaffected (no `$TMUX`, no clamp).
 - **Diff colours are a binary patch, not a theme token.** Since ~2.1.186
   Claude Code renders diffs through a syntax theme (GitHub/Monokai) with
   colours hardcoded in the compiled binary — `~/.claude/themes` can't reach
