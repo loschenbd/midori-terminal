@@ -5,11 +5,15 @@
 # patch: unpack the embedded JS (tweakcc) -> rewrite the 8 colour constants
 # (tools/patch-claude-diffs.py) -> repack + ad-hoc re-sign (tweakcc).
 #
-# Idempotent and self-healing: `brew upgrade claude-code` restores the stock
-# binary, so re-run this after updates (the Midori installer/watcher does).
+# Idempotent and self-healing: any Claude Code update (the native installer's
+# updater at ~/.local/share/claude/versions/<v>, or a brew upgrade on the cask)
+# restores the stock binary, so re-run this after updates. The `claude` shell
+# wrapper in zshrc.midori does it automatically when the resolved path changes.
 # Needs: node 20+, npx (for `npx tweakcc`), python3.
 #
-# Restore the stock binary any time with:  brew reinstall claude-code
+# Restore the stock binary any time by copying back the per-version backup this
+# script saves under ~/.config/midori/claude-backup/ (or `brew reinstall
+# claude-code` if you installed via the brew cask).
 set -e
 
 # Find the JS patcher next to this script (installed copy in ~/.config/midori)
