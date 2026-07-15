@@ -45,3 +45,18 @@ unset _midori_bp
 
 # zoxide: `z foo` jumps to the most-used directory matching "foo".
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
+
+# Midori Claude Code diff patch — self-heal after `brew upgrade claude-code`.
+# The binary hardcodes diff colours; we patch it (see midori tools/). brew
+# upgrades revert it AND retarget the versioned binary path, so when the
+# resolved path differs from the last-patched one, re-apply — here in an
+# interactive shell (node/npx on PATH), only at launch, only after an update.
+if [ -f "$HOME/.config/midori/apply-claude-midori-patch.sh" ]; then
+  claude() {
+    local real; real="$(readlink -f "$(command -v claude 2>/dev/null)" 2>/dev/null)"
+    if [ -n "$real" ] && [ "$real" != "$(cat "$HOME/.config/midori/claude-patched-path" 2>/dev/null)" ]; then
+      sh "$HOME/.config/midori/apply-claude-midori-patch.sh" || true
+    fi
+    command claude "$@"
+  }
+fi
