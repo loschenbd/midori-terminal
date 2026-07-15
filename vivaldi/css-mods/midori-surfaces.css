@@ -11,10 +11,14 @@
 #browser.theme-light {
   --colorBgIntense: #faf9f6 !important;   /* site card white-warm */
   --colorBgIntenser: #fffdf9 !important;
+  --colorBgLight: #faf9f6 !important;     /* .button-popup / menus surface */
 }
 #browser.theme-dark {
   --colorBgIntense: #262421 !important;   /* lifted warm card, not black */
   --colorBgIntenser: #2e2b28 !important;
+  --colorBgLight: #262421 !important;     /* .button-popup: the search popup
+                                             once text is typed lives in this
+                                             portal — also derives to black */
 }
 
 /* Dropdown panels on the card recipe: subtle hairline + soft shadow
