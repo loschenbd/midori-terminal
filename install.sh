@@ -74,8 +74,11 @@ cp -f "$REPO/shell/zshrc.midori" "$HOME/.config/midori/zshrc.midori"
 cp -f "$REPO/tmux/midori.tmux.conf" "$HOME/.config/midori/midori.tmux.conf"
 
 touch "$HOME/.zshrc"
-if grep -q "midori" "$HOME/.zshrc"; then
-  echo "   .zshrc already references midori — not appending"
+# Detect the actual source line (not any mention of "midori" — inline references
+# elsewhere used to false-match and leave the fragment unsourced, which silently
+# disabled the Claude self-heal wrapper).
+if grep -q "config/midori/zshrc.midori" "$HOME/.zshrc"; then
+  echo "   .zshrc already sources the midori fragment — not appending"
 else
   printf '\n# Midori terminal theme (midori-terminal repo)\n[ -f ~/.config/midori/zshrc.midori ] && source ~/.config/midori/zshrc.midori\n' >> "$HOME/.zshrc"
   echo "   appended source line to .zshrc"

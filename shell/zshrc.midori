@@ -3,6 +3,12 @@
 # ANSI-16 color names/indices, so it retints automatically when the Ghostty
 # theme pair (midori-paper / midori-night) flips with macOS appearance.
 
+# Re-entrancy guard: makes a second source a no-op so the precmd hook and
+# oh-my-posh init below aren't registered twice (double prompt render / double
+# OSC 112) when a config re-sources this fragment.
+[ -n "$_MIDORI_ZSHRC_SOURCED" ] && return
+_MIDORI_ZSHRC_SOURCED=1
+
 # Truecolor for Claude Code inside tmux. TWO env vars are required — one alone
 # does nothing:
 #   1. COLORTERM=truecolor — chalk/supports-color (which Claude's diff renderer
