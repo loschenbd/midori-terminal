@@ -52,7 +52,7 @@ this layer to re-skin everything without touching the infrastructure.
 | `ghostty/` | Main config, `midori-paper`/`midori-night` themes, background PNGs, rounded-cursor shader |
 | `watcher/` | Appearance/display watcher script + launchd plist template |
 | `prompt/midori.omp.json` | Manuscript-style oh-my-posh prompt (ANSI names only, no powerline blocks) |
-| `shell/zshrc.midori` | omp init + fzf ANSI palette (sourced from `.zshrc`) |
+| `shell/zshrc.midori` | omp init, fzf ANSI palette, eza aliases, zoxide, zsh autosuggestions/highlighting, cursor-color reset (sourced from `.zshrc`) |
 | `tmux/midori.tmux.conf` | Pane borders, status/message styles (sourced from `.tmux.conf`) |
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |
 | `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, Phosphor Duotone file icons, Phosphor product icons for the workbench chrome (`build-icons.py` / `build-product-icons.py` regenerate), installer |

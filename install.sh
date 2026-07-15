@@ -18,10 +18,10 @@ echo "== Midori terminal theme system =="
 if [ -n "$MIDORI_SKIP_BREW" ]; then
   echo "-- skipping brew (MIDORI_SKIP_BREW set)"
 elif command -v brew >/dev/null 2>&1; then
-  echo "-- brew bundle (ghostty, tmux, fzf, oh-my-posh)"
+  echo "-- brew bundle (Brewfile: ghostty, tmux, fzf, oh-my-posh, eza, zoxide, ...)"
   brew bundle --file "$REPO/Brewfile" || echo "   (brew bundle had failures — continuing)"
 else
-  echo "-- Homebrew not found. Install deps manually: Ghostty, tmux, fzf, oh-my-posh"
+  echo "-- Homebrew not found. Install the Brewfile deps manually."
 fi
 
 # --- 2. Fonts ---------------------------------------------------------------
