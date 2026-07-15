@@ -1,0 +1,45 @@
+/* Midori input/dropdown surfaces + scrollbars.
+
+   Vivaldi DERIVES --colorBgIntense by pushing colorBg toward white (light
+   theme) / toward BLACK (dark theme). The address field, the omnibox dropdown
+   (.OmniDropdown), the start-page search dropdown (.SearchDropdown) and most
+   inputs all paint that variable — so Midori Night got pitch-black "typing
+   windows". Redefining the variable per theme retints every consumer at once
+   and stays robust across Vivaldi updates. !important is required: Vivaldi
+   sets these vars in an inline style attribute on #browser, and only
+   !important author rules beat inline styles. */
+#browser.theme-light {
+  --colorBgIntense: #faf9f6 !important;   /* site card white-warm */
+  --colorBgIntenser: #fffdf9 !important;
+}
+#browser.theme-dark {
+  --colorBgIntense: #262421 !important;   /* lifted warm card, not black */
+  --colorBgIntenser: #2e2b28 !important;
+}
+
+/* Dropdown panels on the card recipe: subtle hairline + soft shadow
+   (default is a harsh 0.35-alpha black drop shadow with a strong border). */
+#browser .OmniDropdown,
+#browser .SearchDropdown {
+  border: 1px solid var(--colorBorderSubtle) !important;
+  box-shadow: 0 1px 0 rgb(60 58 54 / 0.05), 0 12px 32px -16px rgb(0 0 0 / 0.45) !important;
+}
+
+/* UI scrollbars (incl. the calendar/dashboard cards): Vivaldi's dark thumb
+   (--colorFgFadedMost) and our earlier widget override (--colorBorder) BOTH
+   derive to near-black in Midori Night — that was the black pill. Explicit
+   muted-warm thumbs on a transparent track, site style. */
+#browser.theme-light ::-webkit-scrollbar-thumb {
+  background-color: rgb(138 131 120 / 0.35) !important;  /* --muted #8a8378 */
+}
+#browser.theme-light ::-webkit-scrollbar-thumb:hover,
+#browser.theme-light ::-webkit-scrollbar-thumb:active {
+  background-color: rgb(138 131 120 / 0.6) !important;
+}
+#browser.theme-dark ::-webkit-scrollbar-thumb {
+  background-color: rgb(133 126 114 / 0.4) !important;   /* --muted #857e72 */
+}
+#browser.theme-dark ::-webkit-scrollbar-thumb:hover,
+#browser.theme-dark ::-webkit-scrollbar-thumb:active {
+  background-color: rgb(133 126 114 / 0.65) !important;
+}

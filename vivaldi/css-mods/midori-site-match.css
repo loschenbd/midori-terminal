@@ -44,7 +44,8 @@
 #browser .dashboard-widget ::-webkit-scrollbar { width: 8px; }
 #browser .dashboard-widget ::-webkit-scrollbar-track { background: transparent; }
 #browser .dashboard-widget ::-webkit-scrollbar-thumb {
-  background: var(--colorBorder);
+  /* color comes from the theme-scoped rules in midori-surfaces.css —
+     var(--colorBorder) derives to near-black in the dark theme */
   border-radius: 100px;
 }
 
