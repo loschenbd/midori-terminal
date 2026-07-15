@@ -3,6 +3,17 @@
 # ANSI-16 color names/indices, so it retints automatically when the Ghostty
 # theme pair (midori-paper / midori-night) flips with macOS appearance.
 
+# Guarantee truecolor advertisement inside tmux. Claude Code (and other TUIs)
+# pick 24-bit vs 256-color from COLORTERM: `COLORTERM=truecolor` -> 24-bit,
+# otherwise TERM=tmux-256color -> 256-color. tmux does NOT put COLORTERM in its
+# default `update-environment` list, so a pane inherits it only if the tmux
+# SERVER happened to start from a shell that had it (a continuum auto-restore at
+# boot does not) — leaving Claude's diff bands as a muddy 256-color
+# approximation of the Midori washes (terracotta #ddc7b7 -> xterm-256 #d7af87)
+# instead of the exact truecolor Ghostty shows. Exporting it in every in-tmux
+# shell makes the depth deterministic regardless of how the server started.
+[ -n "$TMUX" ] && export COLORTERM=truecolor
+
 # Manuscript-style prompt: underlined sage path, middle-dot separators,
 # plain foreground colors only (no filled powerline blocks).
 if command -v oh-my-posh >/dev/null 2>&1; then
