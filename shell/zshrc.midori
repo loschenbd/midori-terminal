@@ -26,3 +26,22 @@ if command -v eza >/dev/null 2>&1; then
   alias la='eza -lah --icons=auto --group-directories-first --git'
   alias tree='eza --tree --icons=auto --git-ignore'
 fi
+
+# zsh niceties without an oh-my-zsh dependency: autosuggestions + syntax
+# highlighting from brew, skipped when a plugin manager already loaded them.
+# (syntax-highlighting must be sourced last — this fragment is appended to
+# the end of .zshrc, which satisfies that.)
+_midori_bp="${HOMEBREW_PREFIX:-/opt/homebrew}"
+[ -d "$_midori_bp" ] || _midori_bp=/usr/local
+if ! typeset -f _zsh_autosuggest_start >/dev/null; then
+  [ -f "$_midori_bp/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ] && \
+    source "$_midori_bp/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
+if ! typeset -f _zsh_highlight >/dev/null; then
+  [ -f "$_midori_bp/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ] && \
+    source "$_midori_bp/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+fi
+unset _midori_bp
+
+# zoxide: `z foo` jumps to the most-used directory matching "foo".
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
