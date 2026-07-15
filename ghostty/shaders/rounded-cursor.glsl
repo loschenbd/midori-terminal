@@ -17,10 +17,13 @@
 //
 // BASELINE_LIFT couples the two: the cursor bottom is lifted onto the text
 // baseline, and the dot rows are DEFINED as that baseline mod pitch — cursor
-// and dots coincide exactly at any cell height. (0.27 = (font descent +
-// cell-centering pad) / cell height for 14pt M PLUS 1 Code.)
+// and dots coincide exactly at any cell height. 0.178 was measured 2026-07-14
+// (14pt M PLUS 1 Code, 49px cell): prompt-underline y minus raw cell-bottom y
+// = -8.7px = -0.178 cells. The earlier 0.27 was tuned against baked dots that
+// had absorbed a bogus +4.5px "restart drift" recalibration — text sat 4.5px
+// below every dot row. Calibrate against the UNDERLINE, not old dot assets.
 
-const float BASELINE_LIFT = 0.27;
+const float BASELINE_LIFT = 0.178;
 
 // Midori surfaces (sRGB). Dots are drawn only over near-background pixels so
 // text, selections, and TUI fills stay clean.
