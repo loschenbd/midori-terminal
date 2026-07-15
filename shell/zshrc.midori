@@ -17,3 +17,12 @@ export FZF_DEFAULT_OPTS="--color=16,fg:-1,bg:-1,gutter:-1,hl:4,fg+:-1,bg+:-1,hl+
 # OSC 12 and can leave it behind on exit, turning the indigo cursor dark.
 _midori_cursor_reset() { printf '\e]112\a'; }
 precmd_functions+=(_midori_cursor_reset)
+
+# eza: iconed, dir-first listings. Colors ride the terminal's ANSI-16
+# palette, so they retint with the light/dark flip like everything else.
+if command -v eza >/dev/null 2>&1; then
+  alias ls='eza --icons=auto --group-directories-first'
+  alias ll='eza -lh --icons=auto --group-directories-first --git'
+  alias la='eza -lah --icons=auto --group-directories-first --git'
+  alias tree='eza --tree --icons=auto --git-ignore'
+fi
