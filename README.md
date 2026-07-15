@@ -106,6 +106,18 @@ Residual gotchas:
 - The watcher owns `~/.claude/themes/midori.json`; don't hand-edit it (edits
   are clobbered on the next appearance flip). Change the token maps in
   `watcher/midori-claude-theme.sh` instead, then re-run `./install.sh`.
+- **Diff colours are a binary patch, not a theme token.** Since ~2.1.186
+  Claude Code renders diffs through a syntax theme (GitHub/Monokai) with
+  colours hardcoded in the compiled binary — `~/.claude/themes` can't reach
+  them (upstream issues #66937/#69445). `tools/apply-claude-midori-patch.sh`
+  unpacks the binary (via `tweakcc`), rewrites the eight add/remove band
+  constants to the Midori washes (`tools/patch-claude-diffs.py`), and repacks +
+  re-signs it, so diffs stay Midori *with syntax highlighting on*. Needs
+  node/npx/python3. `brew upgrade claude-code` reverts it; the `claude` shell
+  wrapper in `shell/zshrc.midori` self-heals on next launch (re-patches only
+  when the resolved binary path changed). Opt out with `MIDORI_SKIP_CC_PATCH`;
+  restore stock with `brew reinstall claude-code`. Stock binary is backed up
+  under `~/.config/midori/claude-backup/`.
 
 ## Keeping machines in sync
 
