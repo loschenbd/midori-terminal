@@ -3,16 +3,25 @@
 # ANSI-16 color names/indices, so it retints automatically when the Ghostty
 # theme pair (midori-paper / midori-night) flips with macOS appearance.
 
-# Guarantee truecolor advertisement inside tmux. Claude Code (and other TUIs)
-# pick 24-bit vs 256-color from COLORTERM: `COLORTERM=truecolor` -> 24-bit,
-# otherwise TERM=tmux-256color -> 256-color. tmux does NOT put COLORTERM in its
-# default `update-environment` list, so a pane inherits it only if the tmux
-# SERVER happened to start from a shell that had it (a continuum auto-restore at
-# boot does not) — leaving Claude's diff bands as a muddy 256-color
-# approximation of the Midori washes (terracotta #ddc7b7 -> xterm-256 #d7af87)
-# instead of the exact truecolor Ghostty shows. Exporting it in every in-tmux
-# shell makes the depth deterministic regardless of how the server started.
-[ -n "$TMUX" ] && export COLORTERM=truecolor
+# Truecolor for Claude Code inside tmux. TWO env vars are required — one alone
+# does nothing:
+#   1. COLORTERM=truecolor — chalk/supports-color (which Claude's diff renderer
+#      uses) reads COLORTERM, not terminfo; with TERM=tmux-256color and no
+#      COLORTERM it caps at 256-color. This raises chalk's level to 24-bit.
+#   2. CLAUDE_CODE_TMUX_TRUECOLOR=1 — Claude Code has a DELIBERATE clamp (added
+#      v2.1.77, upstream issue #35148, verified in 2.1.210's binary):
+#        if(env.CLAUDE_CODE_TMUX_TRUECOLOR) return;         // escape hatch
+#        if(env.TMUX && chalk.level>2) chalk.level=2;       // force 256
+#      It runs AFTER COLORTERM detection and knocks the level back to 256 unless
+#      this var is set. So COLORTERM alone is silently undone; the escape hatch
+#      alone has nothing to protect (level is already 256). Both together give
+#      exact Midori washes (verified: bands emit 48;2;221;199;183 not 48;5;180).
+# Undocumented var; must be exported from the shell (the clamp reads it at
+# module load, before settings.json env injection).
+if [ -n "$TMUX" ]; then
+  export COLORTERM=truecolor
+  export CLAUDE_CODE_TMUX_TRUECOLOR=1
+fi
 
 # Manuscript-style prompt: underlined sage path, middle-dot separators,
 # plain foreground colors only (no filled powerline blocks).
