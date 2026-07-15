@@ -41,6 +41,19 @@ esac
 
 VERSION="$("$CLAUDE_BIN" --version 2>/dev/null | awk '{print $1}')"
 
+# Truecolor canary. Inside tmux, Claude Code deliberately clamps its colour depth
+# to 256 unless CLAUDE_CODE_TMUX_TRUECOLOR is set (upstream issue #35148). That
+# escape hatch is UNDOCUMENTED, so a future release could remove or rename it and
+# silently revert the Midori diffs to muddy 256-colour with no error. This runs on
+# every version change (the shell `claude` wrapper re-invokes us then), so warn
+# loudly if the hatch has vanished from the new binary.
+if ! LC_ALL=C grep -q -a -F "CLAUDE_CODE_TMUX_TRUECOLOR" "$CLAUDE_BIN" 2>/dev/null; then
+  echo "!! Claude Code $VERSION no longer contains CLAUDE_CODE_TMUX_TRUECOLOR." >&2
+  echo "   The tmux truecolor escape hatch may have changed — diffs could render" >&2
+  echo "   muddy 256-colour inside tmux again. Fallback: alias claude='TMUX= claude'." >&2
+  echo "   Re-check upstream issue #35148 and update shell/zshrc.midori." >&2
+fi
+
 # Marker = signature of the NEWEST patch (codespan inline-code). Keying the
 # idempotency check on this means adding a patch to patch-claude-diffs.py forces
 # re-application over a binary that only has the older patches.
