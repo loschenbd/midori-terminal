@@ -82,8 +82,10 @@ else
 fi
 
 touch "$HOME/.tmux.conf"
-if grep -q "midori" "$HOME/.tmux.conf"; then
-  echo "   .tmux.conf already references midori — not appending"
+# Detect the actual source-file line (not any mention of "midori" — a comment
+# elsewhere used to false-match and leave the fragment unsourced).
+if grep -q "config/midori/midori.tmux.conf" "$HOME/.tmux.conf"; then
+  echo "   .tmux.conf already sources the midori fragment — not appending"
 else
   printf '\n# Midori terminal theme (midori-terminal repo)\nsource-file ~/.config/midori/midori.tmux.conf\n' >> "$HOME/.tmux.conf"
   echo "   appended source-file line to .tmux.conf"
