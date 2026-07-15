@@ -63,34 +63,40 @@ this layer to re-skin everything without touching the infrastructure.
 Fonts follow the site's semantic split: **Spectral** is the naming voice
 (titles, headers), **M PLUS** is the working voice (text you read and type).
 
-## Display gotchas (read before fighting the dot grid)
+## How the dot grid stays aligned (Ghostty)
 
-Ghostty draws background images at **physical pixels** (`fit = none`), so the
-dot grid needs `@2x` assets on retina and `@1x` on 1x externals. The watcher
-flips symlinks when the main display class changes — but Ghostty only re-reads
-images on config reload, so hit **Cmd+Shift+,** after docking/undocking.
+**The dots are drawn by the cursor shader, not the background image.**
+`ghostty/shaders/rounded-cursor.glsl` anchors the lattice to the live cell
+geometry Ghostty reports via `iCurrentCursor`: pitch = cell height, rows = the
+text baseline. Dots therefore track the text rows *by construction* on any
+display, at any cell height — there is no phase to calibrate. The baked
+`*-glow` images carry only the low-frequency washes
+(`tools/bake-backgrounds.py --without-dots`); the `*-dots` tiles are retired.
 
-**Baseline lock:** text rows land on the 24 pt dot grid because
-`adjust-cell-height` stretches the cell to exactly one grid step. It is
-**coupled to font size**: 14 pt → 38.9 %, 15 pt → 29.7 %, 16 pt → 21.6 %.
-Change one, change both. And the font family must be exactly `"M PLUS 1 Code"`
-— a wrong name silently falls back to JetBrains Mono and breaks the lock.
+Glow images still render at **physical pixels** (`fit = none`), so the watcher
+flips `@2x`/`@1x` symlinks when the main display class changes — Ghostty only
+re-reads images on config reload, so hit **Cmd+Shift+,** after
+docking/undocking.
 
-### Calibrating the dot phase on a new display
+Residual gotchas:
 
-The vertical dot offset does **not** scale cleanly between displays — measure
-it, don't derive it:
-
-1. Screenshot a terminal with a prompt underline visible (`screencapture -x`).
-2. Measure the y-pixel of a dot row and of the underline/text baseline
-   (any pixel tool; `sips -s format bmp` + a few lines of python works).
-3. The difference mod the tile size is your phase error. Adjust and rebake:
-   `tools/bake-backgrounds.py --scale 1x --glow-size <WxH> --dot-cy <new>`
-4. Reload Ghostty, re-measure, repeat until dots sit on baselines.
-
-Known-good values: `cy 11.5` @2x (16" MacBook Pro), `cy 10.75` @1x
-(LG ultrawide). Box-drawing rules (TUI separators) render at cell *center*
-and can never share the baseline lattice — that's expected, not a bug.
+- `adjust-cell-height` nudges the row pitch toward the 24 pt rhythm, but
+  Ghostty integer-izes the *base* cell height before applying the percentage
+  (35 px × 1.37 → 48, not 34.585 × 1.37) and applies it **at app startup
+  only**. An off-by-one no longer breaks alignment — the shader follows
+  whatever the cell is — it only nudges the rhythm off 24 pt. Coupled to
+  font size.
+- The font family must be exactly `"M PLUS 1 Code"` — a wrong name silently
+  falls back to JetBrains Mono and changes the cell metrics.
+- Dots disappear in full-screen TUIs that hide the cursor (no cursor uniform,
+  no anchor) — a known trade-off.
+- Box-drawing rules (TUI separators) render at cell *center* and can never
+  share the baseline lattice — expected, not a bug.
+- The themes set `cursor-color` to the exact background hex **on purpose**:
+  the native cursor composites after the shader and the hollow unfocused one
+  ignores `cursor-opacity`, so bg-on-bg hides every native draw and the
+  shader substitutes the indigo ink when it sees that sentinel. Don't "fix"
+  the cursor color in the theme files.
 
 ## Claude Code notes
 
