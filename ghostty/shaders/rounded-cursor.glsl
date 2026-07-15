@@ -14,6 +14,9 @@
 //   For a block cursor, .w (height) = one cell = the dot pitch.
 //   iCurrentCursorColor = live cursor color (follows the midori themes).
 //   iCurrentCursorStyle.x = 1 -> hollow (unfocused window) -> draw outline.
+//   iCursorVisible = DECTCEM (CSI ?25l/h) only — NOT blink phase or focus.
+//   When hidden, Ghostty leaves iCurrentCursor at its last (stale) value, so
+//   the lattice below can still anchor to it; only the cursor draw is gated.
 //
 // BASELINE_LIFT couples the two: the cursor bottom is lifted onto the text
 // baseline, and the dot rows are DEFINED as that baseline mod pitch — cursor
@@ -91,6 +94,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
     // ---- rounded cursor, drawn over the dots ----
+    // Apps that hide the cursor (Claude Code's choice UI, fzf, TUIs) send
+    // CSI ?25l; the native cursor stops rendering but our replacement must
+    // opt in, or it ghosts at the stale iCurrentCursor position.
+    if (iCursorVisible == 0) return;
     // Baseline lock: lift so the bottom edge rests on the baseline dot row
     // and the top touches the previous dot row. Set BASELINE_LIFT to 0.0 for
     // the stock cell-aligned cursor (dots will follow it — they share it).
