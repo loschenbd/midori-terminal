@@ -147,6 +147,23 @@ binary after updates lives **in the shell fragment**. If your `~/.zshrc` inlines
 midori bits instead of sourcing the fragment, that wrapper never loads and
 updates silently revert to stock diffs — so keep the `source` line, don't inline.
 
+## Tests
+
+Most of the repo is declarative (themes, fragments, shaders) and validated by
+eye. The one piece with real, fragile logic — `tools/patch-claude-diffs.py`,
+which silently breaks when Claude Code's minified binary changes — has unit
+tests:
+
+```sh
+python3 tests/test_patch_claude_diffs.py   # patcher logic (idempotency, fail-loud, name-capture)
+sh tests/lint.sh                           # + shellcheck, py_compile, zsh/tmux fragment parse
+```
+
+CI (`.github/workflows/ci.yml`) runs the portable subset (unit tests, py_compile,
+shellcheck) on every push. The patcher tests build their fixtures from the
+module's own `TRIPLE_PATCHES`, so they track palette changes instead of going
+stale.
+
 ## Keeping machines in sync
 
 On the machine where the theme evolves:

@@ -1,0 +1,35 @@
+name: ci
+
+# Portable checks only — the patcher unit tests, Python compile, and shellcheck.
+# The tmux/zsh fragment parsing lives in tests/lint.sh (run it locally on macOS;
+# the tmux fragment uses `defaults`, which doesn't exist on the Linux runner).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Patcher unit tests
+        run: python3 tests/test_patch_claude_diffs.py
+
+      - name: Python compiles
+        run: |
+          for py in $(find . -name '*.py' -not -path './.git/*'); do
+            python3 -m py_compile "$py"
+          done
+
+      - name: Shellcheck (errors only)
+        run: |
+          # shellcheck is preinstalled on ubuntu-latest runners.
+          for sh in $(find . -name '*.sh' -not -path './.git/*'); do
+            shellcheck -S error "$sh"
+          done
