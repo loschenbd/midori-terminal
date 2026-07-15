@@ -123,11 +123,14 @@ Residual gotchas:
   unpacks the binary (via `tweakcc`), rewrites the eight add/remove band
   constants to the Midori washes (`tools/patch-claude-diffs.py`), and repacks +
   re-signs it, so diffs stay Midori *with syntax highlighting on*. Needs
-  node/npx/python3. `brew upgrade claude-code` reverts it; the `claude` shell
-  wrapper in `shell/zshrc.midori` self-heals on next launch (re-patches only
-  when the resolved binary path changed). Opt out with `MIDORI_SKIP_CC_PATCH`;
-  restore stock with `brew reinstall claude-code`. Stock binary is backed up
-  under `~/.config/midori/claude-backup/`.
+  node/npx/python3. **Any** Claude Code update reverts it — the native installer's
+  updater (`~/.local/share/claude/versions/<v>`, the default now) or a
+  `brew upgrade` on older brew-cask installs — because it restores the stock
+  binary. The `claude` shell wrapper in `shell/zshrc.midori` self-heals on next
+  launch, re-patching whenever the resolved binary path changes (works for both
+  update mechanisms). Opt out with `MIDORI_SKIP_CC_PATCH`; restore stock by
+  copying back the per-version backup under `~/.config/midori/claude-backup/`
+  (or `brew reinstall claude-code` if you're on the brew cask).
 
 ## Shell & tmux fragments are additive
 
