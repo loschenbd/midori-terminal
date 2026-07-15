@@ -10,12 +10,14 @@ them — Claude Code issues #66937 / #69445), so the only lever is the binary:
    parenthesised RGB, capturing whatever minified constructor name precedes the
    paren so a rename from `Xl` can't defeat us.
 
-2. Inline code (`` `codespan` ``) — rendered by `Ro("permission",t)(e.text)`.
-   `Ro(name,t)` looks up `UX(t)[name]`, but `UX` switches on the base-mode
+2. Inline code (`` `codespan` ``) — rendered by `<helper>("permission",t)(e.text)`.
+   `<helper>(name,t)` looks up `UX(t)[name]`, but `UX` switches on the base-mode
    NAME ("light"/"dark"/…) and discards custom overrides, so midori's
    `permission` never applies and stock ansi-blue shows. `t` at the call site
    IS the base-mode string, so we swap the token for a literal chosen per mode
-   (values starting with `#` bypass the broken lookup in `Ro`).
+   (values starting with `#` bypass the broken lookup). The minified helper
+   name churns between releases (Ro in 2.1.202, Zn in 2.1.210), so we capture
+   it rather than hardcode it — same tactic as the diff constructor.
 
 Idempotent: each patch is skipped if already applied, replaced if stock is
 present, and FAILS LOUDLY if neither is found (Claude Code changed the code —
@@ -36,11 +38,13 @@ TRIPLE_PATCHES = [
     ("92,2,0",   "116,75,54", "diffRemovedWord(dark) #744b36"),
 ]
 
-# (stock literal, Midori literal, label) — exact string swaps
-LITERAL_PATCHES = [
-    # inline code: permission token -> per-mode midori (light #3a5572 / dark #6c87a4)
-    ('Ro("permission",t)',
-     'Ro(t.includes("dark")?"#6c87a4":"#3a5572",t)',
+# Per-mode midori inline-code colour, injected into `<helper>("permission",t)`.
+MIDORI_CODESPAN = 't.includes("dark")?"#6c87a4":"#3a5572"'  # light #3a5572 / dark #6c87a4
+
+# (stock-call regex, replacement template, label) — helper name captured as \1
+CALL_PATCHES = [
+    (r'([A-Za-z_$][\w$]*)\("permission",t\)',
+     rf'\g<1>({MIDORI_CODESPAN},t)',
      "codespan inline-code colour (per-mode)"),
 ]
 
@@ -58,16 +62,17 @@ def _apply_triple(src, stock, midori, label):
     return pat.sub(rf"\g<1>({midori})", src, count=1), "patch"
 
 
-def _apply_literal(src, stock, midori, label):
-    if src.count(midori):
-        return src, "skip"
-    n = src.count(stock)
-    if n != 1:
+def _apply_call(src, stock_re, repl, label):
+    if MIDORI_CODESPAN in src:
+        return src, "skip"  # already patched
+    pat = re.compile(stock_re)
+    hits = pat.findall(src)
+    if len(hits) != 1:
         raise SystemExit(
-            f"ABORT: stock string [{label}] matched {n}x (expected 1). "
+            f"ABORT: stock call [{label}] matched {len(hits)}x (expected 1). "
             f"Claude Code changed — refresh {sys.argv[0]}."
         )
-    return src.replace(stock, midori, 1), "patch"
+    return pat.sub(repl, src, count=1), "patch"
 
 
 def patch(src: str) -> str:
@@ -75,8 +80,8 @@ def patch(src: str) -> str:
     for stock, midori, label in TRIPLE_PATCHES:
         src, r = _apply_triple(src, stock, midori, label)
         patched += r == "patch"; skipped += r == "skip"
-    for stock, midori, label in LITERAL_PATCHES:
-        src, r = _apply_literal(src, stock, midori, label)
+    for stock_re, repl, label in CALL_PATCHES:
+        src, r = _apply_call(src, stock_re, repl, label)
         patched += r == "patch"; skipped += r == "skip"
     print(f"diff+inline patches: {patched} applied, {skipped} already present")
     return src
