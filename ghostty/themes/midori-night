@@ -30,8 +30,9 @@ palette = 15=#faf9f6
 
 background = #1a1917
 foreground = #ebe8e2
-# cursor: lifted indigo ink (fountain-pen blue, like Lamy blue)
-cursor-color = #6c87a4
+# cursor: EXACT background hex sentinel — see midori-paper for why. The
+# shader substitutes the lifted indigo ink (#6c87a4).
+cursor-color = #1a1917
 cursor-text = #1a1917
 # selection: sage lift (~30% --accent over --background)
 selection-background = #40453d

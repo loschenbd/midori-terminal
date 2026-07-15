@@ -34,6 +34,15 @@ const vec3  NIGHT_DOT = vec3(154.0, 189.0, 179.0) / 255.0;
 const float PAPER_DOT_ALPHA = 0.46;
 const float NIGHT_DOT_ALPHA = 0.1748;  // site dark dot alpha x overlay opacity
 
+// The themes set cursor-color to the EXACT background hex: the native cursor
+// is composited AFTER this shader (so it can't be erased here) and
+// cursor-opacity=0 does NOT hide the hollow unfocused cursor — bg-on-bg makes
+// every native cursor draw invisible. When the reported cursor color IS that
+// sentinel, substitute the intended indigo ink; any other color (e.g. an
+// app's OSC 12) passes through untouched.
+const vec3 PAPER_CURSOR = vec3( 58.0,  85.0, 114.0) / 255.0;  // #3a5572
+const vec3 NIGHT_CURSOR = vec3(108.0, 135.0, 164.0) / 255.0;  // #6c87a4
+
 float sdRoundBox(vec2 p, vec2 b, float r) {
     vec2 q = abs(p) - b + r;
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
@@ -102,6 +111,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         shape = 1.0 - smoothstep(-0.75, 0.75, d);
     }
 
+    // bg-sentinel cursor color -> indigo ink (tolerances cover the uniform
+    // arriving in either sRGB or linear encoding)
+    vec3 ink = iCurrentCursorColor.rgb;
+    if (bgMatch(ink, PAPER_BG, 0.02, 0.04) != 0)      ink = PAPER_CURSOR;
+    else if (bgMatch(ink, NIGHT_BG, 0.02, 0.005) != 0) ink = NIGHT_CURSOR;
+
     // 0.9 alpha: a hint of the glyph shows through a block cursor over text
-    fragColor = mix(fragColor, vec4(iCurrentCursorColor.rgb, 1.0), shape * 0.9);
+    fragColor = mix(fragColor, vec4(ink, 1.0), shape * 0.9);
 }

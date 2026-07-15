@@ -30,8 +30,11 @@ palette = 15=#faf9f6
 
 background = #f3f1eb
 foreground = #2a2825
-# cursor: indigo ink (--ink-indigo — fountain-pen blue, like Lamy blue)
-cursor-color = #3a5572
+# cursor: set to the EXACT background hex as a sentinel. The native cursor is
+# composited AFTER the custom shader, and cursor-opacity=0 does NOT hide the
+# hollow unfocused cursor — bg-on-bg makes every native cursor draw invisible.
+# The shader detects this sentinel and substitutes the indigo ink (#3a5572).
+cursor-color = #f3f1eb
 cursor-text = #f3f1eb
 # selection: sage wash (~25% --accent over --background)
 selection-background = #ced1c8
