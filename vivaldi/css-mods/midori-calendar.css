@@ -99,6 +99,25 @@
   overflow: hidden !important;
 }
 
+/* ── Per-event differentiation ───────────────────────────────────────────────
+   Vivaldi differentiates events only by a faint 20%-alpha wash of the source
+   calendar's color — no accent bar, no separation between adjacent blocks — so
+   a stack of same-calendar events reads as one mass and two different calendars
+   barely differ. Each event exposes its calendar's SOLID color as
+   --colorCalendarBg; use it for a saturated left rail (calendar identity at a
+   glance, matching the mail left-rail language) plus a soft same-color border
+   so back-to-back blocks separate. Theme-adaptive for free — the var is set per
+   event in both light and dark. */
+#browser .calendar-grid-hours .calendar-event,
+#browser .calendar-grid-month .calendar-event {
+  box-shadow: inset 3px 0 0 var(--colorCalendarBg) !important;
+  border: 1px solid color-mix(in srgb, var(--colorCalendarBg), transparent 55%) !important;
+  border-radius: 4px !important;
+}
+#browser .calendar-grid-hours .cal-event-header {
+  padding-left: 4px !important;
+}
+
 /* ── Date-range title + view labels → Spectral ───────────────────────────── */
 #browser .calendar-header-title,
 #browser [class*="calendar-navigation"] [class*="title"],
