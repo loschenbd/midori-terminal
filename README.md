@@ -15,8 +15,13 @@ cd midori-terminal
 ./install.sh
 ```
 
-Then restart Ghostty. For the Vivaldi themes: quit Vivaldi and run
-`./vivaldi/install-vivaldi.sh`. For Cursor/VS Code: `./vscode/install-vscode.sh`
+Then restart Ghostty. Vivaldi is set up by `install.sh` too (themes, CSS mods,
+and the canonical keyboard shortcuts from `vivaldi/keyboard.json`) — but only if
+Vivaldi is closed, since it rewrites its config on exit. To choose which
+profile(s) get the treatment, quit Vivaldi and run `./vivaldi/install-vivaldi.sh`
+for an interactive profile picker (`--profile "Artisan Studios"` / `--profile all`
+to skip the prompt). After tweaking hotkeys in Vivaldi's UI, re-export them with
+`./vivaldi/export-keyboard.sh` so the repo stays the source of truth. For Cursor/VS Code: `./vscode/install-vscode.sh`
 (it prints the settings snippet to wire up auto light/dark + icons). For
 Obsidian: `./obsidian/install-obsidian.sh`.
 
