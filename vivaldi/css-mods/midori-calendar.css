@@ -73,7 +73,14 @@
   min-height: 0 !important;
   overflow: hidden !important;
 }
-#browser .calendar-grid-hours .cal-event-body {
+/* Show only time + title in the time-grid block; hide the description. The body
+   is a CSS grid, so on a short (e.g. 30-min ≈ 32px) event the header row and the
+   description's first line get crushed into the same space and render garbled.
+   Time-grid blocks read like Google Calendar — title only; full text on click. */
+#browser .calendar-grid-hours .cal-event-body-content {
+  display: none !important;
+}
+#browser .calendar-grid-hours .cal-event-header {
   overflow: hidden !important;
 }
 
