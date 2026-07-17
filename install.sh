@@ -129,10 +129,13 @@ else:
 EOF
 fi
 
-# --- 8. Claude Code diff-colour binary patch ---------------------------------
-# Claude Code hardcodes diff-band colours in its compiled binary (theme files
-# can't reach them), so we patch the binary to render the Midori washes while
-# keeping syntax highlighting on. Idempotent + version-aware; needs node/npx.
+# --- 8. Claude Code theme-bypass binary patch --------------------------------
+# Three render paths ignore ~/.claude/themes and read hardcoded colours from the
+# compiled binary — diff bands, inline `codespan`, and the `suggestion` token
+# (tips / ghost-text). The suggestion + codespan helper resolves via UX(mode),
+# which drops custom overrides, so those theme values are decoys without this.
+# We patch the binary to render the Midori colours while keeping syntax
+# highlighting on. Idempotent + version-aware; needs node/npx.
 # Any Claude Code update reverts it (the native updater or a brew upgrade both
 # restore the stock binary) — re-run ./install.sh, or the `claude` shell wrapper
 # self-heals on next launch. Opt out with MIDORI_SKIP_CC_PATCH; restore stock from
@@ -154,7 +157,7 @@ cat <<'EOF'
 == Done ==
 Next steps:
   1. Restart Ghostty (or Cmd+Shift+, to reload if already themed once).
-  2. Restart Claude Code to pick up the Midori diff-colour binary patch.
+  2. Restart Claude Code to pick up the Midori binary patch (diffs, inline code, tips).
   3. Vivaldi themes: quit Vivaldi, then run  ./vivaldi/install-vivaldi.sh
   4. New display? See README "Calibrating the dot phase" + tools/bake-backgrounds.py
 EOF

@@ -116,13 +116,20 @@ Residual gotchas:
   undocumented escape hatch that disables the clamp). Either alone still renders
   256-color — you need both, exported from the shell (the clamp reads them at
   module load). Ghostty-direct is unaffected (no `$TMUX`, no clamp).
-- **Diff colours are a binary patch, not a theme token.** Since ~2.1.186
-  Claude Code renders diffs through a syntax theme (GitHub/Monokai) with
-  colours hardcoded in the compiled binary — `~/.claude/themes` can't reach
-  them (upstream issues #66937/#69445). `tools/apply-claude-midori-patch.sh`
-  unpacks the binary (via `tweakcc`), rewrites the eight add/remove band
-  constants to the Midori washes (`tools/patch-claude-diffs.py`), and repacks +
-  re-signs it, so diffs stay Midori *with syntax highlighting on*. Needs
+- **Some colours are a binary patch, not a theme token.** Three render paths
+  bypass `~/.claude/themes` entirely, so a value you set there silently does
+  nothing and the binary is the only lever (upstream issues #66937/#69445):
+  (1) **diff bands** — hardcoded RGB triples since ~2.1.186; (2) **inline code**
+  (`` `codespan` ``) and (3) **the `suggestion` token** (tips, ghost-text — e.g.
+  the blue `ultracode` keyword) both go through a helper that resolves via
+  `UX(mode)`, which switches on the base-mode *name* and **discards custom
+  overrides**, so your `permission`/`suggestion` values never apply and stock
+  ansi-blue/periwinkle shows. `tools/apply-claude-midori-patch.sh` unpacks the
+  binary (via `tweakcc`), and `tools/patch-claude-diffs.py` rewrites the eight
+  diff-band constants to the Midori washes *and* injects per-mode `#`-literals
+  into the codespan + suggestion call sites (a `#`-prefixed value bypasses the
+  broken `UX` lookup), then repacks + re-signs it — so diffs, inline code, and
+  tips all stay Midori *with syntax highlighting on*. Needs
   node/npx/python3. **Any** Claude Code update reverts it — the native installer's
   updater (`~/.local/share/claude/versions/<v>`, the default now) or a
   `brew upgrade` on older brew-cask installs — because it restores the stock
