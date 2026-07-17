@@ -88,11 +88,11 @@
    whole event box (hard guarantee against runaway height, whatever the body
    contains — paragraphs, links, ascii dividers) and clamp the description text
    to a 2-line preview with an ellipsis. Time + title always survive. */
-#browser .calendar-grid-month .calendar-event {
+#browser .calendar-grid-days .calendar-event {
   max-height: 5.5em !important;
   overflow: hidden !important;
 }
-#browser .calendar-grid-month .cal-event-description {
+#browser .calendar-grid-days .cal-event-description {
   display: -webkit-box !important;
   -webkit-box-orient: vertical !important;
   -webkit-line-clamp: 2 !important;
@@ -109,7 +109,7 @@
    so back-to-back blocks separate. Theme-adaptive for free — the var is set per
    event in both light and dark. */
 #browser .calendar-grid-hours .calendar-event,
-#browser .calendar-grid-month .calendar-event {
+#browser .calendar-grid-days .calendar-event {
   box-shadow: inset 3px 0 0 var(--colorCalendarBg) !important;
   border: 1px solid color-mix(in srgb, var(--colorCalendarBg), transparent 55%) !important;
   border-radius: 4px !important;
