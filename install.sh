@@ -151,6 +151,23 @@ else
   sh "$HOME/.config/midori/apply-claude-midori-patch.sh" || echo "   (diff patch skipped/failed — non-fatal)"
 fi
 
+# --- 9. Vivaldi themes + hotkeys ---------------------------------------------
+# Applies to the Default profile non-interactively (set MIDORI_VIVALDI_PROFILE
+# to a name / "all" to widen). Skipped while Vivaldi is running, since it
+# rewrites Preferences on exit — run ./vivaldi/install-vivaldi.sh yourself then
+# (no args = interactive profile picker).
+if [ -n "$MIDORI_SKIP_VIVALDI" ]; then
+  echo "-- skipping Vivaldi (MIDORI_SKIP_VIVALDI set)"
+elif [ ! -d "$HOME/Library/Application Support/Vivaldi" ]; then
+  echo "-- Vivaldi not installed — skipping"
+elif pgrep -xq Vivaldi; then
+  echo "-- Vivaldi running — skipping. Quit it, then: ./vivaldi/install-vivaldi.sh"
+else
+  echo "-- vivaldi themes + hotkeys (profile: ${MIDORI_VIVALDI_PROFILE:-Default})"
+  sh "$REPO/vivaldi/install-vivaldi.sh" --profile "${MIDORI_VIVALDI_PROFILE:-Default}" \
+    || echo "   (vivaldi setup skipped/failed — non-fatal)"
+fi
+
 # --- Done ---------------------------------------------------------------------
 cat <<'EOF'
 
@@ -158,6 +175,7 @@ cat <<'EOF'
 Next steps:
   1. Restart Ghostty (or Cmd+Shift+, to reload if already themed once).
   2. Restart Claude Code to pick up the Midori binary patch (diffs, inline code, tips).
-  3. Vivaldi themes: quit Vivaldi, then run  ./vivaldi/install-vivaldi.sh
+  3. Vivaldi: applied to the Default profile above (if it was closed). To pick a
+     specific profile, quit Vivaldi and run  ./vivaldi/install-vivaldi.sh
   4. New display? See README "Calibrating the dot phase" + tools/bake-backgrounds.py
 EOF
