@@ -61,6 +61,37 @@
   border-color: var(--colorBorderSubtle) !important;
 }
 
+/* ── Runaway events ──────────────────────────────────────────────────────────
+   Vivaldi's event blocks size to their (sometimes enormous) description text.
+   In the time-grid views the event is a CSS-grid item spanning its duration
+   (e.g. grid-area: 48/5/51/6) but with the default min-height:auto, so it grows
+   PAST its time slot to fit the text instead of clipping — a 45-min meeting with
+   a giant Calendly body becomes 2000px tall and overlaps everything below.
+   Fixing min-height:0 lets it respect its duration track; overflow:hidden clips
+   the spill. Title + time sit at the top, so only excess body text is trimmed. */
+#browser .calendar-grid-hours .calendar-event {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+#browser .calendar-grid-hours .cal-event-body {
+  overflow: hidden !important;
+}
+
+/* Month / multiweek cells have no duration track to bound the event. Cap the
+   whole event box (hard guarantee against runaway height, whatever the body
+   contains — paragraphs, links, ascii dividers) and clamp the description text
+   to a 2-line preview with an ellipsis. Time + title always survive. */
+#browser .calendar-grid-month .calendar-event {
+  max-height: 5.5em !important;
+  overflow: hidden !important;
+}
+#browser .calendar-grid-month .cal-event-description {
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  overflow: hidden !important;
+}
+
 /* ── Date-range title + view labels → Spectral ───────────────────────────── */
 #browser .calendar-header-title,
 #browser [class*="calendar-navigation"] [class*="title"],
