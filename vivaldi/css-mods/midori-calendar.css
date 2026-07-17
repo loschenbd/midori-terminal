@@ -1,0 +1,71 @@
+/* Midori Calendar — brand facelift for Vivaldi's built-in Calendar UI.
+   Spectral for day-names / date-range / view labels; sage today-column wash +
+   sage now-line as the signature; hairline warm grid. */
+
+#browser.theme-light {
+  --m-sage: #5f6f5e; --m-sage-soft: rgb(95 111 94 / .10);
+  --m-sage-line: rgb(95 111 94 / .5); --m-ink: #2a2825; --m-muted: #8a8378;
+}
+#browser.theme-dark {
+  --m-sage: #9aab97; --m-sage-soft: rgb(154 171 151 / .12);
+  --m-sage-line: rgb(154 171 151 / .55); --m-ink: #ebe8e2; --m-muted: #857e72;
+}
+
+/* ── Day-name headers → Spectral naming band ─────────────────────────────── */
+#browser .calendar-header-date {
+  font-family: "Spectral", ui-serif, Georgia, serif !important;
+  font-weight: 600 !important;
+  color: var(--m-ink) !important;
+  letter-spacing: .01em;
+}
+
+/* ── Hour / time labels → muted working voice ────────────────────────────── */
+#browser .cal-event-time,
+#browser .calendar-grid-hour,
+#browser [class*="hour-label"],
+#browser [class*="timeline-label"] {
+  color: var(--m-muted) !important;
+}
+
+/* ── Today (signature) ───────────────────────────────────────────────────────
+   Week/Day view: the today column is `.current-time`, a full-height overlay
+   (NOT a thin line) whose inner `.marker` is the actual now-line. Give the
+   overlay a FAINT sage wash and color only the marker. Month view: `.day.current`
+   cell. Both get a sage top-rule on the header. */
+#browser .current-time {
+  background: var(--m-sage-soft) !important;
+}
+#browser .current-time .marker {
+  background-color: var(--m-sage) !important;
+  height: 2px !important;
+}
+#browser .current-time .marker::before {
+  background-color: var(--m-sage) !important;
+  border-color: var(--m-sage) !important;
+}
+#browser .calendar-drop-target.current,
+#browser .day.current {
+  background: var(--m-sage-soft) !important;
+  box-shadow: inset 0 2px 0 var(--m-sage) !important;
+}
+#browser .calendar-header-date.current {
+  background: var(--m-sage-soft) !important;
+  box-shadow: inset 0 2px 0 var(--m-sage) !important;
+  color: var(--m-sage) !important;
+}
+
+/* ── Grid hairlines → warm subtle ────────────────────────────────────────── */
+#browser .calendar-grid,
+#browser .calendar-drop-target,
+#browser .calendar-header-date {
+  border-color: var(--colorBorderSubtle) !important;
+}
+
+/* ── Date-range title + view labels → Spectral ───────────────────────────── */
+#browser .calendar-header-title,
+#browser [class*="calendar-navigation"] [class*="title"],
+#browser [class*="DateHeader"] {
+  font-family: "Spectral", ui-serif, Georgia, serif !important;
+  font-weight: 600 !important;
+  color: var(--m-ink) !important;
+}

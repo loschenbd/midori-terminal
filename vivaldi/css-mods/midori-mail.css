@@ -1,0 +1,100 @@
+/* Midori Mail — brand facelift for Vivaldi's built-in Mail UI.
+   Naming voice = Spectral (group headers, counts, subject); working voice =
+   M PLUS (rows, controls, inherited). Sage accent for unread + selection.
+   Uses Vivaldi derived vars where possible; !important beats inline UI vars. */
+
+#browser.theme-light {
+  --m-sage: #5f6f5e; --m-sage-soft: rgb(95 111 94 / .12);
+  --m-sage-line: rgb(95 111 94 / .55); --m-ink: #2a2825; --m-muted: #8a8378;
+  --m-card: #faf9f6;
+}
+#browser.theme-dark {
+  --m-sage: #9aab97; --m-sage-soft: rgb(154 171 151 / .16);
+  --m-sage-line: rgb(154 171 151 / .6); --m-ink: #ebe8e2; --m-muted: #857e72;
+  --m-card: #262421;
+}
+
+/* ── Panel: group headers → Spectral naming band ──────────────────────────── */
+#browser .mail-panel-category {
+  font-family: "Spectral", ui-serif, Georgia, serif !important;
+  font-weight: 600 !important;
+  font-size: 12.5px !important;
+  letter-spacing: .015em;
+  color: var(--m-muted) !important;
+}
+
+/* ── Panel: unread count pills — warm, not slate ─────────────────────────── */
+#browser .mail_panel_node .item-count,
+#browser .mail-panel-category .item-count {
+  border-radius: 6px !important;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600 !important;
+}
+#browser .mail_panel_node .item-count.counter-unseen,
+#browser .mail-panel-category .item-count.counter-unseen {
+  background: var(--m-sage-soft) !important;
+  color: var(--m-sage) !important;
+}
+#browser .mail_panel_node .item-count.counter-unread,
+#browser .mail-panel-category .item-count.counter-unread {
+  background: transparent !important;
+  color: var(--m-muted) !important;
+}
+
+/* ── Panel: selected folder → sage-tinted sheet w/ left rule ─────────────── */
+#browser .mail_panel_node.active,
+#browser .mail_panel_node.selected,
+#browser .mail_panel_node[aria-selected="true"] {
+  background: var(--m-sage-soft) !important;
+  box-shadow: inset 3px 0 0 var(--m-sage) !important;
+  border-radius: 6px !important;
+}
+
+/* ── List: unread status dot → sage (fill the SVG circle, not its box) ────── */
+#browser .mail_entry.unseen .mail-status-indicator svg path,
+#browser .mail_entry.unread .mail-status-indicator svg path {
+  fill: var(--m-sage) !important;
+}
+#browser .mail_entry.unseen .mail-contact-name {
+  color: var(--m-ink) !important;
+  font-weight: 600;
+}
+
+/* ── Selection → sage sheet w/ left rule. Scoped to mail (folder panel +
+      message list) via :has() so it never bleeds into bookmarks/history. ──── */
+#browser .tree-row-selected:has(.mail_panel_node),
+#browser .tree-row-selected:has(.mail_entry) {
+  background: var(--m-sage-soft) !important;
+  box-shadow: inset 3px 0 0 var(--m-sage) !important;
+  border-radius: 6px !important;
+}
+
+/* ── List header bar → Spectral utility voice ────────────────────────────── */
+#browser .MailListButtons-MessageCount,
+#browser .MailListButtons-TextMenuTitle,
+#browser .sortselector,
+#browser .sortselector-button {
+  font-family: "Spectral", ui-serif, Georgia, serif !important;
+  font-weight: 600 !important;
+  color: var(--m-muted) !important;
+}
+
+/* ── Reading pane: subject → Spectral display; header labels muted.
+      The subject text sits in a <button> inside h1.subject, so #browser button
+      (font mod) wins unless we target descendants too. ─────────────────────── */
+#browser .mail-detail-header h1.subject,
+#browser .mail-detail-header .subject,
+#browser .mail-detail-header .subject button,
+#browser .mail-detail-header .subject span {
+  font-family: "Spectral", ui-serif, Georgia, serif !important;
+  font-weight: 600 !important;
+  color: var(--m-ink) !important;
+}
+#browser .mail-detail-header .label {
+  color: var(--m-muted) !important;
+  font-weight: 500;
+}
+/* soft hairline under the message header */
+#browser .mail-detail-header {
+  border-bottom: 1px solid var(--colorBorderSubtle) !important;
+}
