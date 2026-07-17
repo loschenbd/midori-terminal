@@ -6,6 +6,14 @@
 # mode accents / semantic colors / chrome from the site + tokentrail palette.
 # Token names dumped from the 2.1.179 binary; unknown keys are silently
 # dropped by the loader, so stale names are harmless.
+#
+# DECOY TOKENS: `suggestion` (tips / ghost-text) and `permission` (inline
+# `codespan`) are written here for completeness but DO NOTHING via this file —
+# Claude Code resolves them through UX(mode), which discards custom overrides,
+# so the stock periwinkle/ansi-blue shows regardless of the value below. They're
+# enforced by the BINARY PATCH instead (tools/patch-claude-diffs.py). To recolor
+# tips or inline code, edit the #-literals there and re-run
+# tools/apply-claude-midori-patch.sh; changing them here has no effect.
 # Also retints live tmux pane borders on appearance change.
 # Managed by: ~/Library/LaunchAgents/com.benjaminloschen.midori-claude-theme.plist
 

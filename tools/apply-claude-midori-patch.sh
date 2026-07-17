@@ -58,10 +58,12 @@ if ! LC_ALL=C grep -q -a -F "CLAUDE_CODE_TMUX_TRUECOLOR" "$CLAUDE_BIN" 2>/dev/nu
   echo "   Re-check upstream issue #35148 and update shell/zshrc.midori." >&2
 fi
 
-# Marker = signature of the NEWEST patch (codespan inline-code). Keying the
-# idempotency check on this means adding a patch to patch-claude-diffs.py forces
-# re-application over a binary that only has the older patches.
-MARKER='?"#6c87a4":"#3a5572"'
+# Marker = signature of the NEWEST patch (suggestion / indigo-ink tips). Keying
+# the idempotency check on this means adding a patch to patch-claude-diffs.py
+# forces re-application over a binary that only has the older patches. (The bare
+# codespan signature `?"#6c87a4":"#3a5572"` is a substring of this one, so a
+# codespan-only binary correctly misses this marker and gets re-patched.)
+MARKER='.theme.includes("dark")?"#6c87a4":"#3a5572"'
 
 # Fully patched already? -> nothing to do.
 if LC_ALL=C grep -q -a -F "$MARKER" "$CLAUDE_BIN" 2>/dev/null; then

@@ -33,12 +33,15 @@ def run_patch(src):
         return m.patch(src)
 
 
-def stock_fixture(ctor="Xl", codespan_helper="Ro", triples=None):
+def stock_fixture(ctor="Xl", codespan_helper="Ro", triples=None, suggestion_helper="Zn"):
     """A minimal chunk of 'minified JS' containing each stock triple exactly once
-    (as `<ctor>(r,g,b)`) plus one codespan call `<helper>("permission",t)`."""
+    (as `<ctor>(r,g,b)`), one codespan call `<helper>("permission",t)`, and a few
+    `<helper>("suggestion",<mode>)` calls with the real mix of mode args."""
     triples = m.TRIPLE_PATCHES if triples is None else triples
     parts = [f"{ctor}({stock})" for stock, _, _ in triples]
     parts.append(f'{codespan_helper}("permission",t)')
+    for mode in ("e.theme", "d.theme", "ey"):
+        parts.append(f'{suggestion_helper}("suggestion",{mode})')
     return "const T=[" + ",".join(parts) + "];"
 
 
@@ -93,6 +96,44 @@ def test_codespan_alone_is_idempotent_skip():
     already = f"case codespan:return Zn({m.MIDORI_CODESPAN},t)(e.text);"
     out = run_patch(already + " " + stock_fixture())
     assert out.count(m.MIDORI_CODESPAN) == 1, "codespan double-applied over an existing patch"
+
+
+def test_suggestion_all_call_sites_rewritten():
+    out = run_patch(stock_fixture())
+    assert '"suggestion",' not in out, "a stock suggestion token survived"
+    dark, light = m.MIDORI_SUGGESTION_DARK, m.MIDORI_SUGGESTION_LIGHT
+    # Each mode arg is reused for both the dark-check and the fallback slot.
+    for mode in ("e.theme", "d.theme", "ey"):
+        assert f'Zn({mode}.includes("dark")?"{dark}":"{light}",{mode})' in out, (
+            f"suggestion call not rewritten for mode arg {mode}"
+        )
+
+
+def test_suggestion_preserves_minified_helper_name():
+    out = run_patch(stock_fixture(suggestion_helper="qq"))
+    dark, light = m.MIDORI_SUGGESTION_DARK, m.MIDORI_SUGGESTION_LIGHT
+    assert f'qq(e.theme.includes("dark")?"{dark}":"{light}",e.theme)' in out, (
+        "helper name not preserved on suggestion rewrite"
+    )
+
+
+def test_suggestion_idempotent_skip():
+    # Second pass over already-patched suggestion calls must not re-wrap them.
+    once = run_patch(stock_fixture())
+    twice = run_patch(once)
+    assert once == twice, "suggestion patch not idempotent"
+
+
+def test_fail_loud_when_suggestion_path_vanishes():
+    # No stock suggestion call and no patched marker → Claude Code changed → ABORT.
+    no_suggestion = stock_fixture(suggestion_helper="Zn").replace(
+        'Zn("suggestion",e.theme),', ""
+    ).replace('Zn("suggestion",d.theme),', "").replace('Zn("suggestion",ey)', "")
+    try:
+        run_patch(no_suggestion)
+    except SystemExit:
+        return
+    raise AssertionError("expected SystemExit when the suggestion render path is gone")
 
 
 # ── runner ───────────────────────────────────────────────────────────────────

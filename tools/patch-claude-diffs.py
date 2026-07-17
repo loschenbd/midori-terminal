@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Rewrite Claude Code's hardcoded diff + inline-code colours to Midori.
+"""Rewrite Claude Code's hardcoded diff + inline-code + suggestion colours to Midori.
 
-Operates on the JS that `tweakcc unpack` extracts from the native binary. Two
+Operates on the JS that `tweakcc unpack` extracts from the native binary. Three
 render paths bypass the theme token map (`~/.claude/themes/*.json` can't reach
 them — Claude Code issues #66937 / #69445), so the only lever is the binary:
 
@@ -18,6 +18,15 @@ them — Claude Code issues #66937 / #69445), so the only lever is the binary:
    (values starting with `#` bypass the broken lookup). The minified helper
    name churns between releases (Ro in 2.1.202, Zn in 2.1.210), so we capture
    it rather than hardcode it — same tactic as the diff constructor.
+
+3. The `suggestion` token — tips, ghost-text, and other hints render via the
+   SAME broken helper: `<helper>("suggestion",<mode>)(text)`. Because `UX`
+   discards custom overrides, midori's `suggestion` (#3a5572 light / #6c87a4
+   dark) never applies and stock periwinkle rgb(87,105,247) shows — e.g. the
+   blue `ultracode` keyword in the workflow tip. Same fix as codespan, but the
+   mode arg varies per call site (`e.theme` / `d.theme` / `ey`), so we capture
+   it and reuse it for the per-mode pick. All call sites are rewritten, so the
+   theme's dead `suggestion` value finally takes effect everywhere.
 
 Idempotent: each patch is skipped if already applied, replaced if stock is
 present, and FAILS LOUDLY if neither is found (Claude Code changed the code —
@@ -40,6 +49,15 @@ TRIPLE_PATCHES = [
 
 # Per-mode midori inline-code colour, injected into `<helper>("permission",t)`.
 MIDORI_CODESPAN = 't.includes("dark")?"#6c87a4":"#3a5572"'  # light #3a5572 / dark #6c87a4
+
+# Per-mode midori suggestion colour (indigo ink), injected into every
+# `<helper>("suggestion",<mode>)`. `<mode>` is captured (\2) so the dark check
+# reuses the same base-mode string zn already receives — mirrors MIDORI_CODESPAN.
+MIDORI_SUGGESTION_LIGHT = "#3a5572"
+MIDORI_SUGGESTION_DARK = "#6c87a4"
+# Skip marker: only the patched suggestion calls carry `.theme.includes("dark")`
+# (codespan uses bare `t.includes`), so its presence means we already ran.
+SUGGESTION_MARKER = f'.theme.includes("dark")?"{MIDORI_SUGGESTION_DARK}":"{MIDORI_SUGGESTION_LIGHT}"'
 
 # (stock-call regex, replacement template, label) — helper name captured as \1
 CALL_PATCHES = [
@@ -75,6 +93,30 @@ def _apply_call(src, stock_re, repl, label):
     return pat.sub(repl, src, count=1), "patch"
 
 
+# `<helper>("suggestion",<mode>)` — helper name (\1) and mode arg (\2) captured.
+# <mode> is a dotted/plain ident (e.theme, d.theme, ey), never a literal, so the
+# regex won't re-match our own `#`-literal output.
+_SUGGESTION_RE = re.compile(
+    r'([A-Za-z_$][\w$]*)\("suggestion",([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\)'
+)
+
+
+def _apply_suggestion(src):
+    hits = _SUGGESTION_RE.findall(src)
+    if not hits:
+        if SUGGESTION_MARKER in src:
+            return src, "skip", 0  # already patched
+        raise SystemExit(
+            'ABORT: no <helper>("suggestion",<mode>) calls found (expected >=1). '
+            f"Claude Code changed the suggestion render path — refresh {sys.argv[0]}."
+        )
+    repl = (
+        rf'\g<1>(\g<2>.includes("dark")?"{MIDORI_SUGGESTION_DARK}":'
+        rf'"{MIDORI_SUGGESTION_LIGHT}",\g<2>)'
+    )
+    return _SUGGESTION_RE.sub(repl, src), "patch", len(hits)
+
+
 def patch(src: str) -> str:
     patched = skipped = 0
     for stock, midori, label in TRIPLE_PATCHES:
@@ -83,7 +125,11 @@ def patch(src: str) -> str:
     for stock_re, repl, label in CALL_PATCHES:
         src, r = _apply_call(src, stock_re, repl, label)
         patched += r == "patch"; skipped += r == "skip"
-    print(f"diff+inline patches: {patched} applied, {skipped} already present")
+    src, r, n = _apply_suggestion(src)
+    patched += r == "patch"; skipped += r == "skip"
+    if r == "patch":
+        print(f"suggestion (indigo ink): {n} call sites rewritten")
+    print(f"diff+inline+suggestion patches: {patched} applied, {skipped} already present")
     return src
 
 
