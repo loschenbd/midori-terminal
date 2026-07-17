@@ -79,6 +79,48 @@
   color: var(--m-muted) !important;
 }
 
+/* ── Flag / Label colors → muted Midori palette ──────────────────────────────
+   Vivaldi paints flag/label icons with a saturated primary palette
+   (#ff0011 / #ff8800 / #ffdd00 / #33cc00 / #0088ff / #aa0099 / #666666). We keep
+   all seven distinguishable (they're semantic — you sort by them) but retint each
+   to an earthy, warm equivalent that reads on paper: clay · ochre · dijon · moss
+   · slate · plum · taupe.
+
+   Two hooks, both discovered over CDP:
+   - Flags carry a STABLE, universal id: [data-id="MAIL_FLAGS_Red"] … so we match
+     those directly.
+   - Labels carry [data-id^="MAIL_LABELS_"]; we match by the label's title within
+     that scope so a *folder* sharing the name (e.g. an "Important" folder, which
+     lives under a different data-id) is never recolored.
+   Target the painted <path> (the color lives on the icon's .fill-override group;
+   setting the path fill with !important wins outright). Label rules cover this
+   profile's labels — copy a title into a group if you add new ones. */
+#browser.theme-light [data-id="MAIL_FLAGS_Red"] svg.folder-icon path,
+#browser.theme-light [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Important"] svg.folder-icon path { fill: #b05140 !important; } /* clay */
+#browser.theme-light [data-id="MAIL_FLAGS_Orange"] svg.folder-icon path,
+#browser.theme-light [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Work"] svg.folder-icon path { fill: #bd7f3c !important; } /* ochre */
+#browser.theme-light [data-id="MAIL_FLAGS_Yellow"] svg.folder-icon path { fill: #b0902f !important; } /* dijon */
+#browser.theme-light [data-id="MAIL_FLAGS_Green"] svg.folder-icon path,
+#browser.theme-light [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Personal"] svg.folder-icon path { fill: #5f7a4e !important; } /* moss */
+#browser.theme-light [data-id="MAIL_FLAGS_Blue"] svg.folder-icon path,
+#browser.theme-light [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="To Do"] svg.folder-icon path { fill: #46617d !important; } /* slate */
+#browser.theme-light [data-id="MAIL_FLAGS_Purple"] svg.folder-icon path,
+#browser.theme-light [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Later"] svg.folder-icon path { fill: #7f5a74 !important; } /* plum */
+#browser.theme-light [data-id="MAIL_FLAGS_Gray"] svg.folder-icon path { fill: #8a8378 !important; } /* taupe */
+
+#browser.theme-dark [data-id="MAIL_FLAGS_Red"] svg.folder-icon path,
+#browser.theme-dark [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Important"] svg.folder-icon path { fill: #cf7a63 !important; }
+#browser.theme-dark [data-id="MAIL_FLAGS_Orange"] svg.folder-icon path,
+#browser.theme-dark [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Work"] svg.folder-icon path { fill: #d29a58 !important; }
+#browser.theme-dark [data-id="MAIL_FLAGS_Yellow"] svg.folder-icon path { fill: #cbab52 !important; }
+#browser.theme-dark [data-id="MAIL_FLAGS_Green"] svg.folder-icon path,
+#browser.theme-dark [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Personal"] svg.folder-icon path { fill: #93a87e !important; }
+#browser.theme-dark [data-id="MAIL_FLAGS_Blue"] svg.folder-icon path,
+#browser.theme-dark [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="To Do"] svg.folder-icon path { fill: #7e9bbb !important; }
+#browser.theme-dark [data-id="MAIL_FLAGS_Purple"] svg.folder-icon path,
+#browser.theme-dark [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Later"] svg.folder-icon path { fill: #b28fa6 !important; }
+#browser.theme-dark [data-id="MAIL_FLAGS_Gray"] svg.folder-icon path { fill: #a89e8f !important; }
+
 /* ── Reading pane: subject → Spectral display; header labels muted.
       The subject text sits in a <button> inside h1.subject, so #browser button
       (font mod) wins unless we target descendants too. ─────────────────────── */
