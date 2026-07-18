@@ -37,3 +37,15 @@
      the SemiBold's thicker strokes keep serifs crisp at ~96 DPI. */
   font-weight: 600;
 }
+
+/* URL field text → Spectral. Deliberate exception to the working-voice rule:
+   Ben wants the typed address in the naming voice. Scoped to the address field
+   only (not the whole toolbar); the 2-class/id specificity beats `#browser
+   input`. */
+#browser .UrlBar-AddressField,
+#browser .UrlBar-AddressField input,
+#browser .UrlBar-UrlField,
+#browser .UrlBar-UrlFieldValue {
+  font-family: "Spectral", ui-serif, Georgia, serif !important;
+  font-weight: 600;
+}

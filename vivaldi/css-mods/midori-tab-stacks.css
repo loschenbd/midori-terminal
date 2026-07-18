@@ -1,0 +1,102 @@
+/* Midori tab-stack colors — remap Vivaldi's 9 built-in stack/group colors to the
+   Midori palette. Vivaldi keys each color off a .colorN class on the tab and drives
+   the paint via --stackColorBg / --stackColorBgAlpha / --stackColorFg (see
+   :root #browser .colorN in Vivaldi's common.css). Overriding those vars recolors
+   BOTH the applied tab groups and the Edit-Stack picker swatches (same classes).
+   Palette gaps: Midori has no native pink/purple/cyan, so slots 6/7/8 are on-brand
+   muted derivations (dusty rose / plum / sage-teal). Light + dark tracked separately,
+   matching Vivaldi's own two-theme definitions. */
+
+/* --- light theme --- */
+:root #browser .color1 {
+  --stackColorBg: #524d46 !important;
+  --stackColorBgAlpha: rgba(82, 77, 70, var(--stackBgAlpha)) !important;
+  --stackColorFg: #fff !important;
+}
+:root #browser .color2 {
+  --stackColorBg: #3a5572 !important;
+  --stackColorBgAlpha: rgba(58, 85, 114, var(--stackBgAlpha)) !important;
+  --stackColorFg: #fff !important;
+}
+:root #browser .color3 {
+  --stackColorBg: #7a4a4a !important;
+  --stackColorBgAlpha: rgba(122, 74, 74, var(--stackBgAlpha)) !important;
+  --stackColorFg: #fff !important;
+}
+:root #browser .color4 {
+  --stackColorBg: #b88a3a !important;
+  --stackColorBgAlpha: rgba(184, 138, 58, var(--stackBgAlpha)) !important;
+  --stackColorFg: #000 !important;
+}
+:root #browser .color5 {
+  --stackColorBg: #6c7d52 !important;
+  --stackColorBgAlpha: rgba(108, 125, 82, var(--stackBgAlpha)) !important;
+  --stackColorFg: #fff !important;
+}
+:root #browser .color6 {
+  --stackColorBg: #9c5f6b !important;
+  --stackColorBgAlpha: rgba(156, 95, 107, var(--stackBgAlpha)) !important;
+  --stackColorFg: #fff !important;
+}
+:root #browser .color7 {
+  --stackColorBg: #6a5a78 !important;
+  --stackColorBgAlpha: rgba(106, 90, 120, var(--stackBgAlpha)) !important;
+  --stackColorFg: #fff !important;
+}
+:root #browser .color8 {
+  --stackColorBg: #4f7d75 !important;
+  --stackColorBgAlpha: rgba(79, 125, 117, var(--stackBgAlpha)) !important;
+  --stackColorFg: #fff !important;
+}
+:root #browser .color9 {
+  --stackColorBg: #c9916b !important;
+  --stackColorBgAlpha: rgba(201, 145, 107, var(--stackBgAlpha)) !important;
+  --stackColorFg: #000 !important;
+}
+
+/* --- dark theme --- */
+:root .theme-dark#browser .color1 {
+  --stackColorBg: #9c958a !important;
+  --stackColorBgAlpha: rgba(156, 149, 138, var(--stackBgAlpha)) !important;
+  --stackColorFg: #000 !important;
+}
+:root .theme-dark#browser .color2 {
+  --stackColorBg: #6c87a4 !important;
+  --stackColorBgAlpha: rgba(108, 135, 164, var(--stackBgAlpha)) !important;
+  --stackColorFg: #000 !important;
+}
+:root .theme-dark#browser .color3 {
+  --stackColorBg: #b8868a !important;
+  --stackColorBgAlpha: rgba(184, 134, 138, var(--stackBgAlpha)) !important;
+  --stackColorFg: #000 !important;
+}
+:root .theme-dark#browser .color4 {
+  --stackColorBg: #d8b06a !important;
+  --stackColorBgAlpha: rgba(216, 176, 106, var(--stackBgAlpha)) !important;
+  --stackColorFg: #000 !important;
+}
+:root .theme-dark#browser .color5 {
+  --stackColorBg: #9eaf85 !important;
+  --stackColorBgAlpha: rgba(158, 175, 133, var(--stackBgAlpha)) !important;
+  --stackColorFg: #000 !important;
+}
+:root .theme-dark#browser .color6 {
+  --stackColorBg: #c898a4 !important;
+  --stackColorBgAlpha: rgba(200, 152, 164, var(--stackBgAlpha)) !important;
+  --stackColorFg: #000 !important;
+}
+:root .theme-dark#browser .color7 {
+  --stackColorBg: #9a8cb0 !important;
+  --stackColorBgAlpha: rgba(154, 140, 176, var(--stackBgAlpha)) !important;
+  --stackColorFg: #000 !important;
+}
+:root .theme-dark#browser .color8 {
+  --stackColorBg: #85b0a8 !important;
+  --stackColorBgAlpha: rgba(133, 176, 168, var(--stackBgAlpha)) !important;
+  --stackColorFg: #000 !important;
+}
+:root .theme-dark#browser .color9 {
+  --stackColorBg: #d4a07a !important;
+  --stackColorBgAlpha: rgba(212, 160, 122, var(--stackBgAlpha)) !important;
+  --stackColorFg: #000 !important;
+}
