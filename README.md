@@ -187,3 +187,19 @@ git commit -am "..." && git push
 ```
 
 On other machines: `git pull && ./install.sh`.
+
+### Vivaldi theme maintenance across profiles
+
+Two layers propagate differently:
+
+- **CSS mods** (`vivaldi/css-mods/*.css`) are **shared across every profile** — all
+  profiles point their `css_ui_mods_directory` at one folder, and Vivaldi has no
+  per-profile CSS layer. Edit once, restart Vivaldi, done for all profiles.
+- **Theme palette, light/dark schedule, and keyboard shortcuts** live in each
+  profile's `Preferences`. They do **not** propagate — quit Vivaldi and re-run
+  `./vivaldi/install-vivaldi.sh --profile all` to push changes into every profile.
+
+On this machine the live `CSSMods` folder is a **symlink to `vivaldi/css-mods/`**,
+so the repo *is* what Vivaldi serves — no copy step, drift impossible. `install.sh`
+and `sync.sh` both detect this and skip their copy. To revert to a managed copy:
+`rm "$HOME/Library/Application Support/Vivaldi/CSSMods" && ./vivaldi/install-vivaldi.sh`.
