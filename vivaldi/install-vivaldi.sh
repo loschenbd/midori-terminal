@@ -48,8 +48,16 @@ if pgrep -xq Vivaldi; then
 fi
 
 mkdir -p "$CSS_DIR"
-cp "$REPO_DIR/css-mods/"midori-*.css "$CSS_DIR/"
-echo "Installed CSS mods to $CSS_DIR"
+# If CSS_DIR already resolves to the repo's css-mods (e.g. it's a symlink to it
+# for zero-drift maintenance), the mods are already "installed" — copying would
+# just copy files onto themselves and error. Otherwise copy every stylesheet
+# (not just midori-*.css — illuminated-overrides.css and future files count too).
+if [ "$(cd "$CSS_DIR" && pwd -P)" = "$(cd "$REPO_DIR/css-mods" && pwd -P)" ]; then
+  echo "CSS_DIR resolves to the repo css-mods dir — already in sync, skipping copy"
+else
+  cp "$REPO_DIR/css-mods/"*.css "$CSS_DIR/"
+  echo "Installed CSS mods to $CSS_DIR"
+fi
 
 REPO_DIR="$REPO_DIR" VIVALDI_DIR="$VIVALDI_DIR" LOCAL_STATE="$LOCAL_STATE" \
 CSS_DIR="$CSS_DIR" PROFILE_SEL="$PROFILE_SEL" python3 - <<'EOF'
