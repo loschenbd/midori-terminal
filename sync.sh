@@ -43,6 +43,14 @@ existing["themes"] = themes
 json.dump(existing, open(out_path, "w"), indent=2)
 print(f"   exported: {[t['name'] for t in themes]}")
 EOF
-cp -f "$HOME/Library/Application Support/Vivaldi/CSSMods/"midori-*.css "$REPO/vivaldi/css-mods/" 2>/dev/null || true
+CSS_LIVE="$HOME/Library/Application Support/Vivaldi/CSSMods"
+if [ -d "$CSS_LIVE" ] && \
+   [ "$(cd "$CSS_LIVE" && pwd -P)" = "$(cd "$REPO/vivaldi/css-mods" && pwd -P)" ]; then
+  echo "   css mods: live dir is the repo (symlink) — already in sync"
+else
+  # *.css, not midori-*.css: illuminated-overrides.css and any future non-midori
+  # mods must round-trip too (this glob is why illuminated-overrides drifted).
+  cp -f "$CSS_LIVE/"*.css "$REPO/vivaldi/css-mods/" 2>/dev/null || true
+fi
 
 echo "-- done. Review with: git -C \"$REPO\" diff"
