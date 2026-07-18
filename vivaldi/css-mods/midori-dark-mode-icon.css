@@ -1,0 +1,19 @@
+/* Dark Mode command-chain button -> Vivaldi-native crescent moon.
+   Same -webkit-mask technique as midori-phosphor-icons.css. Keyed on the button's
+   name ("Dark Mode") so it skins EVERY toolbar the chain is placed on (status bar
+   + the address-bar row in the tab bar). 28px box + 1.5 stroke = pixel-match to the
+   native Panel*.svg set; background:currentColor so it inherits the theme color.
+   Unscoped by theme id on purpose: this is the user's own button, wanted in any theme. */
+#browser .ToolbarButton-Button[aria-label="Dark Mode"] .button-icon svg,
+#browser .ToolbarButton-Button[title="Dark Mode"] .button-icon svg {
+  display: none !important;
+}
+#browser .ToolbarButton-Button[aria-label="Dark Mode"] .button-icon::before,
+#browser .ToolbarButton-Button[title="Dark Mode"] .button-icon::before {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 28px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2028%2028%22%3E%3Cpath%20d%3D%22M14%206a5.3%205.3%200%200%200%208%208%208%208%200%201%201-8-8Z%22%20stroke%3D%22%23000%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+}
