@@ -61,7 +61,7 @@ this layer to re-skin everything without touching the infrastructure.
 | `tmux/midori.tmux.conf` | Pane borders, status/message styles (sourced from `.tmux.conf`) |
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |
 | `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, Phosphor Duotone file icons, Phosphor product icons for the workbench chrome (`build-icons.py` / `build-product-icons.py` regenerate), installer |
-| `obsidian/` | "Dot Grid" Obsidian theme (Midori palette, Spectral/M PLUS fonts), installer for iCloud vaults |
+| `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded fonts), installer for iCloud vaults, `build-fonts.py` regenerates the embedded faces |
 | `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
 | `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
 
@@ -102,6 +102,43 @@ Residual gotchas:
   ignores `cursor-opacity`, so bg-on-bg hides every native draw and the
   shader substitutes the indigo ink when it sees that sentinel. Don't "fix"
   the cursor color in the theme files.
+
+## How the dot grid stays aligned (Obsidian)
+
+Nothing like the Ghostty story: there is no shader and no cell geometry to
+anchor to, so the grid is a CSS background and the phase **is** calibrated.
+
+**`background-attachment: local` on `.cm-scroller`** is what makes it work. A
+background on a scroll container defaults to `scroll`, which pins it to the
+viewport and lets text slide over stationary dots. Painting on `.cm-sizer`
+scrolls correctly but is clipped to `readable-line-width`, so the texture stops
+at the prose edges. `local` re-anchors to the scrolled *content*: the dots
+travel with the text **and** fill the pane edge to edge.
+
+`--dotgrid-offset-y` is the phase. Where a baseline falls inside a 24px row
+depends on the font's ascent/descent half-leading, which no CSS length exposes
+— so it is measured from rendered pixels, not computed. Desktop currently
+measures 0.00px off across every line.
+
+Residual gotchas:
+
+- **Mobile needs its own phase** (`body.is-mobile`). Not a font problem any
+  more — Obsidian ships mobile-only chrome such as
+  `.is-mobile .inline-title { padding-top: 0.5em }`, an em value that is not a
+  grid multiple, which shifts text while the `local` grid stays anchored.
+  Constant, not cumulative, so one number fixes it.
+- **Fonts are embedded** as base64 Latin subsets at the foot of `theme.css`
+  (`build-fonts.py`). iOS cannot install fonts, and Obsidian injects theme CSS
+  into a `<style>` element rather than `<link>`ing it, so relative `url()`
+  resolves against the app document and loose `.woff2` files 404. `local()` is
+  listed first so desktop keeps the full Homebrew-installed families.
+- **Prose is the sans face and the interface is the serif one.** That is not a
+  transposition — titles are Spectral against M PLUS 1p body copy, and the
+  phase above is measured against M PLUS 1p metrics. Swapping them breaks the
+  grid as well as the look, and per-vault font settings in
+  `appearance.json` will mask the mistake until someone clears them.
+- Elements with arbitrary heights (images, embeds, scrollable code blocks)
+  knock following lines off-register — inherent to baseline grids.
 
 ## Claude Code notes
 
