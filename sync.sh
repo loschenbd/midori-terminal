@@ -53,4 +53,17 @@ else
   cp -f "$CSS_LIVE/"*.css "$REPO/vivaldi/css-mods/" 2>/dev/null || true
 fi
 
+echo "-- obsidian (theme.css from the first vault that has it)"
+OBS_VAULTS="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents"
+obs_found=0
+for vault in "$OBS_VAULTS"/*/; do
+  live="$vault.obsidian/themes/Midori/theme.css"
+  [ -f "$live" ] || continue
+  cp -f "$live" "$REPO/obsidian/theme.css"
+  echo "   from: $(basename "$vault")"
+  obs_found=1
+  break
+done
+[ "$obs_found" -eq 0 ] && echo "   no vault has the Midori theme installed — skipped"
+
 echo "-- done. Review with: git -C \"$REPO\" diff"
