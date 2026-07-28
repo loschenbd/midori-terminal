@@ -480,6 +480,34 @@ body.zen-mode .markdown-reading-view .markdown-preview-sizer {
 .markdown-source-view.mod-cm6 .cm-line {
   line-height: 24px;
 }
+
+/* The text caret, which the metric overrides break. CodeMirror sizes the
+   cursor from the client rect of a collapsed Range, and that rect IS the
+   font's content area — so with symmetric metrics the caret becomes
+   [baseline - 0.45em, baseline + 0.45em]: too short, starting below the
+   ascenders and hanging below the descenders. Measured at base 14: caret
+   6.0px above the baseline and 6.5px below, against glyphs running 10px above
+   and 3px below. Stock metrics hid this because the content area was already
+   roughly ascender-to-descender.
+
+   Fix it with a transform rather than a height, because a transform is
+   relative to the element's OWN box — which is proportional to the font size
+   at that position — so one rule serves body text and every heading level.
+   Setting `height` would need a different value per size, and CSS cannot see
+   which line the cursor layer is drawing over: .cm-cursor lives in
+   .cm-cursorLayer, a sibling of the lines, so it cannot be selected by the
+   kind of line it sits on.
+
+   scaleY(1.222) takes 0.9em to 1.1em about the element's centre, which is
+   exactly the baseline. translateY(-33.33%) then lifts it by 0.3em (a
+   percentage translate resolves against the untransformed height, 0.9em).
+   Net: [baseline - 0.85em, baseline + 0.25em] — ascender to descender, the
+   geometry the stock metrics gave for free. */
+.markdown-source-view.mod-cm6 .cm-cursor,
+.markdown-source-view.mod-cm6 .cm-cursor-primary,
+.markdown-source-view.mod-cm6 .cm-cursor-secondary {
+  transform: translateY(-33.33%) scaleY(1.222);
+}
 .markdown-preview-view p,
 .markdown-preview-view li,
 .markdown-preview-view blockquote,
@@ -1225,6 +1253,28 @@ body.is-phone .prompt-input[type="text"] {
 }
 
 /* --------------------------------------------------------------------------
+   Mobile-only padding on the header stack. Three rules Obsidian applies ONLY
+   under .is-mobile add space that is not a whole row, so a phone would sit off
+   the dots by a constant that desktop never sees — and the whole point of
+   --dotgrid-offset-y being one number is that both platforms have the same
+   structural stack above the first line.
+
+   Each of Obsidian's is (0,2,0); prefixing body takes them at (0,2,1).
+
+     .is-mobile .metadata-properties-heading  padding: 4px 0   -> +8px
+     .is-mobile .metadata-content             padding: 8px 12px -> +16px
+     .is-mobile .inline-title                 padding-top: 0.5em -> ~15px
+
+   The title one used to be deliberately left alone, on the grounds that it was
+   already baked into a mobile-measured offset. That reasoning died with the
+   per-platform offset: the offset is now measured once, on desktop, so mobile
+   has to match desktop's geometry rather than carry its own compensation.
+   -------------------------------------------------------------------------- */
+body.is-mobile .metadata-properties-heading { padding: 0; }
+body.is-mobile .metadata-content { padding-block: 0; }
+body.is-mobile .inline-title { padding-top: 0; }
+
+/* --------------------------------------------------------------------------
    Mobile sidebar: the same paper vocabulary as the bars.
 
    The drawer sheet is already paper — --mobile-sidebar-background resolves to
@@ -1276,10 +1326,12 @@ body.is-mobile {
    Two lessons: verify that a line-height override actually lands before
    budgeting for it, and keep layout changes above the prose on the lattice.
 
-   Deliberately untouched: Obsidian's .is-mobile .inline-title padding-top of
-   0.5em. It is ~12px, not a grid multiple, and it is baked into the measured
-   --dotgrid-offset-y above — removing it would reclaim a little more space at
-   the cost of knocking every line off the dots.
+   No longer true, kept as a warning: this note used to say Obsidian's
+   .is-mobile .inline-title padding-top of 0.5em was deliberately untouched
+   because it was baked into the measured --dotgrid-offset-y. That only held
+   while the offset was fitted on a phone. It is now measured once on desktop
+   and shared, so every mobile-only padding has to be zeroed instead of
+   compensated for — see the mobile header-stack block further down.
    -------------------------------------------------------------------------- */
 body.is-phone.is-floating-nav {
   --view-top-spacing-markdown:
