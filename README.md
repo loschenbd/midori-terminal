@@ -61,7 +61,7 @@ this layer to re-skin everything without touching the infrastructure.
 | `tmux/midori.tmux.conf` | Pane borders, status/message styles (sourced from `.tmux.conf`) |
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |
 | `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, Phosphor Duotone file icons, Phosphor product icons for the workbench chrome (`build-icons.py` / `build-product-icons.py` regenerate), installer |
-| `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded fonts), installer for iCloud vaults, `build-fonts.py` regenerates the embedded faces |
+| `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret` companion plugin, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
 | `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
 | `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
 
@@ -115,30 +115,65 @@ scrolls correctly but is clipped to `readable-line-width`, so the texture stops
 at the prose edges. `local` re-anchors to the scrolled *content*: the dots
 travel with the text **and** fill the pane edge to edge.
 
-`--dotgrid-offset-y` is the phase. Where a baseline falls inside a 24px row
-depends on the font's ascent/descent half-leading, which no CSS length exposes
-— so it is measured from rendered pixels, not computed. Desktop currently
-measures 0.00px off across every line.
+**`background-origin: content-box`** is what makes one phase serve every
+device, and it answers a different question from `local`. The default origin,
+`padding-box`, sits above the element's own `padding-top` — and Obsidian puts
+`padding-top: var(--view-top-spacing-markdown)` on exactly the elements the
+grid is painted on, resolving through `env(safe-area-inset-top)`: 59px on a
+Dynamic Island iPhone, 47px with a notch, 20px on an SE, 0 in landscape. Those
+differ mod 24, so with the default origin the phase is a function of which
+phone and which way up. `content-box` moves the origin with the padding and the
+term cancels, which is why `--dotgrid-offset-y` is one number rather than a
+per-device table. It is measured from rendered pixels, not computed: where a
+baseline falls inside a 24px row depends on half-leading, which no CSS length
+exposes. Desktop and iOS both measure 0.00px off across every line.
+
+**Symmetric font metrics** are what removed the per-heading magic numbers. A
+line box seats its baseline at `L/2 + F*(A-D)/2`, and that second term — a
+per-font constant times the font size — *was* the ladder of per-level constants
+this theme used to carry. `build-fonts.py` emits each family twice: stock, for
+interface chrome, and a `Midori …` alias with `A = D = 45%` for prose. The term
+vanishes at every size, every baseline lands at exactly `L/2`, and every margin
+becomes a plain multiple of 24.
 
 Residual gotchas:
 
-- **Mobile needs its own phase** (`body.is-mobile`). Not a font problem any
-  more — Obsidian ships mobile-only chrome such as
-  `.is-mobile .inline-title { padding-top: 0.5em }`, an em value that is not a
-  grid multiple, which shifts text while the `local` grid stays anchored.
-  Constant, not cumulative, so one number fixes it.
-- **Fonts are embedded** as base64 Latin subsets at the foot of `theme.css`
-  (`build-fonts.py`). iOS cannot install fonts, and Obsidian injects theme CSS
-  into a `<style>` element rather than `<link>`ing it, so relative `url()`
-  resolves against the app document and loose `.woff2` files 404. `local()` is
-  listed first so desktop keeps the full Homebrew-installed families.
-- **Prose is the sans face and the interface is the serif one.** That is not a
-  transposition — titles are Spectral against M PLUS 1p body copy, and the
-  phase above is measured against M PLUS 1p metrics. Swapping them breaks the
-  grid as well as the look, and per-vault font settings in
-  `appearance.json` will mask the mistake until someone clears them.
-- Elements with arbitrary heights (images, embeds, scrollable code blocks)
-  knock following lines off-register — inherent to baseline grids.
+- **The metrics are rewritten in the font BINARY, not declared in CSS.**
+  `ascent-override` / `descent-override` / `line-gap-override` are honoured by
+  Chromium and **ignored outright by WebKit**, so descriptors alone are correct
+  on desktop and silently wrong on every phone. Measured on iOS: setting the
+  aliases to `ascent-override: 0%; descent-override: 100%` — which should have
+  thrown every baseline half a row — changed nothing at all. `build-fonts.py`
+  patches hhea, OS/2 sTypo and OS/2 usWin (all three; which one an engine reads
+  is not a theme's choice) so there is no descriptor left for a UA to skip.
+- **The alias faces carry no `local()`; the stock faces do.** `local()` on an
+  alias hands desktop the Homebrew binary, whose metrics are the stock ones,
+  quietly reinstating the descriptor dependency above. The cost is CJK prose
+  falling through to the next family in the stack, as it always did on iOS.
+- **Fonts are embedded** as base64 Latin subsets at the foot of `theme.css`.
+  iOS cannot install fonts, and Obsidian injects theme CSS into a `<style>`
+  element rather than `<link>`ing it, so relative `url()` resolves against the
+  app document and loose `.woff2` files 404.
+- **The caret needs a plugin** — `obsidian/plugins/midori-caret`, fanned out by
+  the installer alongside the theme. Obsidian's editor is a plain
+  contenteditable, so the caret is the *browser's*, and Chromium takes its
+  height from the font's content area — which the symmetric metrics centre on
+  the baseline, leaving a short tick sitting low. `caret-color` is the only CSS
+  lever and it only sets colour. The plugin hides the native caret and draws
+  one the theme can size; uninstall it and the native caret comes back.
+- **The properties widget opts out, onto its own paper.** Its rows are flex
+  boxes full of inputs, icons and pills whose heights Obsidian derives from
+  content the theme never sees. The block's *outer* box is a whole number of
+  rows so prose below is unaffected, and an opaque fill hides the dots behind
+  it so the interior only has to agree with itself. Inside it, text uses the
+  *stock* face on purpose: a baseline at `L/2` centres the line box, not the
+  ink, which leaves lowercase floating above every icon beside it.
+- **Prose is the sans face and the interface is the serif one.** Not a
+  transposition — titles are Spectral against M PLUS 1p body copy. Per-vault
+  font settings in `appearance.json` will mask a mistake here until someone
+  clears them.
+- Elements with arbitrary heights (images, Mermaid diagrams, embeds) knock
+  following lines off-register — inherent to baseline grids.
 
 ## Claude Code notes
 
