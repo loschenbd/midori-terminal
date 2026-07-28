@@ -911,30 +911,40 @@ body {
    ==highlight== does — it falls through to the UA default, which is a pure
    yellow that has no business on cream paper. Style the element itself.
 
-   The band is painted as a sized gradient rather than as background-color,
-   because a plain background-color fills the inline box and that box belongs
-   to the FONT: "Midori Text" is metric-normalised to A = D = 0.45em so its box
-   is centred on the BASELINE, while the ink runs about 0.72em up and 0.22em
-   down. Filling it puts the band's top edge through the middle of the
-   lowercase and hangs a third of it below the descenders. A gradient can be
-   given its own height and offset, so the band is centred on the ink instead.
-   The padding is not visual — it only stops background-clip from cropping the
-   raised band. Same trick as .external-link below.
+   A background-color fills the inline box, and that box belongs to the FONT:
+   "Midori Text" is metric-normalised to A = D = 0.45em, so the box is centred
+   on the BASELINE while the ink runs about 0.72em up and 0.22em down. Filled
+   as-is, the band's top edge cuts through the lowercase and a third of it
+   hangs below the descenders. The padding below is therefore not decoration —
+   it is what re-shapes the box onto the ink, which is why it is asymmetric:
+   0.53em on top to clear the ascenders, none underneath because the box
+   already reaches 0.45em below a baseline the descenders only drop 0.22em
+   past. That 0.45em is a FLOOR — background-color paints the whole box and
+   padding cannot be negative, so the gap under the ink cannot be tightened
+   further without going back to a positioned gradient, which would give up
+   the rounded corners.
+
+   The band may grow past the 24px row boundary, and should. Ink occupies only
+   1.5px..15.2px of each row, so consecutive lines' ink is ~10px apart; the
+   band ends up ~6px clear of the line above and below. Sizing it to fit
+   INSIDE the row instead is what made it look shrink-wrapped, because the row
+   is barely taller than the ink itself.
 
    Live preview needs the full `.cm-s-obsidian span.cm-highlight` (0,2,1) —
    Obsidian paints the band there, and a bare `.cm-highlight` (0,1,0) loses, so
-   the background-color survives and the padding below only makes it taller. */
+   its background-color survives and only the padding lands, which makes a
+   misaligned band taller rather than leaving it visibly unchanged. */
 mark,
 .markdown-rendered mark,
 .markdown-source-view mark,
 .cm-s-obsidian span.cm-highlight,
 .cm-s-obsidian span.cm-formatting-highlight {
-  background-color: transparent;
-  background-image: linear-gradient(var(--text-highlight-bg), var(--text-highlight-bg));
-  background-repeat: no-repeat;
-  background-size: 100% 1.05em;
-  background-position: 0 calc(50% - 0.26em);
-  padding-block: 0.35em;
+  background-color: var(--text-highlight-bg);
+  background-image: none;
+  padding-top: 0.53em;
+  padding-bottom: 0;
+  padding-inline: 0.3em;
+  border-radius: 3px;
   color: var(--text-normal);
 }
 
