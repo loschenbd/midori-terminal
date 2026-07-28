@@ -544,11 +544,29 @@ body.midori-caret-active .cm-editor.cm-focused .midori-cursorLayer {
       kind of line a caret sits over.
 
    2. Draw the visible bar as a pseudo-element anchored to that bottom edge,
-      with a fixed 24px height. The transform on the parent carries the child
-      along, but a translate does not scale it, so the 24px stays 24px.
+      with a fixed pixel height. The transform on the parent carries the child
+      along, but a translate does not scale it, so that height is absolute.
 
    The marker element itself is left invisible; it exists only to position the
-   pseudo. Its own width is irrelevant — the bar carries its own. */
+   pseudo. Its own width is irrelevant — the bar carries its own.
+
+   NO NEGATIVE MARGIN. CodeMirror's own .cm-cursor centres itself on the text
+   position with margin-left: -0.6px against a 1.2px border. Copying that here
+   put the bar 0.75px to the LEFT of the position, i.e. inside the preceding
+   glyph's right side bearing, and it visibly touched the letter — measured at
+   a 0px gap. The caret marks the boundary between two characters, so it is
+   drawn from that boundary rightward, the way the native caret does.
+
+   Height is a variable because it is the one part of this that is taste
+   rather than arithmetic. 20px sits just inside the row: bottom still exactly
+   on the baseline dot, top a few pixels shy of the dot above, which reads as
+   deliberate rather than as a caret that missed. Set it to 24px for a caret
+   that spans dot to dot. The colour is the palette's ink indigo via
+   --color-blue, so it follows light/dark without a second declaration. */
+body {
+  --midori-caret-height: 20px;
+  --midori-caret-width: 1.5px;
+}
 body.midori-caret-active .midori-cursor {
   position: absolute;
   transform: translateY(-50%);
@@ -558,10 +576,9 @@ body.midori-caret-active .midori-cursor::before {
   position: absolute;
   bottom: 0;                    /* = the baseline, after the translate */
   inset-inline-start: 0;
-  width: 1.5px;
-  height: 24px;                 /* exactly one row of the dot grid */
-  background: var(--caret-color, var(--text-normal));
-  margin-inline-start: -0.75px;
+  width: var(--midori-caret-width);
+  height: var(--midori-caret-height);
+  background: var(--color-blue);
 }
 
 /* Two identical keyframes so the plugin can restart the blink by alternating
