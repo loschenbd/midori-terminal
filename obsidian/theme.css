@@ -90,7 +90,7 @@ body {
   --link-unresolved-color: #6b5f52;       /* --accent-mythic */
 
   --text-selection: rgba(201, 145, 107, 0.25);  /* --accent-warm @ 25% */
-  --text-highlight-bg: #f0e0d4;                 /* --accent-warm-wash */
+  --text-highlight-bg: #e2d4b9;                 /* ochre wash — --color-yellow @ 28% on paper */
 
   --hr-color: rgba(60, 58, 54, 0.1);
   --blockquote-border-color: #c9916b;     /* --accent-warm */
@@ -216,7 +216,7 @@ body {
   --link-unresolved-color: #c4b8a8;       /* --accent-mythic */
 
   --text-selection: rgba(212, 160, 122, 0.25); /* --accent-warm @ 25% */
-  --text-highlight-bg: #3e3530;                /* --accent-warm-light */
+  --text-highlight-bg: #483d2b;                /* ochre wash — --color-yellow @ 24% on paper */
 
   --hr-color: rgba(235, 232, 226, 0.1);
   --blockquote-border-color: #d4a07a;     /* --accent-warm */
@@ -909,12 +909,43 @@ body {
 
 /* Raw <mark> in the source does not route through --text-highlight-bg the way
    ==highlight== does — it falls through to the UA default, which is a pure
-   yellow that has no business on cream paper. Style the element itself. */
+   yellow that has no business on cream paper. Style the element itself.
+
+   The band is painted as a sized gradient rather than as background-color,
+   because a plain background-color fills the inline box and that box belongs
+   to the FONT: "Midori Text" is metric-normalised to A = D = 0.45em so its box
+   is centred on the BASELINE, while the ink runs about 0.72em up and 0.22em
+   down. Filling it puts the band's top edge through the middle of the
+   lowercase and hangs a third of it below the descenders. A gradient can be
+   given its own height and offset, so the band is centred on the ink instead.
+   The padding is not visual — it only stops background-clip from cropping the
+   raised band. Same trick as .external-link below.
+
+   Live preview needs the full `.cm-s-obsidian span.cm-highlight` (0,2,1) —
+   Obsidian paints the band there, and a bare `.cm-highlight` (0,1,0) loses, so
+   the background-color survives and the padding below only makes it taller. */
 mark,
 .markdown-rendered mark,
-.markdown-source-view mark {
-  background-color: var(--text-highlight-bg);
+.markdown-source-view mark,
+.cm-s-obsidian span.cm-highlight,
+.cm-s-obsidian span.cm-formatting-highlight {
+  background-color: transparent;
+  background-image: linear-gradient(var(--text-highlight-bg), var(--text-highlight-bg));
+  background-repeat: no-repeat;
+  background-size: 100% 1.05em;
+  background-position: 0 calc(50% - 0.26em);
+  padding-block: 0.35em;
   color: var(--text-normal);
+}
+
+/* Obsidian anchors the trailing ↗ with `background-position-y: 0.25em`,
+   measured from the top of that same baseline-centred font box, so the icon
+   lands well below the word — measured at 11 device px under the x-height
+   centre at a 15px base. Re-anchor to the box centre (which IS the baseline,
+   given A = D) and lift it onto the cap band. */
+.external-link {
+  padding-block: 0.25em;
+  background-position-y: calc(50% - 0.2em);
 }
 
 /* Mermaid renders as SVG carrying its own inline theme, so unlike callouts it
@@ -1015,9 +1046,19 @@ mark,
    paragraph, and a stock face there displaces the line box exactly the way it
    did in code blocks (see the strut note above), pushing any line that
    contains a tag off the row. */
+/* Geometry goes through --tag-*, NOT through a shorthand on .cm-hashtag. In
+   live preview a tag is TWO spans — .cm-hashtag-begin ("#") and
+   .cm-hashtag-end ("reference") — and Obsidian joins them into one pill by
+   giving each only its OUTER corners and its OUTER padding. A
+   `border-radius`/`padding` shorthand on the shared .cm-hashtag class beats
+   those longhands on the inner edges too, so each half rounds and pads on all
+   four sides and the tag renders as two detached pills with a gap. Setting the
+   variables lets Obsidian's own begin/end rules do the joining. */
+body {
+  --tag-padding-y: 0.05em;
+  --tag-padding-x: 0.6em;
+}
 .tag, .cm-hashtag {
-  border-radius: 9999px;
-  padding: 0.05em 0.6em;
   font-family: "Midori Text", ui-sans-serif, system-ui, sans-serif;
   font-size: 0.85em;
 }
