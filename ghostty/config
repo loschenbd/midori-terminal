@@ -39,3 +39,9 @@ unfocused-split-opacity = 0.9
 focus-follows-mouse = true
 
 desktop-notifications = true
+
+# Suppress the native OSC 9;4 progress bar (the thin blue line at the top of
+# the window that Claude Code and other tools draw while working). Ghostty's
+# progress bar color is not configurable as of 1.3.1 — this is the only knob,
+# and it's all-or-nothing. Remove this line to bring the bar back.
+progress-style = false
