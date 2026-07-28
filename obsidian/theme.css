@@ -481,33 +481,29 @@ body.zen-mode .markdown-reading-view .markdown-preview-sizer {
   line-height: 24px;
 }
 
-/* The text caret, which the metric overrides break. CodeMirror sizes the
-   cursor from the client rect of a collapsed Range, and that rect IS the
-   font's content area — so with symmetric metrics the caret becomes
-   [baseline - 0.45em, baseline + 0.45em]: too short, starting below the
-   ascenders and hanging below the descenders. Measured at base 14: caret
-   6.0px above the baseline and 6.5px below, against glyphs running 10px above
-   and 3px below. Stock metrics hid this because the content area was already
-   roughly ascender-to-descender.
+/* THE TEXT CARET SITS LOW, AND THAT CANNOT BE FIXED HERE. Do not add a
+   .cm-cursor rule; there is no .cm-cursor element. Obsidian's editor is a
+   plain contenteditable and the caret is the BROWSER's, whose height Chromium
+   takes from the font's content area. Symmetric metrics make that area
+   symmetric about the baseline, so the caret runs [baseline +/- 0.45em] while
+   the glyphs run about 0.72em up and 0.22em down — it reads as a short tick
+   sitting ~3px too low. Measured at base 14: caret 6.0px above the baseline
+   and 6.5px below, against ink 10px above.
 
-   Fix it with a transform rather than a height, because a transform is
-   relative to the element's OWN box — which is proportional to the font size
-   at that position — so one rule serves body text and every heading level.
-   Setting `height` would need a different value per size, and CSS cannot see
-   which line the cursor layer is drawing over: .cm-cursor lives in
-   .cm-cursorLayer, a sibling of the lines, so it cannot be selected by the
-   kind of line it sits on.
+   Proved rather than assumed: `caret-color` on .cm-content recolours it, so it
+   is the native caret; a `background`/`width` override on .cm-cursor changes
+   nothing, so that element does not exist. An earlier revision of this file
+   carried a transform on .cm-cursor that did precisely nothing.
 
-   scaleY(1.222) takes 0.9em to 1.1em about the element's centre, which is
-   exactly the baseline. translateY(-33.33%) then lifts it by 0.3em (a
-   percentage translate resolves against the untransformed height, 0.9em).
-   Net: [baseline - 0.85em, baseline + 0.25em] — ascender to descender, the
-   geometry the stock metrics gave for free. */
-.markdown-source-view.mod-cm6 .cm-cursor,
-.markdown-source-view.mod-cm6 .cm-cursor-primary,
-.markdown-source-view.mod-cm6 .cm-cursor-secondary {
-  transform: translateY(-33.33%) scaleY(1.222);
-}
+   This is the one real cost of the metric overrides, and it is structural.
+   Baseline position is L/2 + F*(A-D)/2; for every size to share a row that
+   term must vanish for all F, which forces A = D, which forces the caret to
+   centre on the baseline. Raising A and D together does not help — it extends
+   the caret further below the baseline as well, and h1 caps A+D near 0.95.
+
+   The only real fix is to stop using the native caret: register CodeMirror's
+   drawSelection() extension from a plugin, which draws a .cm-cursor div that
+   CSS can then size. That is a plugin decision, not a theme one. */
 .markdown-preview-view p,
 .markdown-preview-view li,
 .markdown-preview-view blockquote,
