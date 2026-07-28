@@ -501,9 +501,62 @@ body.zen-mode .markdown-reading-view .markdown-preview-sizer {
    centre on the baseline. Raising A and D together does not help — it extends
    the caret further below the baseline as well, and h1 caps A+D near 0.95.
 
-   The only real fix is to stop using the native caret: register CodeMirror's
-   drawSelection() extension from a plugin, which draws a .cm-cursor div that
-   CSS can then size. That is a plugin decision, not a theme one. */
+   The only real fix is to stop using the native caret, which is what the
+   companion plugin does — see plugins/midori-caret. Everything below is gated
+   on the body class that plugin sets, so this file stays correct on its own:
+   without the plugin the native caret is untouched, rather than hidden with
+   nothing drawn in its place. */
+body.midori-caret-active .markdown-source-view.mod-cm6 .cm-content {
+  caret-color: transparent;
+}
+
+/* CodeMirror's layer() gives the container position/containment; the marker
+   only carries inline left/top/height. Both are restated so the caret does not
+   depend on which CM base theme happens to be loaded. */
+body.midori-caret-active .midori-cursorLayer {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  pointer-events: none;
+  contain: size style;
+}
+body.midori-caret-active .cm-editor:not(.cm-focused) .midori-cursorLayer {
+  display: none;
+}
+body.midori-caret-active .cm-editor.cm-focused .midori-cursorLayer {
+  animation: midori-blink 1.2s steps(1) infinite;
+}
+
+/* THE POINT OF ALL THIS. The marker's box is the font's content area:
+   0.9em tall, centred on the baseline. A transform fixes it without a
+   per-size rule, because a transform is relative to the element's OWN box —
+   which is proportional to the font size at that position — so one
+   declaration serves body text and every heading level. A `height` could not:
+   the layer is a sibling of the lines, so no selector can tell which kind of
+   line a given caret sits over.
+
+   scaleY(1.222) takes 0.9em to 1.1em about the element's centre, which with
+   symmetric metrics is exactly the baseline. translateY(-33.33%) then lifts it
+   0.3em — a percentage translate resolves against the UNTRANSFORMED height, so
+   -33.33% of 0.9em is 0.3em, not 0.3 of the scaled box. Net
+   [baseline - 0.85em, baseline + 0.25em]: ascender to descender, which is the
+   geometry the stock metrics used to give for free. */
+body.midori-caret-active .midori-cursor {
+  position: absolute;
+  border-inline-start: 1.5px solid var(--caret-color, var(--text-normal));
+  margin-inline-start: -0.75px;
+  transform: translateY(-33.33%) scaleY(1.222);
+}
+
+/* Two identical keyframes so the plugin can restart the blink by alternating
+   between them; re-assigning the same name would not retrigger the animation
+   and the caret could sit invisible at the moment you start typing. */
+@keyframes midori-blink {
+  50% { opacity: 0; }
+}
+@keyframes midori-blink2 {
+  50% { opacity: 0; }
+}
 .markdown-preview-view p,
 .markdown-preview-view li,
 .markdown-preview-view blockquote,
