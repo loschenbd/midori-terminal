@@ -917,12 +917,13 @@ body {
    as-is, the band's top edge cuts through the lowercase and a third of it
    hangs below the descenders. The padding below is therefore not decoration —
    it is what re-shapes the box onto the ink, which is why it is asymmetric:
-   0.53em on top to clear the ascenders, none underneath because the box
+   0.42em on top to clear the ascenders, none underneath because the box
    already reaches 0.45em below a baseline the descenders only drop 0.22em
    past. That 0.45em is a FLOOR — background-color paints the whole box and
    padding cannot be negative, so the gap under the ink cannot be tightened
    further without going back to a positioned gradient, which would give up
-   the rounded corners.
+   the rounded corners. Trimming padding-top is therefore the only lever on
+   the band's overall height.
 
    The band may grow past the 24px row boundary, and should. Ink occupies only
    1.5px..15.2px of each row, so consecutive lines' ink is ~10px apart; the
@@ -941,7 +942,7 @@ mark,
 .cm-s-obsidian span.cm-formatting-highlight {
   background-color: var(--text-highlight-bg);
   background-image: none;
-  padding-top: 0.53em;
+  padding-top: 0.42em;
   padding-bottom: 0;
   padding-inline: 0.3em;
   border-radius: 3px;
