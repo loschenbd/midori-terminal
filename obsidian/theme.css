@@ -651,7 +651,7 @@ body.midori-caret-active .midori-cursor::before {
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-3,
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-4 {
   line-height: 24px;
-  padding-top: 48px;
+  padding-top: 24px;
   padding-bottom: 0;
 }
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-5,
@@ -675,14 +675,24 @@ body.midori-caret-active .midori-cursor::before {
    applies, so it has to be the whole-row one; setting the margin alone leaves
    every post-paragraph heading half a row out. */
 body {
-  --heading-spacing: 48px;
+  --heading-spacing: 24px;
 }
 
 /* Every heading box is one row and every baseline sits at L/2, so these are
-   just whole rows: two above, none below. No half-row margins, no negative
+   just whole rows: one above, none below. No half-row margins, no negative
    margins, nothing to re-derive when a font or size changes. Change them to
-   any multiple of 24 and the grid still holds. */
-.markdown-preview-view :is(h1, h2, h3, h4) { margin-block: 48px 0; }
+   any multiple of 24 and the grid still holds.
+
+   One row above, not two. The heading was carrying a two-row hole above it and
+   nothing below, which put more air between a heading and the section it ends
+   than between the heading and its own first line — it read as belonging to the
+   paragraph before. Taking a row off the TOP is the fix; adding one to the
+   bottom was tried first and only made the block taller without closing the
+   gap that was actually wrong. Reading view collapses the adjacent margins, so
+   the 24 above is the whole gap rather than 24 on top of the paragraph's own
+   24; live preview uses padding, which does not collapse, which is why the two
+   views need matching values stated separately. */
+.markdown-preview-view :is(h1, h2, h3, h4) { margin-block: 24px 0; }
 .markdown-preview-view :is(h5, h6) { margin-block: 24px 0; }
 /* --heading-spacing lands on `.markdown-rendered :is(p,pre,…) + :is(h1..h6)`
    at (0,1,2), which outranks the margin-block rules above — so h5/h6 need
@@ -1529,11 +1539,11 @@ body {
    still measured 25.5px, and 12px measured 21px, so it is a content-driven
    floor rather than a box the theme can size. Take it out of flow entirely
    and reserve exactly one row for it — the container is then
-   24 x (1 heading + n properties + 1 button) whatever the button does. */
+   24 x (1 heading + n properties + 1 button) whatever the button does. The row
+   it reserves, and the block's whole vertical budget, are set in the paper-fill
+   rule below — one place rather than two. */
 .metadata-container {
   position: relative;
-  padding-bottom: 24px;
-  margin-block-end: 48px;
 }
 
 /* --------------------------------------------------------------------------
@@ -1568,18 +1578,34 @@ body {
    variable because the "Add property" button is positioned against the
    container's PADDING box, not its content box: give the container padding
    without moving the button and the button hangs out into the bleed, left of
-   every row above it. The vertical padding is a straight trade against the
-   bottom margin — 24 up top, 24 off the margin — because the sum below the
-   block is what the grid cares about, not how it is split.
+   every row above it.
+
+   Vertically, --midori-metadata-inset is the air above the "Properties"
+   heading, and the bottom is left alone: the 24px padding-bottom is the row the
+   absolutely positioned button sits in, and the button stays at `bottom: 0` so
+   the paper ends where the button does. Spending the inset symmetrically was
+   tried and is wrong — it moves the whole stack up inside a card of unchanged
+   height, so the card gains air at the bottom instead of losing it at the top.
+
+   The grid is untouched whatever the inset is, because it comes out of the
+   bottom margin rather than out of the block: padding-top + padding-bottom +
+   margin-block-end = inset + 24 + (24 - inset) = 48, always two rows. The
+   third row used to live in that margin and was simply too much air under the
+   card — it stacked on top of whatever blank line the note itself starts with
+   and on the heading's own row above it, so a card followed by a heading
+   opened an 84px hole. Removing a whole row keeps the arithmetic trivial;
+   anything smaller would have to be found somewhere else in the block.
    -------------------------------------------------------------------------- */
 .metadata-container {
   --midori-metadata-bleed: 12px;
+  --midori-metadata-inset: 12px;
   background-color: var(--background-primary-alt);
   border-radius: var(--radius-m);
   margin-inline: calc(-1 * var(--midori-metadata-bleed));
   padding-inline: var(--midori-metadata-bleed);
-  padding-top: 24px;
-  margin-block-end: 24px;
+  padding-top: var(--midori-metadata-inset);
+  padding-bottom: 24px;
+  margin-block-end: calc(24px - var(--midori-metadata-inset));
 }
 /* THE WIDGET USES THE NATURAL FACE, NOT THE NORMALISED ONE, and that is a
    reversal worth spelling out because the opposite is right everywhere else.
