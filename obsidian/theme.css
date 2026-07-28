@@ -83,10 +83,10 @@ body {
   --interactive-accent: #5f6f5e;
   --interactive-accent-hover: #4a5749;
 
-  --link-color: #5f6f5e;
-  --link-color-hover: #4a5749;
-  --link-external-color: #b06d4a;         /* --accent-warm-strong */
-  --link-external-color-hover: #8f4f38;   /* --accent-warm-deep */
+  --link-color: #3a5572;                  /* indigo — internal links */
+  --link-color-hover: #2d4259;            /* indigo deep */
+  --link-external-color: #5f6f5e;         /* --accent (sage) — external links */
+  --link-external-color-hover: #4a5749;   /* --accent-hover */
   --link-unresolved-color: #6b5f52;       /* --accent-mythic */
 
   --text-selection: rgba(201, 145, 107, 0.25);  /* --accent-warm @ 25% */
@@ -209,10 +209,10 @@ body {
   --interactive-accent: #9aab97;
   --interactive-accent-hover: #b4c0b0;
 
-  --link-color: #9aab97;
-  --link-color-hover: #b4c0b0;
-  --link-external-color: #d4a07a;         /* --accent-warm */
-  --link-external-color-hover: #e0b899;   /* --accent-warm-strong */
+  --link-color: #6c87a4;                  /* indigo — internal links */
+  --link-color-hover: #8ba3bd;            /* indigo lifted */
+  --link-external-color: #9aab97;         /* --accent (sage) — external links */
+  --link-external-color-hover: #b4c0b0;   /* --accent-hover */
   --link-unresolved-color: #c4b8a8;       /* --accent-mythic */
 
   --text-selection: rgba(212, 160, 122, 0.25); /* --accent-warm @ 25% */
