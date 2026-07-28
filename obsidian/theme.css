@@ -467,12 +467,17 @@ body.zen-mode .markdown-reading-view .markdown-preview-sizer {
    24px baseline grid — text sits in exact grid rows, like the site's
    leading-6 rhythm. Assumes base font size 15–16px (Settings → Appearance).
    -------------------------------------------------------------------------- */
-/* Content starts one full grid row down, so line boxes align with dot rows */
+/* No leading row. This used to be a full grid row of air, on the reasoning that
+   content should "start on a row" — but the phase comes from the background
+   origin and the row pitch, not from where the first line happens to sit, so
+   any multiple of 24 here is equally on-grid, zero included. It is zero because
+   it was one of the two rows between the title and the body that had to go; the
+   other came out of the title's own line box. */
 .markdown-source-view.mod-cm6 .cm-content {
-  padding-top: 24px;
+  padding-top: 0;
 }
 .markdown-reading-view .markdown-preview-sizer {
-  padding-top: 24px;
+  padding-top: 0;
 }
 
 /* Body lines: exactly one 24px row each (editor lines have no margins,
@@ -1519,20 +1524,38 @@ body {
      this variable, so the theme's own `.inline-title { line-height: 48px }`
      at (0,1,0) never applied — set the variable, not the rule.
 
-     72px. The symmetric metrics put the baseline at exactly L/2, which is
-     what killed the per-heading ladder everywhere else, but it does NOT make
-     every multiple of 24 usable here: prose baselines sit 12px into a 24px
-     box, so a box of height L only agrees with them when L/2 is an odd
-     multiple of 12 — L = 24, 72, 120, not 48. Measured directly: at 48px the
-     title read half a row off while every other block was exact.
+     The symmetric metrics put the baseline at exactly L/2, which is what
+     killed the per-heading ladder everywhere else, but it does NOT make every
+     multiple of 24 usable here: prose baselines sit 12px into a 24px box, so a
+     box of height L only agrees with them when L/2 is an odd multiple of 12 —
+     L = 24, 72, 120, not 48. Measured directly: at 48px the title read half a
+     row off while every other block was exact.
 
-     24px is unreachable. .inline-title resolves --inline-title-size against a
-     larger em base than prose does, so its content area measures ~26.5px, and
-     a line box is max(strut, content) — line-height can only ever GROW it.
-     72px is therefore the first honest value, and it gives the title an empty
-     row above and below. */
-  --inline-title-line-height: 72px;
+     24px, not the 72px this used to carry. The old note here said 24 was
+     unreachable because the title's content area measured ~26.5px and a line
+     box is max(strut, content) — but that measurement predates the metric
+     normalisation, which pulled the content area down to (A+D)*F = 0.9em.
+     Re-measured with the normalised face: a 24px box takes, and the title
+     lands at +0.00 against the dots.
+
+     Dropping 72 -> 24 removes a row of air above the title and a row below it,
+     so both are handed back explicitly where they were still wanted — a
+     margin-block-start below, and a margin-block-start on .metadata-container.
+     What is NOT handed back is the row under the title in a note with no
+     properties, which together with .cm-content's own padding-top is the two
+     rows this was asked to close. Doing it that way keeps the air a property
+     of the thing that wants it instead of a side effect of the title's box. */
+  --inline-title-line-height: 24px;
   --inline-title-margin-bottom: 0;
+}
+/* The row of air that used to be the title box's own top half. */
+.inline-title {
+  margin-block-start: 24px;
+}
+/* ...and the row that used to sit between the title and the properties card.
+   The card asks for it; a paragraph does not, which is the whole point. */
+.metadata-container {
+  margin-block-start: 24px;
 }
 
 /* The add button's intrinsic height will not quantise: pinning height to 24px
@@ -1605,7 +1628,7 @@ body {
   padding-inline: var(--midori-metadata-bleed);
   padding-top: var(--midori-metadata-inset);
   padding-bottom: 24px;
-  margin-block-end: calc(24px - var(--midori-metadata-inset));
+  margin-block-end: calc(48px - var(--midori-metadata-inset));
 }
 /* THE WIDGET USES THE NATURAL FACE, NOT THE NORMALISED ONE, and that is a
    reversal worth spelling out because the opposite is right everywhere else.
