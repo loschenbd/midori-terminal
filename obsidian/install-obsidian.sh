@@ -45,6 +45,37 @@ if cfg.get("cssTheme", "") in (os.environ["LEGACY"], ""):
 PY
   fi
 
+  # Companion plugin. The theme cannot size the editor caret on its own — the
+  # native contenteditable caret takes its height from the font, and the
+  # theme's symmetric metric overrides centre it on the baseline. This draws a
+  # caret the theme can style. See plugins/midori-caret/main.js.
+  for plugin in "$REPO_DIR"/plugins/*/; do
+    [ -f "$plugin/manifest.json" ] || continue
+    id="$(basename "$plugin")"
+    pdest="$vault.obsidian/plugins/$id"
+    mkdir -p "$pdest"
+    cp "$plugin/manifest.json" "$plugin/main.js" "$pdest/"
+
+    # Obsidian holds community-plugins.json in memory and rewrites it on any
+    # plugin change, so this only sticks reliably while the app is closed —
+    # same caveat as appearance.json above, hence the note at the end.
+    ID="$id" python3 - "$vault.obsidian/community-plugins.json" <<'PY'
+import json, os, sys
+path, pid = sys.argv[1], os.environ["ID"]
+try:
+    with open(path) as f:
+        enabled = json.load(f)
+    if not isinstance(enabled, list):
+        raise ValueError
+except (OSError, ValueError):
+    enabled = []
+if pid not in enabled:
+    enabled.append(pid)
+    with open(path, "w") as f:
+        json.dump(enabled, f, indent=2)
+PY
+  done
+
   echo "Installed into $(basename "$vault")"
   installed=1
 done
@@ -56,8 +87,9 @@ fi
 
 echo
 if [ "$obsidian_running" -eq 1 ]; then
-  echo "Obsidian is running: it keeps appearance.json in memory, so if the theme"
-  echo "does not switch by itself, pick '$THEME' under Settings -> Appearance."
+  echo "Obsidian is running: it keeps appearance.json and community-plugins.json"
+  echo "in memory, so if the theme does not switch by itself, pick '$THEME' under"
+  echo "Settings -> Appearance, and enable 'Midori Caret' under Community plugins."
 else
   echo "Done. '$THEME' is selected in every vault."
 fi
