@@ -527,25 +527,41 @@ body.midori-caret-active .cm-editor.cm-focused .midori-cursorLayer {
   animation: midori-blink 1.2s steps(1) infinite;
 }
 
-/* THE POINT OF ALL THIS. The marker's box is the font's content area:
-   0.9em tall, centred on the baseline. A transform fixes it without a
-   per-size rule, because a transform is relative to the element's OWN box —
-   which is proportional to the font size at that position — so one
-   declaration serves body text and every heading level. A `height` could not:
-   the layer is a sibling of the lines, so no selector can tell which kind of
-   line a given caret sits over.
+/* THE POINT OF ALL THIS: make the caret one grid row — bottom on the baseline
+   dot, top on the dot above. It reads as part of the lattice rather than as a
+   tick floating in the middle of the line.
 
-   scaleY(1.222) takes 0.9em to 1.1em about the element's centre, which with
-   symmetric metrics is exactly the baseline. translateY(-33.33%) then lifts it
-   0.3em — a percentage translate resolves against the UNTRANSFORMED height, so
-   -33.33% of 0.9em is 0.3em, not 0.3 of the scaled box. Net
-   [baseline - 0.85em, baseline + 0.25em]: ascender to descender, which is the
-   geometry the stock metrics used to give for free. */
+   The awkward part is that "one row" is an absolute 24px while the marker's
+   box is 0.9em, so it is a different height on a heading line than on a body
+   line. Two steps, neither of which needs to know the font size:
+
+   1. translateY(-50%) on the marker. The box is 0.9em CENTRED ON THE BASELINE
+      (that is what the symmetric metrics guarantee), so shifting it up by half
+      its own height puts its bottom edge exactly on the baseline. A percentage
+      translate resolves against the element's own border box, so this is right
+      for every font size without a per-level rule — which matters because the
+      cursor layer is a SIBLING of the lines, so no selector can tell which
+      kind of line a caret sits over.
+
+   2. Draw the visible bar as a pseudo-element anchored to that bottom edge,
+      with a fixed 24px height. The transform on the parent carries the child
+      along, but a translate does not scale it, so the 24px stays 24px.
+
+   The marker element itself is left invisible; it exists only to position the
+   pseudo. Its own width is irrelevant — the bar carries its own. */
 body.midori-caret-active .midori-cursor {
   position: absolute;
-  border-inline-start: 1.5px solid var(--caret-color, var(--text-normal));
+  transform: translateY(-50%);
+}
+body.midori-caret-active .midori-cursor::before {
+  content: "";
+  position: absolute;
+  bottom: 0;                    /* = the baseline, after the translate */
+  inset-inline-start: 0;
+  width: 1.5px;
+  height: 24px;                 /* exactly one row of the dot grid */
+  background: var(--caret-color, var(--text-normal));
   margin-inline-start: -0.75px;
-  transform: translateY(-33.33%) scaleY(1.222);
 }
 
 /* Two identical keyframes so the plugin can restart the blink by alternating
