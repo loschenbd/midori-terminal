@@ -1066,12 +1066,30 @@ mark,
    four sides and the tag renders as two detached pills with a gap. Setting the
    variables lets Obsidian's own begin/end rules do the joining. */
 body {
-  --tag-padding-y: 0.05em;
   --tag-padding-x: 0.6em;
 }
 .tag, .cm-hashtag {
   font-family: "Midori Text", ui-sans-serif, system-ui, sans-serif;
   font-size: 0.85em;
+}
+
+/* Vertical padding cannot go through --tag-padding-y, because that variable
+   feeds a SYMMETRIC padding-top/padding-bottom pair and the pill needs an
+   asymmetric one. The fill is an inline background, so its box is the font's
+   box, which "Midori Text" centres on the baseline (A = D = 0.45em) — measured
+   on a rendered #reference: pill exactly +-12 device px about the baseline
+   while the ink ran from 17px above it down to the baseline. The ascenders of
+   `#` and `f` therefore hung 2.5 CSS px OUT of the pill while 6 CSS px of dead
+   fill sat underneath: the pill was not enclosing its own text.
+
+   0.6em on top clears the ascenders with ~4px to spare. Nothing underneath —
+   the box floor is already 0.45em (~5.4px) below the baseline and padding
+   cannot be negative, so that side is fixed. Needs `a.tag` rather than `.tag`:
+   Obsidian's own rule is `a.tag` (0,1,1), which outranks a bare `.tag`.
+   See also the same correction on mark/.cm-highlight above. */
+a.tag, .cm-hashtag {
+  padding-top: 0.6em;
+  padding-bottom: 0;
 }
 
 /* Inline title matches H1 treatment.
