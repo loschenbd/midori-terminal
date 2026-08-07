@@ -43,9 +43,10 @@
 const { Plugin, Notice, Platform } = require('obsidian');
 const cmView = require('@codemirror/view');
 
-/* THE SELECTION HALF IS DESKTOP-ONLY, and this is a platform limit rather than
- * a preference. Both replacements work by painting the native out and drawing
- * over it, and on iOS only one of those two natives can be painted out:
+/* THE BAND IS SHAPED DIFFERENTLY ON iOS, and this is a platform limit rather
+ * than a preference. Both replacements work by painting the native out and
+ * drawing over it, and on iOS only one of those two natives can be painted
+ * out:
  *
  *   caret-color: transparent                    -> honoured
  *   ::selection { background-color: transparent } -> IGNORED
@@ -79,9 +80,18 @@ const cmView = require('@codemirror/view');
  * is the plain line box — 288 device px for 4 rows at 3x, i.e. exactly 4 x 24
  * CSS px, contiguous, with no gap between rows — and full-width across every
  * row but the first and last. BLOCK_ROWS below builds that shape; theme.css
- * supplies the matching 12px/12px slot under body.is-mobile. */
-const IS_MOBILE = !!(Platform && Platform.isMobile);
-const BLOCK_ROWS = IS_MOBILE;
+ * supplies the matching slot under body.is-ios.
+ *
+ * iOS, NOT MOBILE, and the difference is not pedantry. Android is Chrome: it
+ * honours ::selection, so the native band there really does get painted out and
+ * there is no scrim to sit under. Gating this on Platform.isMobile handed
+ * Android the scrim's shape — squared-off rows and a box leaning above the
+ * baseline — with nothing to justify either, which just puts the band 5px high
+ * against the ink. Android wants the desktop treatment, so it gets it by
+ * falling through. Obsidian ships isIosApp and a matching body.is-ios for
+ * exactly this split; theme.css keys off the class, this off the flag. */
+const IS_IOS = !!(Platform && Platform.isIosApp);
+const BLOCK_ROWS = IS_IOS;
 
 const CURSOR_LAYER = 'midori-cursorLayer';
 const CURSOR_CLASS = 'midori-cursor';
@@ -484,8 +494,12 @@ function setupTitleOverlay(plugin) {
 
   const place = () => {
     // Nothing here is styled unless the Midori stylesheet is loaded, and the
-    // vault may have switched to another theme since load.
-    if (!midoriStylesheetActive()) return hide();
+    // vault may have switched to another theme since load. Read from the flag
+    // syncTheme keeps rather than probing: midoriStylesheetActive() is a
+    // getComputedStyle call, i.e. a forced style read, and this runs on scroll.
+    // css-change is the only thing that can flip it and syncTheme is already
+    // wired to it.
+    if (!plugin.midoriActive) return hide();
 
     const sel = document.getSelection();
     if (!sel || sel.rangeCount === 0) return hide();
@@ -498,13 +512,28 @@ function setupTitleOverlay(plugin) {
     else drawBands(range, title);
   };
 
+  /* Scroll and resize are COALESCED TO ONE CALL PER FRAME. The scroll listener
+   * is in the capture phase so that every scrolling element reaches it, which
+   * also means a single flick fires it dozens of times, and place() is not
+   * free: it reads the selection and, when the range is not obviously inside a
+   * title, scans every .inline-title on the page. Nothing it does can be
+   * observed more than once a frame anyway, since all it moves is a bar and a
+   * few bands. selectionchange is left immediate — it is not a hot path, and
+   * the caret should land the moment the selection does. */
+  let frame = 0;
+  const placeSoon = () => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => { frame = 0; place(); });
+  };
+  plugin.register(() => { if (frame) cancelAnimationFrame(frame); });
+
   // selectionchange is the only event that fires for every way the caret can
   // move (typing, arrows, clicking, undo). The rest are for cases where the
   // caret does not move but its SCREEN position does. The bands are positioned
   // inside the title's own container, so scroll only matters to the caret.
   plugin.registerDomEvent(document, 'selectionchange', place);
-  plugin.registerDomEvent(window, 'resize', place);
-  plugin.registerDomEvent(document, 'scroll', place, true);
+  plugin.registerDomEvent(window, 'resize', placeSoon);
+  plugin.registerDomEvent(document, 'scroll', placeSoon, true);
   plugin.registerDomEvent(document, 'focusout', (e) => {
     if (e.target && e.target.closest && e.target.closest('.inline-title')) hide();
   });
@@ -540,12 +569,15 @@ module.exports = class MidoriCaret extends Plugin {
     // The theme hides the natives ONLY under these classes, so theme.css stays
     // correct on its own — uninstall the plugin and the native caret and
     // selection come back, rather than the editor losing both entirely. They
-    // are separate classes rather than one so the selection half can be
-    // switched off (it repaints a band Obsidian usually leaves to the
-    // compositor) without giving up the caret — which is exactly what mobile
-    // needs, since the native band there cannot be painted out at all.
+    // are separate classes rather than one because each arrived in a different
+    // build, and Obsidian mobile does not reload plugin code when the file
+    // changes: a vault runs new CSS against an old build until the app is
+    // restarted, and a rule hung on a class that build already sets would take
+    // effect early, in the one window where it cannot be right. They all flip
+    // together now; the separation is what makes the NEXT one safe.
     this.syncTheme = () => {
       const on = midoriStylesheetActive();
+      this.midoriActive = on;
       const cls = document.body.classList;
       cls.toggle(BODY_CLASS, on);
       cls.toggle(SELECTION_BODY_CLASS, on);
@@ -555,6 +587,7 @@ module.exports = class MidoriCaret extends Plugin {
       if (!on && this.hideTitleOverlay) this.hideTitleOverlay();
     };
 
+    this.midoriActive = false;
     setupTitleOverlay(this);
     // Added LAST and only after setupTitleOverlay has actually installed its
     // listeners: these classes are what make theme.css hide the native title
