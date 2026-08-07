@@ -247,12 +247,14 @@
     "minimap.selectionHighlight": "#ced1c8",
     "minimap.findMatchHighlight": "#cc9c4266",
 
-    "textLink.foreground": "#3a5572",
-    "textLink.activeForeground": "#4d7095",
+    "textLink.foreground": "#264464",
+    "textLink.activeForeground": "#3a5572",
     "textCodeBlock.background": "#eceae2",
-    "textBlockQuote.background": "#faf9f6",
-    "textBlockQuote.border": "#9ebfb4",
+    "textBlockQuote.background": "#edeae2",
+    "textBlockQuote.border": "#7fa99b",
     "textPreformat.foreground": "#8f4f38",
+    "textPreformat.background": "#e5e1d9",
+    "textSeparator.foreground": "#d6d0c6",
 
     "keybindingLabel.background": "#eceae2",
     "keybindingLabel.foreground": "#524d46",
