@@ -518,24 +518,24 @@ body.zen-mode .markdown-reading-view .markdown-preview-sizer {
    on the body class that plugin sets, so this file stays correct on its own:
    without the plugin the native caret is untouched, rather than hidden with
    nothing drawn in its place. */
-body.midori-caret-active .markdown-source-view.mod-cm6 .cm-content {
+body.midori-drawn .markdown-source-view.mod-cm6 .cm-content {
   caret-color: transparent;
 }
 
 /* CodeMirror's layer() gives the container position/containment; the marker
    only carries inline left/top/height. Both are restated so the caret does not
    depend on which CM base theme happens to be loaded. */
-body.midori-caret-active .midori-cursorLayer {
+body.midori-drawn .midori-cursorLayer {
   position: absolute;
   inset-inline-start: 0;
   top: 0;
   pointer-events: none;
   contain: size style;
 }
-body.midori-caret-active .cm-editor:not(.cm-focused) .midori-cursorLayer {
+body.midori-drawn .cm-editor:not(.cm-focused) .midori-cursorLayer {
   display: none;
 }
-body.midori-caret-active .cm-editor.cm-focused .midori-cursorLayer {
+body.midori-drawn .cm-editor.cm-focused .midori-cursorLayer {
   animation: midori-blink 1.2s steps(1) infinite;
 }
 
@@ -607,11 +607,11 @@ body {
   --midori-slot-drop: 5px;
   --midori-caret-width: 1.5px;
 }
-body.midori-caret-active .midori-cursor {
+body.midori-drawn .midori-cursor {
   position: absolute;
   transform: translateY(-50%);
 }
-body.midori-caret-active .midori-cursor::before {
+body.midori-drawn .midori-cursor::before {
   content: "";
   position: absolute;
   /* 0 would be the baseline, after the translate; this hangs below it. */
@@ -643,7 +643,7 @@ body.midori-caret-active .midori-cursor::before {
    face was measured: at 19px it clipped Spectral's ascenders by 0.4px and
    cleared no descender at all.
 
-   ITS OWN BODY CLASS, not midori-caret-active. Obsidian hot-reloads theme CSS
+   ITS OWN BODY CLASS, not midori-drawn. Obsidian hot-reloads theme CSS
    but NOT plugin code — a plugin keeps running its previous build until it is
    toggled off and on, or the app restarts. So for one reload cycle this
    stylesheet is new while main.js is old. Hanging this rule on the class the
@@ -651,7 +651,7 @@ body.midori-caret-active .midori-cursor::before {
    place: no caret at all in the title. Gate every rule on a class introduced
    BY THE SAME BUILD that implements it and that window is harmless — the rule
    simply does not apply until the code behind it is live. */
-body.midori-title-caret-active .inline-title {
+body.midori-drawn .inline-title {
   caret-color: transparent;
 }
 .midori-title-caret {
@@ -667,7 +667,7 @@ body.midori-title-caret-active .inline-title {
    these two rules would resolve their em against the body's 16px and draw a
    13px caret for as long as the old code kept running. The height stays with
    the old build until the new one is actually live. */
-body.midori-title-slot-active .midori-title-caret {
+body.midori-drawn .midori-title-caret {
   margin-top: calc(-1 * var(--midori-title-slot-rise));
   height: calc(var(--midori-title-slot-rise) + var(--midori-title-slot-drop));
 }
@@ -712,11 +712,11 @@ body {
   --midori-title-sel-rise: var(--midori-title-slot-rise);
   --midori-title-sel-drop: var(--midori-title-slot-drop);
 }
-body.midori-title-selection-active .inline-title::selection,
-body.midori-title-selection-active .inline-title ::selection {
+body.midori-drawn .inline-title::selection,
+body.midori-drawn .inline-title ::selection {
   background-color: transparent;
 }
-body.midori-title-selection-active .midori-title-selection {
+body.midori-drawn .midori-title-selection {
   position: absolute;
   margin-top: calc(-1 * var(--midori-title-sel-rise));
   height: calc(var(--midori-title-sel-rise) + var(--midori-title-sel-drop));
@@ -733,10 +733,9 @@ body.midori-title-selection-active .midori-title-selection {
 
    ::selection cannot fix it: the spec allows colour properties there and
    nothing else, so height and offset are unreachable. The plugin therefore
-   draws its own markers and this paints the native one out. Gated on its own
-   body class, separate from the caret's, so the selection half can be turned
-   off without losing the caret — it is the more invasive of the two, being a
-   band Obsidian normally leaves to the compositor.
+   draws its own markers and this paints the native one out. Gated on the same
+   body class as everything else the plugin enables — see DRAWN_CLASS in the
+   plugin for why there used to be five of them and why there is one now.
 
    Both forms are needed: `.cm-content::selection` for text directly in the
    editor element and the descendant form for text inside its child spans.
@@ -755,15 +754,15 @@ body.midori-title-selection-active .midori-title-selection {
    band there really does disappear and the drawn one stands alone, exactly as
    on desktop. That is why the shape override keys off is-ios and not
    is-mobile. */
-body.midori-selection-active .cm-content::selection,
-body.midori-selection-active .cm-content ::selection {
+body.midori-drawn .cm-content::selection,
+body.midori-drawn .cm-content ::selection {
   background-color: transparent;
 }
 
 /* The markers carry only inline left/top/width/height, so the container is
    restated here rather than inherited from whichever CM base theme loaded.
    `above: false` in the plugin puts this layer UNDER the text. */
-body.midori-selection-active .midori-selectionLayer {
+body.midori-drawn .midori-selectionLayer {
   position: absolute;
   inset-inline-start: 0;
   top: 0;
@@ -820,11 +819,11 @@ body {
   --midori-sel-rise: var(--midori-slot-rise);
   --midori-sel-drop: var(--midori-slot-drop);
 }
-body.midori-selection-active .midori-selection {
+body.midori-drawn .midori-selection {
   position: absolute;
   background: transparent;
 }
-body.midori-selection-active .midori-selection::before {
+body.midori-drawn .midori-selection::before {
   content: "";
   position: absolute;
   inset-inline: 0;
@@ -920,11 +919,11 @@ body {
   --midori-handle-knob: 8px;
   --midori-handle-color: var(--color-blue);
 }
-body.is-ios.midori-selection-active .midori-selection-handle {
+body.is-ios.midori-drawn .midori-selection-handle {
   position: absolute;
   background: transparent;
 }
-body.is-ios.midori-selection-active .midori-selection-handle::before {
+body.is-ios.midori-drawn .midori-selection-handle::before {
   content: "";
   position: absolute;
   inset-inline-start: 0;
@@ -933,7 +932,7 @@ body.is-ios.midori-selection-active .midori-selection-handle::before {
   width: var(--midori-handle-width);
   background: var(--midori-handle-color);
 }
-body.is-ios.midori-selection-active .midori-selection-handle::after {
+body.is-ios.midori-drawn .midori-selection-handle::after {
   content: "";
   position: absolute;
   inset-inline-start: calc(
@@ -944,10 +943,10 @@ body.is-ios.midori-selection-active .midori-selection-handle::after {
   border-radius: 50%;
   background: var(--midori-handle-color);
 }
-body.is-ios.midori-selection-active .midori-selection-handle-start::after {
+body.is-ios.midori-drawn .midori-selection-handle-start::after {
   bottom: calc(50% + var(--midori-sel-rise));
 }
-body.is-ios.midori-selection-active .midori-selection-handle-end::after {
+body.is-ios.midori-drawn .midori-selection-handle-end::after {
   top: calc(50% + var(--midori-sel-drop));
 }
 

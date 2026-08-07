@@ -130,15 +130,23 @@ const HANDLE_CLASS = 'midori-selection-handle';
 const TITLE_CARET_CLASS = 'midori-title-caret';
 const TITLE_SELECTION_CLASS = 'midori-title-selection';
 
-const BODY_CLASS = 'midori-caret-active';
-const SELECTION_BODY_CLASS = 'midori-selection-active';
-const TITLE_BODY_CLASS = 'midori-title-caret-active';
-const TITLE_SELECTION_BODY_CLASS = 'midori-title-selection-active';
-// New in the build that moved the title caret's height out of this file and
-// into theme.css. Older builds set an inline height and never set the bar's
-// font-size, so the em-based rules would resolve against the body's 16px and
-// draw the caret ~13px high — hence a class those builds do not set.
-const TITLE_SLOT_BODY_CLASS = 'midori-title-slot-active';
+/* ONE CLASS, AND A NEW NAME FOR IT. There were five — one per surface, plus
+ * one for the build that moved the title caret's height into theme.css — and
+ * they existed because Obsidian mobile does NOT reload plugin code when the
+ * file changes. A vault runs new CSS against whatever build was live when the
+ * app started, so a rule hung on a class that older build already sets takes
+ * effect in the one window where it cannot be right: the title-slot rules, for
+ * instance, would have met a build that still set an inline height and drawn
+ * the caret against the body's 16px. Adding a class the older build does not
+ * set closed each of those windows.
+ *
+ * They have all flipped together for some time now, so this collapses them —
+ * and collapsing them is itself one of those migrations, which is why the
+ * survivor is a NEW name rather than the shortest of the old five. An older
+ * build sets only the old names, matches nothing here, and leaves every native
+ * alone; the failure mode is a missing enhancement rather than a caret drawn
+ * to the wrong size. Reusing midori-caret-active would have inverted that. */
+const DRAWN_CLASS = 'midori-drawn';
 
 /* THIS PLUGIN IS ONLY MEANINGFUL UNDER THE MIDORI STYLESHEET. Obsidian installs
  * plugins per VAULT but themes are chosen per vault too, so a vault can easily
@@ -228,7 +236,7 @@ function rowMarkers(view, markerClass, range) {
 
   const out = [];
   const pieces = BLOCK_ROWS
-    ? blockRows(live, view.contentDOM.getBoundingClientRect())
+    ? blockRows(live, contentBox(view.contentDOM))
     : live;
   for (const r of pieces) {
     out.push(new RectangleMarker(
@@ -298,11 +306,14 @@ function blockRows(live, content) {
  * caret at all, native or drawn. CodeMirror's own drawSelection does the same
  * thing via its drawRangeCursor option, which defaults to on.
  *
- * Duck-typed rather than built with EditorSelection.cursor(): forRange's empty
- * branch reads only .empty, .head and .assoc, so this avoids taking a second
- * externalised CodeMirror module as a dependency just to make one object. */
+ * Built through cursorAt, which is where the duck-typing is explained. */
+/* Duck-typed rather than built with EditorSelection.cursor(), which would mean
+ * taking a second externalised CodeMirror module as a dependency to make one
+ * object. Only these three fields exist because only these three are read:
+ * forRange's empty branch is `coordsAtPos(range.head, range.assoc || 1)` and
+ * nothing else — from/to are never consulted unless the range is non-empty. */
 function cursorAt(pos, assoc) {
-  return { empty: true, from: pos, to: pos, head: pos, assoc };
+  return { empty: true, head: pos, assoc };
 }
 
 function headCursor(range) {
@@ -425,7 +436,7 @@ function buildLayer({ cls, markerClass, above, wantEmpty }) {
 /* theme.css sizes the title caret and the title bands in em, and both live
  * OUTSIDE .inline-title — so they carry the title's own font size and the em
  * resolves against the face they are wrapping rather than against the body. */
-function titleEm(title) {
+function titleFontSize(title) {
   return `${parseFloat(getComputedStyle(title).fontSize) || 16}px`;
 }
 
@@ -501,7 +512,7 @@ function setupTitleOverlay(plugin) {
     const baseline = rect.top + rect.height / 2;
 
     bar.style.display = 'block';
-    bar.style.fontSize = titleEm(title);
+    bar.style.fontSize = titleFontSize(title);
     bar.style.left = `${rect.left}px`;
     bar.style.top = `${baseline}px`;
     flipBlink(bar);
@@ -543,8 +554,8 @@ function setupTitleOverlay(plugin) {
       const baseline = rect.top + rect.height / 2; // A = D again
 
       // JS supplies the baseline; the rise above it and the drop below it stay
-      // in CSS — see titleEm above for why the font size comes along.
-      band.style.fontSize = titleEm(title);
+      // in CSS — see titleFontSize above for why the font size comes along.
+      band.style.fontSize = titleFontSize(title);
       band.style.left = `${rect.left - origin.left}px`;
       band.style.width = `${rect.width}px`;
       band.style.top = `${baseline - origin.top}px`;
@@ -629,38 +640,23 @@ module.exports = class MidoriCaret extends Plugin {
       [caretLayer, selectionLayer],
     );
 
-    // The theme hides the natives ONLY under these classes, so theme.css stays
+    // The theme hides the natives ONLY under this class, so theme.css stays
     // correct on its own — uninstall the plugin and the native caret and
-    // selection come back, rather than the editor losing both entirely. They
-    // are separate classes rather than one because each arrived in a different
-    // build, and Obsidian mobile does not reload plugin code when the file
-    // changes: a vault runs new CSS against an old build until the app is
-    // restarted, and a rule hung on a class that build already sets would take
-    // effect early, in the one window where it cannot be right. They all flip
-    // together now; the separation is what makes the NEXT one safe.
+    // selection come back, rather than the editor losing both entirely. See
+    // DRAWN_CLASS for why it is one class now, and why it is a new name.
     this.syncTheme = () => {
       const on = midoriStylesheetActive();
       this.midoriActive = on;
-      const cls = document.body.classList;
-      cls.toggle(BODY_CLASS, on);
-      cls.toggle(SELECTION_BODY_CLASS, on);
-      cls.toggle(TITLE_BODY_CLASS, on);
-      cls.toggle(TITLE_SELECTION_BODY_CLASS, on);
-      cls.toggle(TITLE_SLOT_BODY_CLASS, on);
+      document.body.classList.toggle(DRAWN_CLASS, on);
       if (!on && this.hideTitleOverlay) this.hideTitleOverlay();
     };
 
     this.midoriActive = false;
     setupTitleOverlay(this);
-    // Added LAST and only after setupTitleOverlay has actually installed its
-    // listeners: these classes are what make theme.css hide the native title
-    // caret and the native title selection, so anything that throws above must
-    // leave the natives alone rather than trade them for nothing. It is also
-    // why they are separate classes from BODY_CLASS — see the matching note in
-    // theme.css. TITLE_SELECTION_BODY_CLASS is separate from TITLE_BODY_CLASS
-    // for the same reason again: the 1.1.0 build already set the caret class,
-    // so hanging the new ::selection rule on it would have blanked the title
-    // selection for anyone running the new CSS against the old code.
+    // Added LAST, and only once setupTitleOverlay has actually installed its
+    // listeners: the class is what makes theme.css hide all four natives, so
+    // anything that throws above must leave them alone rather than trade them
+    // for nothing drawn in their place.
     this.syncTheme();
     // Obsidian fires css-change when the theme is switched, so a vault that
     // moves on or off Midori picks this up without a reload.
@@ -668,10 +664,6 @@ module.exports = class MidoriCaret extends Plugin {
   }
 
   onunload() {
-    document.body.classList.remove(BODY_CLASS);
-    document.body.classList.remove(SELECTION_BODY_CLASS);
-    document.body.classList.remove(TITLE_BODY_CLASS);
-    document.body.classList.remove(TITLE_SELECTION_BODY_CLASS);
-    document.body.classList.remove(TITLE_SLOT_BODY_CLASS);
+    document.body.classList.remove(DRAWN_CLASS);
   }
 };
