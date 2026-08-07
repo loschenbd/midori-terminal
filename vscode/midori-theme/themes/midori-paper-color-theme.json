@@ -153,8 +153,8 @@
     "peekViewEditor.matchHighlightBackground": "#cc9c4233",
     "peekViewResult.matchHighlightBackground": "#cc9c4233",
 
-    "input.background": "#f8f5ed",
-    "input.border": "#c9c4b8",
+    "input.background": "#edeae2",
+    "input.border": "#b0aba0",
     "input.foreground": "#2a2825",
     "input.placeholderForeground": "#827e77",
     "inputOption.activeBorder": "#5f6f5e",
@@ -162,8 +162,8 @@
     "inputValidation.errorBackground": "#f0e0d4",
     "inputValidation.errorBorder": "#8f4f38",
 
-    "dropdown.background": "#f8f5ed",
-    "dropdown.border": "#c9c4b8",
+    "dropdown.background": "#edeae2",
+    "dropdown.border": "#b0aba0",
     "dropdown.foreground": "#2a2825",
 
     "button.background": "#5f6f5e",
@@ -173,8 +173,8 @@
     "button.secondaryForeground": "#2a2825",
     "button.secondaryHoverBackground": "#d5d2c9",
 
-    "checkbox.background": "#f8f5ed",
-    "checkbox.border": "#c9c4b8",
+    "checkbox.background": "#edeae2",
+    "checkbox.border": "#b0aba0",
 
     "progressBar.background": "#5f6f5e",
 
