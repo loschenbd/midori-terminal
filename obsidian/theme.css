@@ -707,6 +707,10 @@ body.midori-title-slot-active .midori-title-caret {
 body {
   --midori-title-slot-rise: 0.83em;
   --midori-title-slot-drop: 0.30em;
+  /* Split for the same reason --midori-sel-* is split from --midori-slot-*:
+     mobile moves the band onto the scrim's box without moving the caret. */
+  --midori-title-sel-rise: var(--midori-title-slot-rise);
+  --midori-title-sel-drop: var(--midori-title-slot-drop);
 }
 body.midori-title-selection-active .inline-title::selection,
 body.midori-title-selection-active .inline-title ::selection {
@@ -714,8 +718,8 @@ body.midori-title-selection-active .inline-title ::selection {
 }
 body.midori-title-selection-active .midori-title-selection {
   position: absolute;
-  margin-top: calc(-1 * var(--midori-title-slot-rise));
-  height: calc(var(--midori-title-slot-rise) + var(--midori-title-slot-drop));
+  margin-top: calc(-1 * var(--midori-title-sel-rise));
+  height: calc(var(--midori-title-sel-rise) + var(--midori-title-sel-drop));
   background: var(--text-selection);
   pointer-events: none;
   z-index: -1;
@@ -850,35 +854,49 @@ body.midori-selection-active .midori-selection::before {
    device px = 5 CSS px HIGHER, same height (both 360 device px over 5 rows),
    same horizontal extents (both 72..1106). A shift, not a different size.
 
-   17/7 rather than 12/12, then. And the 5px is not arbitrary: iOS is laying the
-   selection out on the font's REAL metrics, ignoring the ascent-override and
-   descent-override this whole theme is built on. Take a typical A = 0.8em,
-   D = 0.2em at 16px — content box 16px, half-leading (24 - 16) / 2 = 4 — and
-   the box lands at baseline -16.8 / +7.2. That is the 17/7 below, arrived at
-   from two directions. Under the overrides the box would be -12/+12, which is
-   what everything else in this theme correctly assumes and what the scrim
-   correctly ignores, since UIKit never saw the @font-face descriptors.
+   WHERE THE LEAN COMES FROM, because the first two explanations were wrong and
+   the third is the one that predicts the title as well as the prose.
+
+   It is not the CSS line box. Probed in the page, .cm-line and .inline-title
+   both put their content box exactly 12 up and 12 down from the baseline, as
+   symmetric overrides require.
+
+   It is not the fonts' real metrics either. The overrides are BAKED INTO the
+   woff2s here, not just declared — hhea, OS/2 typo and OS/2 win all read
+   0.45/-0.45 on both faces — so "iOS ignores the descriptors" would still land
+   on a centred box.
+
+   What fits is that UIKit lays the selection rect out on the SYSTEM font at the
+   element's font size, having never resolved the web font at all. Measured in
+   page, -apple-system runs A 0.90 / D 0.25, so its box leans (A - D) / 2 =
+   0.325em above the baseline; sans-serif and Georgia give 0.345 and 0.349. The
+   phone's measured lean was 5.0 CSS px at a 14px prose face, i.e. 0.357em, and
+   1 device px at 3x is 0.33 CSS px, so those agree inside the measurement.
+
+   The consequence that matters: THE LEAN SCALES WITH FONT SIZE. It is not a
+   flat 5px, which is why the title needs its own numbers rather than the prose
+   ones — at 22.652px the same 0.357em is 8.1px, not 5. Both slots are written
+   as half the row plus or minus the lean so neither has to be re-measured when
+   Appearance -> Font size moves. em resolves at the element that uses it, and
+   both bands carry the right font-size to use it against: the prose markers
+   inherit the editor's 14px, and the plugin sets each title band's font-size to
+   the title's own.
 
    The plugin squares off the middle rows to match the scrim's width (see
    BLOCK_ROWS); this is the vertical half of the same match.
 
-   Only --midori-sel-* moves. The caret keeps the 14/5 ink slot on every
-   platform, because nothing is drawn over IT — caret-color IS honoured on iOS,
-   so the native caret really is gone and there is nothing to line up with. */
+   Only the --*-sel-* pairs move. Both carets keep their ink slots on every
+   platform, because nothing is drawn over THEM — caret-color IS honoured on
+   iOS, so the native caret really is gone and there is nothing to line up
+   with. */
 body.is-mobile {
-  --midori-sel-rise: 17px;
-  --midori-sel-drop: 7px;
-}
-
-/* The title band stays desktop-only. Its slot is in em against the title's own
-   face rather than against the 24px prose row, so matching it to the scrim is a
-   separate measurement from this one — and the plugin withholds it on mobile
-   anyway. This is the belt to that braces: Obsidian mobile does NOT reload
-   plugin code when the file changes, so a vault spends a window running new CSS
-   against an old build, and this keeps that window from painting a title band
-   the old build still sets the class for. */
-body.is-mobile .midori-title-selection {
-  display: none !important;
+  --midori-scrim-lean: 0.357em;
+  --midori-sel-rise: calc(12px + var(--midori-scrim-lean));
+  --midori-sel-drop: calc(12px - var(--midori-scrim-lean));
+  --midori-title-sel-rise:
+    calc(var(--inline-title-line-height) / 2 + var(--midori-scrim-lean));
+  --midori-title-sel-drop:
+    calc(var(--inline-title-line-height) / 2 - var(--midori-scrim-lean));
 }
 
 /* Two identical keyframes so the plugin can restart the blink by alternating

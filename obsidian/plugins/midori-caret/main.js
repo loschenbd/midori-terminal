@@ -81,11 +81,6 @@ const cmView = require('@codemirror/view');
  * row but the first and last. BLOCK_ROWS below builds that shape; theme.css
  * supplies the matching 12px/12px slot under body.is-mobile. */
 const IS_MOBILE = !!(Platform && Platform.isMobile);
-/* The title band stays desktop-only. Its slot is in em against the title's own
- * face rather than the 24px prose line box, so squaring it off against the
- * native scrim is a separate measurement, and the title is not where anyone
- * drags a selection. */
-const TITLE_SELECTION_IS_SUPPORTED = !IS_MOBILE;
 const BLOCK_ROWS = IS_MOBILE;
 
 const CURSOR_LAYER = 'midori-cursorLayer';
@@ -192,7 +187,9 @@ function rowMarkers(view, markerClass, range) {
   const live = rects.filter((r) => r.width > 0 && r.height > 0);
 
   const out = [];
-  const pieces = BLOCK_ROWS ? blockRows(view, live) : live;
+  const pieces = BLOCK_ROWS
+    ? blockRows(live, view.contentDOM.getBoundingClientRect())
+    : live;
   for (const r of pieces) {
     out.push(new RectangleMarker(
       markerClass, r.left - base.left, r.top - base.top, r.width, r.height,
@@ -222,7 +219,16 @@ function rowMarkers(view, markerClass, range) {
  * so a centre inside the row's span means same row and one 24px lower does not.
  * Taking the union of a row's fragments keeps that: intervals symmetric about a
  * shared centre stay symmetric about it, so `top: 50%` is still the baseline. */
-function blockRows(view, live) {
+function contentBox(el) {
+  const box = el.getBoundingClientRect();
+  const cs = getComputedStyle(el);
+  return {
+    left: box.left + parseFloat(cs.paddingLeft || 0) + parseFloat(cs.borderLeftWidth || 0),
+    right: box.right - parseFloat(cs.paddingRight || 0) - parseFloat(cs.borderRightWidth || 0),
+  };
+}
+
+function blockRows(live, content) {
   const sorted = live.slice().sort((a, b) => (a.top - b.top) || (a.left - b.left));
   const rows = [];
   for (const r of sorted) {
@@ -238,10 +244,10 @@ function blockRows(view, live) {
     }
   }
 
-  const content = rows.length > 1 ? view.contentDOM.getBoundingClientRect() : null;
+  const square = rows.length > 1 ? content : null;
   return rows.map((row, i) => {
-    const left = content && i > 0 ? content.left : row.left;
-    const right = content && i < rows.length - 1 ? content.right : row.right;
+    const left = square && i > 0 ? square.left : row.left;
+    const right = square && i < rows.length - 1 ? square.right : row.right;
     return { left, top: row.top, width: right - left, height: row.bottom - row.top };
   });
 }
@@ -430,15 +436,19 @@ function setupTitleOverlay(plugin) {
 
   const drawBands = (range, title) => {
     bar.style.display = 'none';
-    // The title band is desktop-only — see TITLE_SELECTION_IS_SUPPORTED.
-    if (!TITLE_SELECTION_IS_SUPPORTED) return hideBandsFrom(0);
 
     const clipped = clipToTitle(range, title);
     if (!clipped) return hide();
 
-    const rects = Array.from(clipped.getClientRects())
+    const live = Array.from(clipped.getClientRects())
       .filter((r) => r.width > 0 && r.height > 0);
-    if (!rects.length) return hide();
+    if (!live.length) return hide();
+
+    /* A wrapped title gets the same block shape as the prose band on mobile,
+     * for the same reason: the scrim squares its middle rows off and a band
+     * that does not reads as a second highlight beside it. The content box,
+     * not getBoundingClientRect, because the title's padding is not selected. */
+    const rects = BLOCK_ROWS ? blockRows(live, contentBox(title)) : live;
 
     // The bands live next to the title rather than on <body> so they scroll
     // with it instead of being chased by a scroll handler.
@@ -540,7 +550,7 @@ module.exports = class MidoriCaret extends Plugin {
       cls.toggle(BODY_CLASS, on);
       cls.toggle(SELECTION_BODY_CLASS, on);
       cls.toggle(TITLE_BODY_CLASS, on);
-      cls.toggle(TITLE_SELECTION_BODY_CLASS, on && TITLE_SELECTION_IS_SUPPORTED);
+      cls.toggle(TITLE_SELECTION_BODY_CLASS, on);
       cls.toggle(TITLE_SLOT_BODY_CLASS, on);
       if (!on && this.hideTitleOverlay) this.hideTitleOverlay();
     };
