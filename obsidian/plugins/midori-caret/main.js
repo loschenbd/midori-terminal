@@ -59,11 +59,34 @@ const cmView = require('@codemirror/view');
  * native caret blinked across 4 of 8 frames without the rule and 0 of 8 with
  * it.)
  *
- * So on mobile the band would be drawn UNDER a native band that cannot be
- * removed, which reads as a doubled highlight — two offset slabs of colour.
- * Better to leave the native selection alone there and keep the caret fix,
- * which does work. */
-const SELECTION_IS_SUPPORTED = !(Platform && Platform.isMobile);
+ * So on mobile the band is drawn UNDER a native band that cannot be removed.
+ * The first attempt at that read as a doubled highlight — two offset slabs of
+ * colour — and the band was made desktop-only. That was the wrong conclusion:
+ * the problem was the geometry, not the drawing.
+ *
+ * What mobile's band actually is, measured off a dark-mode iPhone screenshot:
+ * every pixel of the selected region multiplied by 0.8. Ground 26,25,23 ->
+ * 21,20,18, dot-grid dots 49,53,51 -> 39,43,40, and — the part that settles it
+ * — the TEXT too, 234,232,227 -> 187,185,181. A selection background sits
+ * behind the glyphs and cannot dim them. This one is a translucent black scrim
+ * composited on top of everything, which is exactly what "UIKit above the web
+ * content" looks like from inside the page.
+ *
+ * That makes it unrecolourable (nothing behind it can change what it paints)
+ * but also see-through: a band drawn underneath comes back at 80%, which is
+ * plenty. The whole job is to make our band the same SHAPE as the scrim, so
+ * the two read as one highlight. Measured off the same screenshot, the scrim
+ * is the plain line box — 288 device px for 4 rows at 3x, i.e. exactly 4 x 24
+ * CSS px, contiguous, with no gap between rows — and full-width across every
+ * row but the first and last. BLOCK_ROWS below builds that shape; theme.css
+ * supplies the matching 12px/12px slot under body.is-mobile. */
+const IS_MOBILE = !!(Platform && Platform.isMobile);
+/* The title band stays desktop-only. Its slot is in em against the title's own
+ * face rather than the 24px prose line box, so squaring it off against the
+ * native scrim is a separate measurement, and the title is not where anyone
+ * drags a selection. */
+const TITLE_SELECTION_IS_SUPPORTED = !IS_MOBILE;
+const BLOCK_ROWS = IS_MOBILE;
 
 const CURSOR_LAYER = 'midori-cursorLayer';
 const CURSOR_CLASS = 'midori-cursor';
@@ -166,13 +189,27 @@ function rowMarkers(view, markerClass, range) {
   }
 
   const base = layerBase(view);
+  const live = rects.filter((r) => r.width > 0 && r.height > 0);
+
+  /* SQUARE OFF THE MIDDLE ROWS when we are drawing under a native scrim we
+   * cannot remove (see BLOCK_ROWS). getClientRects hugs the text, so a row
+   * ending mid-line leaves the rest of that row to the scrim alone — a ragged
+   * sage edge with a dark tail past it, which is the doubling complaint in
+   * another form. Every row except the one the selection starts on runs from
+   * the content's left edge, and every row except the one it ends on runs to
+   * the right edge, which is the same three-piece shape the scrim uses. */
+  const content = BLOCK_ROWS && live.length > 1
+    ? view.contentDOM.getBoundingClientRect()
+    : null;
+
   const out = [];
-  for (const r of rects) {
-    if (r.width <= 0 || r.height <= 0) continue;
+  live.forEach((r, i) => {
+    const left = content && i > 0 ? content.left : r.left;
+    const right = content && i < live.length - 1 ? content.right : r.right;
     out.push(new RectangleMarker(
-      markerClass, r.left - base.left, r.top - base.top, r.width, r.height,
+      markerClass, left - base.left, r.top - base.top, right - left, r.height,
     ));
-  }
+  });
   return out.length ? out : RectangleMarker.forRange(view, markerClass, range);
 }
 
@@ -360,8 +397,8 @@ function setupTitleOverlay(plugin) {
 
   const drawBands = (range, title) => {
     bar.style.display = 'none';
-    // Mobile keeps its native band — see SELECTION_IS_SUPPORTED.
-    if (!SELECTION_IS_SUPPORTED) return hideBandsFrom(0);
+    // The title band is desktop-only — see TITLE_SELECTION_IS_SUPPORTED.
+    if (!TITLE_SELECTION_IS_SUPPORTED) return hideBandsFrom(0);
 
     const clipped = clipToTitle(range, title);
     if (!clipped) return hide();
@@ -454,7 +491,7 @@ module.exports = class MidoriCaret extends Plugin {
     }
 
     this.registerEditorExtension(
-      SELECTION_IS_SUPPORTED ? [caretLayer, selectionLayer] : [caretLayer],
+      [caretLayer, selectionLayer],
     );
 
     // The theme hides the natives ONLY under these classes, so theme.css stays
@@ -468,9 +505,9 @@ module.exports = class MidoriCaret extends Plugin {
       const on = midoriStylesheetActive();
       const cls = document.body.classList;
       cls.toggle(BODY_CLASS, on);
-      cls.toggle(SELECTION_BODY_CLASS, on && SELECTION_IS_SUPPORTED);
+      cls.toggle(SELECTION_BODY_CLASS, on);
       cls.toggle(TITLE_BODY_CLASS, on);
-      cls.toggle(TITLE_SELECTION_BODY_CLASS, on && SELECTION_IS_SUPPORTED);
+      cls.toggle(TITLE_SELECTION_BODY_CLASS, on && TITLE_SELECTION_IS_SUPPORTED);
       cls.toggle(TITLE_SLOT_BODY_CLASS, on);
       if (!on && this.hideTitleOverlay) this.hideTitleOverlay();
     };
