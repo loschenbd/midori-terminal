@@ -1,0 +1,289 @@
+/* Midori — Markdown preview typography and code-block syntax colours.
+ *
+ * Loaded via the extension's "markdown.previewStyles" contribution, NOT via
+ * the user's "markdown.styles" setting. That distinction matters: the preview
+ * webview's localResourceRoots only ever contains the open workspace folders
+ * (or the previewed file's own directory), so a global markdown.styles path
+ * into this repo would silently fail to load in every other project. An
+ * extension's own directory is always a preview resource root, so this file
+ * loads in every workspace with no user setting to carry between machines.
+ *
+ * IMPORTANT — every selector here is deliberately one step more specific than
+ * it needs to be (`html body`, not `body`; `body.vscode-light .hljs-keyword`,
+ * not `.vscode-light .hljs-keyword`). The built-in markdown.css and
+ * highlight.css are themselves markdown.previewStyles contributions, so they
+ * are peers of this file in the <head> and their relative order is whatever
+ * order the extensions happened to be enumerated in — not something we can
+ * rely on. Winning on specificity instead of source order makes the result
+ * deterministic without reaching for !important.
+ */
+
+/* ---------------------------------------------------------------- type ---
+ * Follows the repo's split: Spectral is the naming voice (titles, headers),
+ * M PLUS is the working voice (text you read and type).
+ */
+
+html body {
+  font-family: "M PLUS 1p", ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+body h1,
+body h2,
+body h3,
+body h4,
+body h5,
+body h6 {
+  font-family: "Spectral", ui-serif, Georgia, serif;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+/* Spectral runs large for its point size; ease the top of the scale back so a
+   heading sits with the prose instead of shouting over it. */
+body h1 {
+  font-size: 1.9em;
+}
+body h2 {
+  font-size: 1.5em;
+}
+body h3 {
+  font-size: 1.25em;
+}
+
+/* Blockquotes take the naming voice too — they are quoted speech, not body
+   copy, and this matches the obsidian theme's markup.quote treatment. */
+body blockquote {
+  font-family: "Spectral", ui-serif, Georgia, serif;
+  font-style: italic;
+}
+
+/* Everything typed rather than read stays monospace. Without this, inline
+   code and fenced blocks inherit the M PLUS 1p body face. */
+body code,
+body pre,
+body kbd,
+body samp,
+body tt {
+  font-family: "M PLUS 1 Code", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Headings can contain inline code (`## the `foo` option`); keep it monospace
+   but let it inherit the heading's size rather than the body's. */
+body h1 code,
+body h2 code,
+body h3 code,
+body h4 code,
+body h5 code,
+body h6 code {
+  font-size: 0.9em;
+}
+
+/* Tables are working text, not prose — align them with the body voice. */
+body table {
+  font-family: "M PLUS 1p", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ------------------------------------------------------- code colours ---
+ * The preview does NOT use the active colour theme for fenced code. It ships
+ * highlight.js' "VS2015" palette hardcoded in highlight.css, with a partial
+ * `.vscode-light` override on top — and the classes that override misses
+ * (.hljs-selector-class, .hljs-selector-id, .hljs-bullet) keep the *dark*
+ * theme's tan #D7BA7D on a cream background, which is where the washed-out
+ * look comes from. So the whole set is remapped here onto the Midori syntax
+ * roles, one theme at a time.
+ *
+ * Contrast is measured against the code block's own surface
+ * (--vscode-textCodeBlock-background: #eceae2 paper / #22211e night), which
+ * sits slightly darker than the editor background the syntax ladder was tuned
+ * on. Three paper roles landed just under 4.5:1 there, so they take a ~2-point
+ * OKLCh lightness drop against their editor values — same hue, same chroma:
+ *   function #906613 -> #8b610a   comment #766e5f -> #706859
+ *   md punctuation #5f6f5e -> #5d6d5c
+ * Everything else is the shipped token colour verbatim. Minimum is 4.57:1
+ * (paper) and 4.52:1 (night).
+ */
+
+/* --- Midori Paper -------------------------------------------------- */
+
+/* keywords, storage, tags, JSON keys — indigo */
+body.vscode-light .hljs-keyword,
+body.vscode-light .hljs-literal,
+body.vscode-light .hljs-symbol,
+body.vscode-light .hljs-name,
+body.vscode-light .hljs-tag,
+body.vscode-light .hljs-selector-tag,
+body.vscode-light .hljs-meta-keyword {
+  color: #264464;
+}
+
+body.vscode-light .hljs-link {
+  color: #264464;
+  text-decoration: underline;
+}
+
+/* types, classes, CSS selectors that name a thing — wine */
+body.vscode-light .hljs-type,
+body.vscode-light .hljs-built_in,
+body.vscode-light .hljs-builtin-name,
+body.vscode-light .hljs-class,
+body.vscode-light .hljs-selector-class,
+body.vscode-light .hljs-selector-id {
+  color: #744242;
+}
+
+/* numbers and constants — terracotta */
+body.vscode-light .hljs-number {
+  color: #773913;
+}
+
+/* strings — olive; regex and templates take the escape mint */
+body.vscode-light .hljs-string,
+body.vscode-light .hljs-meta-string,
+body.vscode-light .hljs-template-tag {
+  color: #586b3a;
+}
+
+body.vscode-light .hljs-regexp,
+body.vscode-light .hljs-char.escape_ {
+  color: #0b3c2f;
+}
+
+/* function names and section headings — ochre (darkened for this surface) */
+body.vscode-light .hljs-title,
+body.vscode-light .hljs-function,
+body.vscode-light .hljs-section,
+body.vscode-light .hljs-attr,
+body.vscode-light .hljs-attribute {
+  color: #8b610a;
+}
+
+/* parameters and interpolated substitutions — eyebrow ink */
+body.vscode-light .hljs-params,
+body.vscode-light .hljs-subst,
+body.vscode-light .hljs-formula {
+  color: #625649;
+}
+
+/* decorators, pragmas, pseudo-selectors — plum */
+body.vscode-light .hljs-meta,
+body.vscode-light .hljs-selector-attr,
+body.vscode-light .hljs-selector-pseudo {
+  color: #786275;
+}
+
+/* variables — ink, same as plain code text */
+body.vscode-light .hljs-variable,
+body.vscode-light .hljs-template-variable {
+  color: #2a2825;
+}
+
+/* comments — quiet warm gray (darkened for this surface) */
+body.vscode-light .hljs-comment,
+body.vscode-light .hljs-quote,
+body.vscode-light .hljs-doctag {
+  color: #706859;
+  font-style: italic;
+}
+
+/* markdown-in-markdown list markers — sage as punctuation */
+body.vscode-light .hljs-bullet {
+  color: #5d6d5c;
+}
+
+/* --- Midori Night -------------------------------------------------- */
+
+body.vscode-dark .hljs-keyword,
+body.vscode-dark .hljs-literal,
+body.vscode-dark .hljs-symbol,
+body.vscode-dark .hljs-name,
+body.vscode-dark .hljs-tag,
+body.vscode-dark .hljs-selector-tag,
+body.vscode-dark .hljs-meta-keyword {
+  color: #5f8dbe;
+}
+
+body.vscode-dark .hljs-link {
+  color: #8ba3bd;
+  text-decoration: underline;
+}
+
+body.vscode-dark .hljs-type,
+body.vscode-dark .hljs-built_in,
+body.vscode-dark .hljs-builtin-name,
+body.vscode-dark .hljs-class,
+body.vscode-dark .hljs-selector-class,
+body.vscode-dark .hljs-selector-id {
+  color: #d0969a;
+}
+
+body.vscode-dark .hljs-number {
+  color: #da9664;
+}
+
+body.vscode-dark .hljs-string,
+body.vscode-dark .hljs-meta-string,
+body.vscode-dark .hljs-template-tag {
+  color: #c4dba2;
+}
+
+body.vscode-dark .hljs-regexp,
+body.vscode-dark .hljs-char.escape_ {
+  color: #96cbba;
+}
+
+body.vscode-dark .hljs-title,
+body.vscode-dark .hljs-function,
+body.vscode-dark .hljs-section,
+body.vscode-dark .hljs-attr,
+body.vscode-dark .hljs-attribute {
+  color: #e0b364;
+}
+
+body.vscode-dark .hljs-params,
+body.vscode-dark .hljs-subst,
+body.vscode-dark .hljs-formula {
+  color: #c1b5a5;
+}
+
+body.vscode-dark .hljs-meta,
+body.vscode-dark .hljs-selector-attr,
+body.vscode-dark .hljs-selector-pseudo {
+  color: #a88aa7;
+}
+
+body.vscode-dark .hljs-variable,
+body.vscode-dark .hljs-template-variable {
+  color: #ebe8e2;
+}
+
+body.vscode-dark .hljs-comment,
+body.vscode-dark .hljs-quote,
+body.vscode-dark .hljs-doctag {
+  color: #8e877a;
+  font-style: italic;
+}
+
+body.vscode-dark .hljs-bullet {
+  color: #9aab97;
+}
+
+/* --- both ---------------------------------------------------------- */
+
+/* highlight.css paints diff lines with a raw rgb(255,0,0) / rgb(155,185,85)
+   pair that belongs to no theme. Use the Midori diff tokens instead; the
+   backgrounds already come from the theme's diffEditor colours. */
+body .hljs-addition {
+  color: #586b3a;
+}
+body .hljs-deletion {
+  color: #8f4f38;
+}
+body.vscode-dark .hljs-addition {
+  color: #c4dba2;
+}
+body.vscode-dark .hljs-deletion {
+  color: #b87d5c;
+}
