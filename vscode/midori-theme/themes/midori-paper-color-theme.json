@@ -249,7 +249,7 @@
 
     "textLink.foreground": "#264464",
     "textLink.activeForeground": "#3a5572",
-    "textCodeBlock.background": "#eceae2",
+    "textCodeBlock.background": "#f7f5ef",
     "textBlockQuote.background": "#edeae2",
     "textBlockQuote.border": "#7fa99b",
     "textPreformat.foreground": "#8f4f38",

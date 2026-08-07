@@ -2,7 +2,7 @@
   "name": "midori-theme",
   "displayName": "Midori",
   "description": "Midori MD Paper — cream paper light + warm charcoal night, from benjaminloschen.com. Color Dot syntax set: indigo / olive / wine / ochre / sage. File icons recolored from Material Symbols Rounded (Apache-2.0); workbench-chrome icons built from Phosphor (MIT) — see CREDITS.md.",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "publisher": "benjaminloschen",
   "license": "MIT",
   "engines": {
