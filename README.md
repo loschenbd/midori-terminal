@@ -282,6 +282,23 @@ Residual gotchas:
   fragments; changing them here alone would drift the palette across tools.
   They still carry the old light values (`ansiYellow` `#b88a3a` is 2.76:1 on
   paper), so the integrated terminal is the one surface this pass did not fix.
+- **Coloured nesting guides need a setting the theme can't supply, and turning
+  it on silently disables another one.** `editorBracketPairGuide.background1-6`
+  / `activeBackground1-6` only render when `editor.guides.bracketPairs` is on
+  (it defaults to `false`), so the theme half is inert on its own. The trap is
+  the second step: `editor.guides.highlightActiveIndentation` defaults to
+  `true`, which means *"highlight the active indent guide **unless bracket pair
+  guides are enabled**"* — so switching on `bracketPairs` silently kills the
+  active-indentation rail. Set it to `"always"` to get both. Verified by
+  sampling guide columns out of a screenshot: every indent rail came back at
+  the idle `#d6d0c6` with no active one drawn anywhere.
+- **Bracket guides will never track JSX elements.** Bracket-pair colorization
+  only knows `()`, `[]`, `{}`; `<span>`/`</span>` are tags, so the active pair
+  for a caret inside JSX is whatever paren or brace encloses the whole block —
+  often several screens up. The thing that follows JSX nesting is the plain
+  indentation guide, which is why `editorIndentGuide.activeBackground1` is
+  pitched to match the active bracket guides (2.4:1 paper / 3.0:1 night)
+  instead of the near-invisible one-step-off-idle value it started at.
 - Reinstall with `./vscode/install-vscode.sh` — it repackages the `.vsix` and
   force-installs into both editors. Symlinking into `~/.cursor/extensions`
   does not work; see the header of that script.
