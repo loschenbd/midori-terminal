@@ -796,16 +796,22 @@ body.midori-selection-active .midori-selectionLayer {
    against the GLYPHS belong in em. (The title's pair is the mirror case — it
    is in em precisely because the title has no fixed row.)
 
-   SAME PAIR AS THE CARET. --midori-slot-rise / --midori-slot-drop are declared
-   up in the caret block and used by both, which is the point: the caret and
-   the band are two renderings of one slot, and a theme that let them drift
-   would put the caret on a character whose selection box sits 5px lower.
+   SAME PAIR AS THE CARET. --midori-sel-rise / --midori-sel-drop default to the
+   caret's --midori-slot-rise / --midori-slot-drop, which is the point: the
+   caret and the band are two renderings of one slot, and a theme that let them
+   drift would put the caret on a character whose selection box sits 5px lower.
+   They are separate NAMES only so mobile can move the band to the line box
+   (below) without dragging the caret up to 24px with it.
 
    No border-radius: a mark on a dot lattice, not a chip — see the note on
    selection in the file tree for the same argument.
 
    The marker itself is transparent and exists only to position the pseudo,
    the same division of labour as the caret. */
+body {
+  --midori-sel-rise: var(--midori-slot-rise);
+  --midori-sel-drop: var(--midori-slot-drop);
+}
 body.midori-selection-active .midori-selection {
   position: absolute;
   background: transparent;
@@ -814,59 +820,52 @@ body.midori-selection-active .midori-selection::before {
   content: "";
   position: absolute;
   inset-inline: 0;
-  top: calc(50% - var(--midori-slot-rise));
-  height: calc(var(--midori-slot-rise) + var(--midori-slot-drop));
+  top: calc(50% - var(--midori-sel-rise));
+  height: calc(var(--midori-sel-rise) + var(--midori-sel-drop));
   background: var(--text-selection);
 }
 
-/* MOBILE NEVER GETS A DRAWN BAND, and this says so in CSS rather than trusting
-   the plugin to withhold the body classes. Two reasons it belongs here as well
-   as there:
+/* MOBILE DRAWS THE BAND ON THE LINE BOX, not on the ink.
 
-   1. The plugin decides at load time, and Obsidian mobile does NOT reload
-      plugin code when the file changes — it keeps running whatever build was
-      live when the app started, while theme CSS hot-reloads on its own. So a
-      vault always spends some window with new CSS and old JS, and on mobile
-      the old JS is still adding midori-selection-active. This rule closes that
-      window: the fix arrives with the stylesheet instead of waiting for an
-      app restart.
-   2. It fails safe. If the platform check ever regresses, the worst case is a
-      missing enhancement rather than a doubled highlight.
+   Everywhere else the band hugs the glyphs, 14px up and 5px down, because that
+   is the slot the caret uses and the two must agree. On iOS it cannot: there is
+   a native scrim over the selection that no stylesheet can remove, and a band
+   at a different height than the scrim reads as two overlapping highlights
+   rather than one. That is what the first mobile attempt looked like, and why
+   the band was withheld here for a while.
 
-   iOS ignores ::selection outright — verified in the Simulator with a loud
-   green, which still painted the system blue, in a contenteditable and in a
-   static paragraph alike — so we cannot hide whatever band mobile already
-   paints, and a drawn one only ever adds a SECOND slab beside it. Two slabs at
-   two different geometries is worse than the geometry it was fixing, which is
-   exactly how this looked on the phone before the guard went in. Colouring the
-   band mobile already has (below) is the move here, not drawing our own. */
-body.is-mobile .midori-selection::before,
-body.is-mobile .midori-title-selection {
-  display: none !important;
+   The scrim turned out to be see-through rather than opaque. Measured off a
+   dark-mode iPhone screenshot, everything under it is multiplied by 0.8 —
+   ground 26,25,23 -> 21,20,18, the dot grid 49,53,51 -> 39,43,40, and the text
+   itself 234,232,227 -> 187,185,181. Dimming the glyphs is the tell: a
+   selection BACKGROUND sits behind them and cannot touch them, so this is a
+   translucent black layer composited on top, i.e. UIKit's, i.e. beyond CSS. It
+   also means a band underneath survives it at 80%, so what looks like a dead
+   end is only a shape constraint.
+
+   And the shape is simple: 288 device px for 4 rows at 3x is exactly 4 x 24
+   CSS px, contiguous, no gap between rows — the plain line box, 12px either
+   side of the baseline. Hence the slot below. The plugin squares off the middle
+   rows to match the scrim's width (see BLOCK_ROWS); this is the vertical half
+   of the same match.
+
+   Only --midori-sel-* moves. The caret keeps the 14/5 ink slot on every
+   platform, because nothing is drawn over IT — caret-color IS honoured on iOS,
+   so the native caret really is gone and there is nothing to line up with. */
+body.is-mobile {
+  --midori-sel-rise: 12px;
+  --midori-sel-drop: 12px;
 }
 
-/* …but the band mobile DOES paint is ours to colour, because it is not the
-   system's. Measured off a dark-mode iPhone screenshot, the selected region was
-   every underlying pixel multiplied by 0.8 — background 26,25,23 -> 21,20,18,
-   dot-grid dots 49,53,51 -> 39,43,40. Perfectly achromatic, so nothing of
-   --text-selection's sage was reaching it, and a L* step of 3 against the
-   ground, which is the "really hard to see" this rule exists to fix.
-
-   It is not the system band either. In the Simulator, iOS paints its selection
-   system blue whether the range is inside a contenteditable or in a plain
-   static paragraph, and ignores ::selection in both cases. Achromatic dark is
-   therefore something Obsidian mobile draws in the DOM — which means it takes
-   CSS, unlike the system one.
-
-   Which element it is, is the part a phone screenshot cannot tell us, so this
-   names all three candidates Obsidian ships selection styling for. They only
-   ever match selection bands, so the extra reach costs nothing, and routing
-   them through --text-selection keeps one variable in charge of every surface
-   instead of starting a mobile-only colour. */
-body.is-mobile .cm-selectionBackground,
-body.is-mobile .cm-selectionLayer > *,
-body.is-mobile .cm-line .cm-selection {
-  background-color: var(--text-selection) !important;
+/* The title band stays desktop-only. Its slot is in em against the title's own
+   face rather than against the 24px prose row, so matching it to the scrim is a
+   separate measurement from this one — and the plugin withholds it on mobile
+   anyway. This is the belt to that braces: Obsidian mobile does NOT reload
+   plugin code when the file changes, so a vault spends a window running new CSS
+   against an old build, and this keeps that window from painting a title band
+   the old build still sets the class for. */
+body.is-mobile .midori-title-selection {
+  display: none !important;
 }
 
 /* Two identical keyframes so the plugin can restart the blink by alternating
