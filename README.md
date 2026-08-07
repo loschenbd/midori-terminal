@@ -349,6 +349,21 @@ Residual gotchas:
   the block. These keys are therefore laddered so the **p90 pixel** clears
   4.5:1, not the nominal value — which lands them at 5.0–5.4:1 nominal, the
   same headroom rule as the first bullet.
+- **Shell code blocks needed a lexer, not more CSS.** highlight.js' Bash
+  grammar only emits classes for a fixed built-in list (`cd`, `echo`, `whoami`,
+  the coreutils names), quotes, comments and `$vars` — a command name in command
+  position is simply not a token in that model. Measured on a real block: 2 of
+  ~20 words carried a class, and `git`, `npm`, `node` and every argument came
+  out as plain ink. No stylesheet can colour a span that was never created,
+  which is why `midori-theme/extension.js` exists at all. It contributes
+  `markdown.markdownItPlugins` and re-sets markdown-it's `highlight` for shell
+  fences only, emitting the same `hljs-*` names the stylesheet already maps:
+  command → `built_in`, bare-word arguments → `title`, `-flags` → `meta`,
+  `$var` → `subst`, quotes and `#` comments as themselves. Everything that is
+  not a shell fence falls through to highlight.js untouched. Two ordering facts
+  make it work: `MarkdownItEngine` applies contributed plugins *after* it sets
+  its own `highlight` option, so ours wins; and it normalises aliases first, so
+  `shell` arrives as `sh`.
 - Reinstall with `./vscode/install-vscode.sh` — it repackages the `.vsix` and
   force-installs into both editors. Symlinking into `~/.cursor/extensions`
   does not work; see the header of that script.
