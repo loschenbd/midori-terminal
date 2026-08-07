@@ -891,8 +891,10 @@ body.midori-drawn .midori-selection::before {
    8.1px at the title's face, not 5 — is exactly the mistake the block below
    documents undoing: the title's scrim is centred and does not lean at all.
 
-   The plugin squares off the middle rows to match the scrim's width (see
-   BLOCK_ROWS); this is the vertical half of the same match.
+   The plugin squares the middle rows off to the content edges (see blockRows),
+   which matches the scrim's width here but is not done FOR the scrim — it is
+   the shape a selection has on every platform, and this is the vertical half
+   of the iOS-only part of the match.
 
    Only the --*-sel-* pairs move. Both carets keep their ink slots on every
    platform, because nothing is drawn over THEM — caret-color IS honoured on

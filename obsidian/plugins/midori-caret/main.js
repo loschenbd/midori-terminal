@@ -108,19 +108,40 @@ const cmView = require('@codemirror/view');
  * the two read as one highlight. Measured off the same screenshot, the scrim
  * is the plain line box — 288 device px for 4 rows at 3x, i.e. exactly 4 x 24
  * CSS px, contiguous, with no gap between rows — and full-width across every
- * row but the first and last. BLOCK_ROWS below builds that shape; theme.css
- * supplies the matching slot under body.is-ios.
+ * row but the first and last. blockRows below builds that shape — it runs on
+ * every platform, because it is what a selection looks like everywhere and not
+ * a scrim-matching trick; theme.css supplies the matching slot under
+ * body.is-ios.
  *
  * iOS, NOT MOBILE, and the difference is not pedantry. Android is Chrome: it
  * honours ::selection, so the native band there really does get painted out and
  * there is no scrim to sit under. Gating this on Platform.isMobile handed
- * Android the scrim's shape — squared-off rows and a box leaning above the
- * baseline — with nothing to justify either, which just puts the band 5px high
- * against the ink. Android wants the desktop treatment, so it gets it by
- * falling through. Obsidian ships isIosApp and a matching body.is-ios for
- * exactly this split; theme.css keys off the class, this off the flag. */
+ * Android a box leaning above the baseline with nothing to justify it, which
+ * just puts the band 5px high against the ink. Android wants the desktop slot,
+ * so it gets it by falling through. Obsidian ships isIosApp and a matching
+ * body.is-ios for exactly this split; theme.css keys off the class, this off
+ * the flag.
+ *
+ * What that split does NOT cover is the squared rows — see blockRows below.
+ * They were part of this paragraph until a wrapped paragraph on desktop showed
+ * why: the shape is universal, only the vertical slot is a platform question. */
 const IS_IOS = !!(Platform && Platform.isIosApp);
-const BLOCK_ROWS = IS_IOS;
+
+/* SQUARING IS NOT AN iOS THING, and gating it there was a mistake worth naming.
+ * It was written to match the scrim, so it was scoped to the platform that has
+ * one — but what it actually does is give a multi-row selection the shape every
+ * selection has had since selections existed: a row that CONTINUES onto the next
+ * one runs to the edge of the text column.
+ *
+ * Without it, only rows ending at a hard line break reach the edge, because the
+ * newline itself has a rect. Soft-wrapped rows stop at their last glyph, so a
+ * wrapped paragraph selects with a notch bitten out of every wrap point —
+ * measured on a desktop screenshot at 720, 727, 746, 751, 758 and 679px against
+ * a content edge of 762. Native selection does not do that, and neither does our
+ * own iOS path, which is how a desktop-only defect hid behind a platform flag.
+ *
+ * The vertical slot stays per-platform: desktop keeps its ink slot (14/5), iOS
+ * takes the scrim's line box. Only the horizontal shape is universal. */
 
 const CURSOR_LAYER = 'midori-cursorLayer';
 const CURSOR_CLASS = 'midori-cursor';
@@ -215,12 +236,41 @@ function layerBase(view) {
   };
 }
 
+/* A DOM RANGE CANNOT DESCRIBE A SELECTION IN A VIRTUALISED EDITOR, which is the
+ * real lesson of this function. CodeMirror only renders its viewport; the rest
+ * of the document is not in the DOM at all, replaced by a SPACER element of the
+ * right total height. Measure a range that runs past the rendered region and
+ * the spacer's border box comes back as one enormous rect — 3848px in the note
+ * that exposed this, with nothing inside it, so it is not a wrapper any filter
+ * could recognise. It is a legitimate innermost box that simply is not content.
+ *
+ * So measure only what is rendered. view.visibleRanges is exactly that list,
+ * and the layer redraws on viewportChanged, so rows get their markers as they
+ * scroll in. Nothing off-screen needs one: it cannot be seen.
+ *
+ * The clip has a consequence for the squaring. blockRows squares every row but
+ * the one the selection starts on and the one it ends on — and once clipped,
+ * the first row we can see is usually NOT where the selection started. Hence
+ * startsHere/endsHere: they say whether these rects contain the real endpoints,
+ * so a selection running off the top of the screen keeps a full-width top row
+ * instead of a notch where the clip fell. */
 function rowMarkers(view, markerClass, range) {
   const { RectangleMarker } = cmView;
+  let from = -1;
+  let to = -1;
+  for (const vis of view.visibleRanges) {
+    const lo = Math.max(range.from, vis.from);
+    const hi = Math.min(range.to, vis.to);
+    if (hi <= lo) continue;
+    if (from < 0) from = lo;
+    to = hi;
+  }
+  if (from < 0) return [];
+
   let rects;
   try {
-    const start = view.domAtPos(range.from);
-    const end = view.domAtPos(range.to);
+    const start = view.domAtPos(from);
+    const end = view.domAtPos(to);
     const dom = document.createRange();
     dom.setStart(start.node, start.offset);
     dom.setEnd(end.node, end.offset);
@@ -234,10 +284,42 @@ function rowMarkers(view, markerClass, range) {
   const base = layerBase(view);
   const live = rects.filter((r) => r.width > 0 && r.height > 0);
 
+  /* A DOM Range hands back the BORDER BOX of every element it fully contains,
+   * not just text rects — so a multi-line selection carries a rect for each
+   * whole .cm-line, and a line that wraps or holds an embed is several rows
+   * tall. Those are the rects blockRows must never see: it grows a row to fit
+   * whatever lands in it, so one tall box swallows every row beneath it. On a
+   * real note this produced markers 48, 96, 120 and 2920px tall — i.e. most of
+   * the selection collapsed into one slab painting a single 19px band across
+   * its middle and nothing anywhere else.
+   *
+   * It only became reachable when squaring stopped being iOS-only: before that
+   * desktop drew a marker per rect, where a too-tall rect is a stray band
+   * rather than a swallowed one, and iOS only ever met it inside a paragraph.
+   *
+   * KEEP THE INNERMOST BOXES. The first fix here was "drop anything taller than
+   * a row and a half", which works and is a magic number waiting to be wrong: a
+   * heading whose face exceeds 1.5 rows has a TEXT rect over the line too, and
+   * would lose its band. The real distinction is not short versus tall, it is
+   * wrapper versus content — a container's rect vertically encloses the rects
+   * inside it, and a text rect encloses nothing. So drop a rect when some other
+   * rect sits vertically inside it. No threshold, and it scales with whatever
+   * the face happens to be.
+   *
+   * An empty line survives on purpose: its .cm-line box encloses nothing, and
+   * it is the only rect its row has. The full width the dropped wrappers were
+   * incidentally supplying is what the squaring below now does deliberately. */
+  const inner = live.filter((a) => !live.some((b) => (
+    b !== a
+    && b.top >= a.top - 0.5 && b.bottom <= a.bottom + 0.5
+    && a.height - b.height > 0.5
+  )));
+
   const out = [];
-  const pieces = BLOCK_ROWS
-    ? blockRows(live, contentBox(view.contentDOM))
-    : live;
+  const pieces = blockRows(
+    inner.length ? inner : live, contentBox(view.contentDOM),
+    from === range.from, to === range.to,
+  );
   for (const r of pieces) {
     out.push(new RectangleMarker(
       markerClass, r.left - base.left, r.top - base.top, r.width, r.height,
@@ -246,13 +328,18 @@ function rowMarkers(view, markerClass, range) {
   return out.length ? out : RectangleMarker.forRange(view, markerClass, range);
 }
 
-/* SQUARE OFF THE MIDDLE ROWS when we are drawing under a native scrim we
- * cannot remove (see BLOCK_ROWS). getClientRects hugs the text, so a row
- * ending mid-line leaves the rest of that row to the scrim alone — a ragged
- * sage edge with a dark tail past it, which is the doubling complaint in
- * another form. Every row except the one the selection starts on runs from the
- * content's left edge, and every row except the one it ends on runs to the
- * right edge: the same three-piece shape the scrim uses.
+/* SQUARE OFF THE MIDDLE ROWS. getClientRects hugs the text, so a row the
+ * selection continues past stops at its last glyph instead of running to the
+ * edge of the column. Every row except the one the selection starts on runs
+ * from the content's left edge, and every row except the one it ends on runs to
+ * the right edge: the three-piece shape a selection has always had.
+ *
+ * On iOS this also matches the scrim we cannot remove — there the ragged edge
+ * leaves the rest of the row to the scrim alone, a sage notch with a dark tail
+ * past it, which is the doubling complaint in another form. But the shape is
+ * right on every platform, and scoping it to the one that made it obvious left
+ * the same notches on desktop for as long as it took someone to select a
+ * wrapped paragraph and say the highlights looked funky.
  *
  * ONE RECT IS NOT ONE ROW, which is what the first version of this got wrong.
  * getClientRects returns a rect per BOX FRAGMENT, and a decoration splits a row
@@ -276,7 +363,7 @@ function contentBox(el) {
   };
 }
 
-function blockRows(live, content) {
+function blockRows(live, content, startsHere = true, endsHere = true) {
   const sorted = live.slice().sort((a, b) => (a.top - b.top) || (a.left - b.left));
   const rows = [];
   for (const r of sorted) {
@@ -292,10 +379,13 @@ function blockRows(live, content) {
     }
   }
 
-  const square = rows.length > 1 ? content : null;
+  /* A row keeps its own edge only where the selection really begins or ends.
+     One visible row can still need squaring on both sides — a long selection
+     scrolled so that neither endpoint is on screen. */
+  const square = (rows.length > 1 || !startsHere || !endsHere) ? content : null;
   return rows.map((row, i) => {
-    const left = square && i > 0 ? square.left : row.left;
-    const right = square && i < rows.length - 1 ? square.right : row.right;
+    const left = square && (i > 0 || !startsHere) ? square.left : row.left;
+    const right = square && (i < rows.length - 1 || !endsHere) ? square.right : row.right;
     return { left, top: row.top, width: right - left, height: row.bottom - row.top };
   });
 }
@@ -408,7 +498,15 @@ function buildLayer({ cls, markerClass, above, wantEmpty }) {
       }
       // geometryChanged matters: a font finishing loading or the pane being
       // resized moves both without touching doc or selection.
-      return update.docChanged || update.selectionSet || update.geometryChanged;
+      //
+      // viewportChanged matters because rowMarkers measures only what is
+      // RENDERED (see the note there). Without it, scrolling a long selection
+      // brings rows into view that were never measured and so never get a
+      // band — the selection appears to stop at wherever it happened to be
+      // drawn. It is also how the markers stay attached during a scroll, since
+      // CodeMirror re-renders the viewport rather than moving the old DOM.
+      return update.docChanged || update.selectionSet
+        || update.geometryChanged || update.viewportChanged;
     },
   });
 }
@@ -560,11 +658,11 @@ function setupTitleOverlay(plugin) {
       .filter((r) => r.width > 0 && r.height > 0);
     if (!live.length) return hide();
 
-    /* A wrapped title gets the same block shape as the prose band on mobile,
-     * for the same reason: the scrim squares its middle rows off and a band
-     * that does not reads as a second highlight beside it. The content box,
-     * not getBoundingClientRect, because the title's padding is not selected. */
-    const rects = BLOCK_ROWS ? blockRows(live, contentBox(title)) : live;
+    /* A wrapped title gets the same block shape as the prose band, for the same
+     * reason: a row the selection continues past should run to the edge of the
+     * column. The content box, not getBoundingClientRect, because the title's
+     * padding is not selected. */
+    const rects = blockRows(live, contentBox(title));
 
     // The bands live next to the title rather than on <body> so they scroll
     // with it instead of being chased by a scroll handler.
