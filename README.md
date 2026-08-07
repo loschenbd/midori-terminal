@@ -342,6 +342,13 @@ Residual gotchas:
   / 5.59:1 night on the editor). Measure both modes: night's overlay is not the
   mirror of paper's, and estimating it left three values short at 4.39–4.42. A
   fence with no language tag gets no tokens at all and renders as flat ink.
+  That block also sets `font-size: 12px`, below the body text around it, and at
+  12px the 1x coverage problem above bites hard: sampling the olive token, the
+  *thickest* pixel in any glyph reaches 98% coverage and the p90 pixel 92%, so
+  a nominal 4.56:1 renders at 3.91:1 and there is no pure-ink pixel anywhere in
+  the block. These keys are therefore laddered so the **p90 pixel** clears
+  4.5:1, not the nominal value — which lands them at 5.0–5.4:1 nominal, the
+  same headroom rule as the first bullet.
 - Reinstall with `./vscode/install-vscode.sh` — it repackages the `.vsix` and
   force-installs into both editors. Symlinking into `~/.cursor/extensions`
   does not work; see the header of that script.
