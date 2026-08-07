@@ -33,11 +33,40 @@
  * that instead of on a font size it cannot see.
  *
  * WHY NOT drawSelection(). CodeMirror ships drawSelection(), which would draw
- * the band in one line — but it replaces the selection MECHANISM, and
- * Obsidian's live preview leans on native selection for widget interaction and
- * IME. This uses the layer() primitive, which only draws: the real selection
- * stays native and keeps behaving, and the theme merely paints it transparent
- * so there is no doubled band. That is the whole reason for the extra code.
+ * the band in one line. This file used to claim the reason was that it
+ * "replaces the selection MECHANISM" and would cost live preview its widget
+ * interaction and IME. That was wrong, and worth recording as wrong because it
+ * is a common belief: drawSelection is
+ *
+ *   [selectionConfig, cursorLayer, selectionLayer, hideNativeSelection,
+ *    nativeSelectionHidden.of(true)]
+ *
+ * where hideNativeSelection is a Prec.highest theme applying the same
+ * caret-color: transparent and transparent ::selection this theme applies by
+ * hand, and nativeSelectionHidden is read in exactly ONE place — viewstate.ts,
+ * to suppress mustEnforceCursorAssoc. Nothing in docview, domobserver,
+ * domchange or input consults it, so composition, DOM-selection writing and
+ * the pointer/widget paths are untouched. Since 6.26.4 it even carries an
+ * explicit carve-out restoring the native caret and selection inside a focused
+ * widget, which is the opposite of the old claim.
+ *
+ * The real reasons, which do survive:
+ *
+ *   - There is no selection-only extension to import. cursorLayer and
+ *     selectionLayer are module-level consts without `export`, and
+ *     SelectionConfig's three options (cursorBlinkRate, drawRangeCursor,
+ *     iosSelectionHandles) cannot suppress the drawn cursor. layer() and
+ *     RectangleMarker, by contrast, ARE public API. So this is the supported
+ *     path, not a workaround around one.
+ *   - Its selection layer is built from RectangleMarker.forRange, i.e. exactly
+ *     the three-piece decomposition rowMarkers exists to avoid — see the
+ *     invariant note there.
+ *   - It forces caret-color: transparent at Prec.highest, which on iOS costs
+ *     the native selection grabbers. We pay that too, and pay it back below.
+ *
+ * There are also genuine open upstream issues around it (an iOS IME freeze
+ * with lineWrapping, mis-highlighting around block widgets), so the caution
+ * was not baseless — only misattributed.
  */
 
 const { Plugin, Notice, Platform } = require('obsidian');
@@ -97,6 +126,7 @@ const CURSOR_LAYER = 'midori-cursorLayer';
 const CURSOR_CLASS = 'midori-cursor';
 const SELECTION_LAYER = 'midori-selectionLayer';
 const SELECTION_CLASS = 'midori-selection';
+const HANDLE_CLASS = 'midori-selection-handle';
 const TITLE_CARET_CLASS = 'midori-title-caret';
 const TITLE_SELECTION_CLASS = 'midori-title-selection';
 
@@ -271,15 +301,45 @@ function blockRows(live, content) {
  * Duck-typed rather than built with EditorSelection.cursor(): forRange's empty
  * branch reads only .empty, .head and .assoc, so this avoids taking a second
  * externalised CodeMirror module as a dependency just to make one object. */
+function cursorAt(pos, assoc) {
+  return { empty: true, from: pos, to: pos, head: pos, assoc };
+}
+
 function headCursor(range) {
   if (range.empty) return range;
-  return {
-    empty: true,
-    from: range.head,
-    to: range.head,
-    head: range.head,
-    assoc: range.head > range.anchor ? -1 : 1,
-  };
+  return cursorAt(range.head, range.head > range.anchor ? -1 : 1);
+}
+
+/* GIVE iOS BACK ITS SELECTION GRABBERS. caret-color: transparent is the one
+ * half of this technique iOS honours, and honouring it costs the grabbers:
+ * mobile Safari queries that property ONCE, when the selection is made, and
+ * reuses the answer for the whole life of the non-empty selection — so a
+ * transparent caret means transparent handles. Confirmed by CodeMirror's
+ * maintainer in codemirror/dev#1538, and confirmed here by measuring the phone:
+ * the only bar in the screenshot was 1.67 CSS px by 19px, i.e. our own caret at
+ * its own slot, and the selection START had no tinted pixel at all.
+ *
+ * The drag targets are unaffected — it is the PAINT that went transparent — so
+ * what is lost is the affordance rather than the ability. Upstream's answer is
+ * the same one taken here: draw decorative replacements. drawSelection has done
+ * it by default since 6.39.17 via iosSelectionHandles, in the SELECTION layer
+ * and shaped as a bar with a round knob outside it, which is what theme.css
+ * draws. Only the main range gets them, matching upstream: a grabber pair per
+ * cursor in a multi-cursor selection would be noise, and iOS only ever offers
+ * one pair anyway. */
+function iosHandles(view) {
+  const { RectangleMarker } = cmView;
+  const main = view.state.selection.main;
+  if (main.empty) return [];
+  const out = [];
+  // assoc 1 at both ends, as upstream does.
+  for (const piece of RectangleMarker.forRange(
+    view, `${HANDLE_CLASS} ${HANDLE_CLASS}-start`, cursorAt(main.from, 1),
+  )) out.push(piece);
+  for (const piece of RectangleMarker.forRange(
+    view, `${HANDLE_CLASS} ${HANDLE_CLASS}-end`, cursorAt(main.to, 1),
+  )) out.push(piece);
+  return out;
 }
 
 /* Both layers are the same shape: collect RectangleMarkers for the ranges we
@@ -304,6 +364,9 @@ function buildLayer({ cls, markerClass, above, wantEmpty }) {
         } else if (!range.empty) {
           for (const piece of rowMarkers(view, markerClass, range)) out.push(piece);
         }
+      }
+      if (!wantEmpty && IS_IOS) {
+        for (const piece of iosHandles(view)) out.push(piece);
       }
       return out;
     },

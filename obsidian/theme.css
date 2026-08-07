@@ -896,6 +896,61 @@ body.midori-selection-active .midori-selection::before {
    platform, because nothing is drawn over THEM — caret-color IS honoured on
    iOS, so the native caret really is gone and there is nothing to line up
    with. */
+/* THE GRABBERS, redrawn because caret-color: transparent takes the real ones.
+   That property is the half of this technique iOS honours, and honouring it
+   costs the handles: mobile Safari queries caret-color ONCE, when the selection
+   is made, and reuses the answer for the life of the selection — so a
+   transparent caret paints transparent grabbers. Measured on the phone rather
+   than assumed: the only bar in the screenshot was 1.67px by 19px, our own
+   caret at its own slot, and the selection START had no tinted pixel at all.
+
+   Only the paint went; the drag targets are still there, so this restores the
+   affordance rather than the ability. Shaped after upstream's, which
+   drawSelection has drawn by default since 6.39.17: a bar the height of the
+   band with a round knob sitting just outside it, above at the start and below
+   at the end. The bar takes --midori-sel-* rather than a size of its own, so it
+   lines up with the band's edges exactly however the slot moves.
+
+   The knob is centred on the bar by half the difference of their widths, and
+   the percentages resolve against the marker, whose 50% is the baseline —
+   `bottom: 50% + rise` therefore puts the knob's bottom edge on the bar's top,
+   and `top: 50% + drop` puts its top edge on the bar's bottom. */
+body {
+  --midori-handle-width: 1.5px;
+  --midori-handle-knob: 8px;
+  --midori-handle-color: var(--color-blue);
+}
+body.is-ios.midori-selection-active .midori-selection-handle {
+  position: absolute;
+  background: transparent;
+}
+body.is-ios.midori-selection-active .midori-selection-handle::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: calc(50% - var(--midori-sel-rise));
+  height: calc(var(--midori-sel-rise) + var(--midori-sel-drop));
+  width: var(--midori-handle-width);
+  background: var(--midori-handle-color);
+}
+body.is-ios.midori-selection-active .midori-selection-handle::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: calc(
+    (var(--midori-handle-width) - var(--midori-handle-knob)) / 2
+  );
+  width: var(--midori-handle-knob);
+  height: var(--midori-handle-knob);
+  border-radius: 50%;
+  background: var(--midori-handle-color);
+}
+body.is-ios.midori-selection-active .midori-selection-handle-start::after {
+  bottom: calc(50% + var(--midori-sel-rise));
+}
+body.is-ios.midori-selection-active .midori-selection-handle-end::after {
+  top: calc(50% + var(--midori-sel-drop));
+}
+
 body.is-ios {
   --midori-scrim-lean: 0.357em;
   --midori-sel-rise: calc(12px + var(--midori-scrim-lean));

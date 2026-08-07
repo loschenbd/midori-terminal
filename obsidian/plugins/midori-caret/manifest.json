@@ -1,9 +1,9 @@
 {
   "id": "midori-caret",
   "name": "Midori Caret",
-  "version": "1.9.1",
+  "version": "1.10.0",
   "minAppVersion": "1.4.0",
-  "description": "Draws the editor caret, the editor selection band, the note-title caret and the note-title selection band as real elements so the Midori theme can size them. Needed because the Midori fonts carry symmetric ascent/descent overrides, which makes everything the browser derives from font metrics centre on the baseline instead of on the ink. On iOS (not Android, which honours ::selection) the native selection scrim cannot be removed, so both bands are drawn under it in the scrim's own shape: squared-off rows, and a box that leans above the baseline by the system font's lean rather than sitting centred on it.",
+  "description": "Draws the editor caret, the editor selection band, the note-title caret and the note-title selection band as real elements so the Midori theme can size them. Needed because the Midori fonts carry symmetric ascent/descent overrides, which makes everything the browser derives from font metrics centre on the baseline instead of on the ink. On iOS (not Android, which honours ::selection) the native selection scrim cannot be removed, so both bands are drawn under it in the scrim's own shape: squared-off rows, and a box that leans above the baseline by the system font's lean rather than sitting centred on it. On iOS it also redraws the selection grabbers, which painting out caret-color removes; only the paint is lost, so this restores the affordance rather than the ability.",
   "author": "Benjamin Loschen",
   "isDesktopOnly": false
 }
