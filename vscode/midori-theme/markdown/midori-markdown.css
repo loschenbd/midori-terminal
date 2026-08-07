@@ -283,13 +283,10 @@ body table {
  * roles, one theme at a time.
  *
  * Contrast is measured against the code block's own surface
- * (--vscode-textCodeBlock-background: #eceae2 paper / #22211e night), which
- * sits slightly darker than the editor background the syntax ladder was tuned
- * on. Three paper roles landed just under 4.5:1 there, so they take a ~2-point
- * OKLCh lightness drop against their editor values — same hue, same chroma:
- *   function #906613 -> #8b610a   comment #766e5f -> #706859
- *   md punctuation #5f6f5e -> #5d6d5c
- * Everything else is the shipped token colour verbatim. Minimum is 4.57:1
+ * (--vscode-textCodeBlock-background: #f7f5ef paper / #22211e night), not the
+ * editor background — they are different rungs and a ladder tuned on one can
+ * slip under 4.5:1 on the other. Paper's block sits *above* the page now, so
+ * every role carries its shipped editor value verbatim; minimum is 4.62:1
  * (paper) and 4.52:1 (night).
  */
 
@@ -344,7 +341,7 @@ body.vscode-light .hljs-function,
 body.vscode-light .hljs-section,
 body.vscode-light .hljs-attr,
 body.vscode-light .hljs-attribute {
-  color: #8b610a;
+  color: #906613;
 }
 
 /* parameters and interpolated substitutions — eyebrow ink */
@@ -371,13 +368,13 @@ body.vscode-light .hljs-template-variable {
 body.vscode-light .hljs-comment,
 body.vscode-light .hljs-quote,
 body.vscode-light .hljs-doctag {
-  color: #706859;
+  color: #766e5f;
   font-style: italic;
 }
 
 /* markdown-in-markdown list markers — sage as punctuation */
 body.vscode-light .hljs-bullet {
-  color: #5d6d5c;
+  color: #5f6f5e;
 }
 
 /* --- Midori Night -------------------------------------------------- */
