@@ -62,7 +62,7 @@ this layer to re-skin everything without touching the infrastructure.
 | `shell/zshrc.midori` | omp init, fzf ANSI palette, eza aliases, zoxide, zsh autosuggestions/highlighting, cursor-color reset (sourced from `.zshrc`) |
 | `tmux/midori.tmux.conf` | Pane borders, status/message styles (sourced from `.tmux.conf`) |
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |
-| `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, Phosphor Duotone file icons, Phosphor product icons for the workbench chrome (`build-icons.py` / `build-product-icons.py` regenerate), installer |
+| `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, file icons recolored from Material Symbols Rounded (Apache-2.0), workbench-chrome product icons built from Phosphor (MIT) — see `midori-theme/CREDITS.md`; `build-icons.py` / `build-product-icons.py` regenerate — plus installer |
 | `antinote/` | Midori Paper/Night Antinote themes (24-key JSON), installer, and a transcription of Antinote's undocumented theme schema |
 | `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret` companion plugin, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
 | `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
