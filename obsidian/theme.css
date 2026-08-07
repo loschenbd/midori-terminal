@@ -812,6 +812,29 @@ body.midori-selection-active .midori-selection::before {
   background: var(--text-selection);
 }
 
+/* MOBILE NEVER GETS A DRAWN BAND, and this says so in CSS rather than trusting
+   the plugin to withhold the body classes. Two reasons it belongs here as well
+   as there:
+
+   1. The plugin decides at load time, and Obsidian mobile does NOT reload
+      plugin code when the file changes — it keeps running whatever build was
+      live when the app started, while theme CSS hot-reloads on its own. So a
+      vault always spends some window with new CSS and old JS, and on mobile
+      the old JS is still adding midori-selection-active. This rule closes that
+      window: the fix arrives with the stylesheet instead of waiting for an
+      app restart.
+   2. It fails safe. If the platform check ever regresses, the worst case is a
+      missing enhancement rather than a doubled highlight.
+
+   iOS ignores ::selection on an editable outright — verified in the Simulator
+   with `background-color: rgb(255,0,0)`, which still painted the system blue —
+   so the native band cannot be hidden and anything we draw lands UNDER it.
+   Two offset slabs of colour is worse than the geometry it was fixing. */
+body.is-mobile .midori-selection::before,
+body.is-mobile .midori-title-selection {
+  display: none !important;
+}
+
 /* Two identical keyframes so the plugin can restart the blink by alternating
    between them; re-assigning the same name would not retrigger the animation
    and the caret could sit invisible at the moment you start typing. */
