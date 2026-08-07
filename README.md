@@ -323,6 +323,21 @@ Residual gotchas:
   per theme. Measure those against `textCodeBlock.background`, not
   `editor.background`: the code block sits a rung darker, and three paper roles
   tuned on the editor surface slipped under 4.5:1 there.
+- **Cursor's native markdown editor colours its code blocks from
+  `symbolIcon.*` and `debugTokenExpression.*`, of all things.** Its
+  `.code-highlight-*` classes map straight onto those keys —
+  `comment → debugTokenExpression.name`, `string → debugTokenExpression.string`,
+  `keyword → symbolIcon.keywordForeground`, `function →
+  symbolIcon.functionForeground`, and so on — so that surface *is* themeable
+  even though no contributed CSS reaches it. What is **not** themeable is the
+  block background: measured `#e3e1dc`, which is the page `#f3f1eb` under a
+  uniform 6.5% black (`243 × 0.935` on every channel), one of Cursor's own
+  `color-mix` design tokens rather than `textCodeBlock.background`. It sits a
+  full rung below anything the theme controls, so those two key families are
+  laddered against `#e3e1dc` — five paper values dropped 1.6–4 OKLCh points at
+  unchanged hue and chroma to clear 4.5:1 there, which costs nothing on the
+  lighter surfaces they normally land on (min 5.27:1 on the editor). A fence
+  with no language tag gets no tokens at all and renders as flat ink.
 - Reinstall with `./vscode/install-vscode.sh` — it repackages the `.vsix` and
   force-installs into both editors. Symlinking into `~/.cursor/extensions`
   does not work; see the header of that script.
