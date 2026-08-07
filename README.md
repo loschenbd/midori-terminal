@@ -190,7 +190,10 @@ Residual gotchas:
   behind and could not dim. So it is a translucent scrim on top: unrecolourable,
   but see-through, and a band underneath returns at 80%. Matching its shape is
   the whole job — the line box rather than the ink, middle rows squared off to
-  the content edges, and, in the prose, a box leaning above the baseline by
+  the content edges (which turned out not to be an iOS matter at all: a row the
+  selection continues past should reach the edge of the column on every
+  platform, and scoping the squaring here left desktop with a notch bitten out
+  of every soft-wrap point), and, in the prose, a box leaning above the baseline by
   `fontSize × (A−D)/2` for the **system** font, since UIKit lays the rect out
   without ever resolving the webfont. That lean scales with font size, so the
   slot is written as half the line box ± `--midori-scrim-lean`.
