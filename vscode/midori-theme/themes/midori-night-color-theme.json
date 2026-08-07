@@ -248,11 +248,13 @@
     "minimap.findMatchHighlight": "#d8b06a4d",
 
     "textLink.foreground": "#8ba3bd",
-    "textLink.activeForeground": "#bad5cb",
+    "textLink.activeForeground": "#aac3dd",
     "textCodeBlock.background": "#22211e",
     "textBlockQuote.background": "#22211e",
-    "textBlockQuote.border": "#9ebfb4",
+    "textBlockQuote.border": "#3c5a51",
     "textPreformat.foreground": "#d4a07a",
+    "textPreformat.background": "#2a2825",
+    "textSeparator.foreground": "#3b3935",
 
     "keybindingLabel.background": "#2f2e2b",
     "keybindingLabel.foreground": "#c5bfb4",

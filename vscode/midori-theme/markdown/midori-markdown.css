@@ -86,6 +86,81 @@ body table {
   font-family: "M PLUS 1p", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* --------------------------------------------------------- rules ---
+ * markdown.css draws every rule with neutral alpha over the background —
+ * rgba(0,0,0,.18) light, rgba(255,255,255,.18) dark, and .69 for the table
+ * header. Neutral black over cream reads faintly blue, which is the one thing
+ * this palette exists to avoid. Point them at the theme's own separator
+ * instead so they follow Paper and Night without a per-theme branch here.
+ */
+
+body.vscode-light h1,
+body.vscode-light h2,
+body.vscode-light hr,
+body.vscode-light td,
+body.vscode-dark h1,
+body.vscode-dark h2,
+body.vscode-dark hr,
+body.vscode-dark td {
+  border-color: var(--vscode-textSeparator-foreground);
+}
+
+/* The header rule is the only one that should carry weight — it separates
+   labels from data rather than one block from the next. Matched by presence
+   across the two themes (1.91:1 paper, 1.93:1 night against their editor
+   backgrounds) rather than by using the same alpha on both. */
+body.vscode-light th {
+  border-color: #b6b0a7;
+}
+body.vscode-dark th {
+  border-color: #4b4845;
+}
+
+/* --------------------------------------------------- blockquotes ---
+ * markdown.css gives these a 5px bar and no vertical margin, so a quote sits
+ * flush against the paragraph above it and the bar dominates the text it is
+ * supposed to be marking. The colour comes from textBlockQuote.border, which
+ * the theme now sets at matched presence in both modes.
+ */
+
+body blockquote {
+  border-left-width: 3px;
+  padding: 10px 16px;
+  margin: 0 0 16px;
+}
+
+body blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* -------------------------------------------------------- tables ---
+ * Stock tables are 5px-padded and full-bleed, which reads as a grid of
+ * unrelated cells. Give the cells room and let the header carry the weight;
+ * the borders above do the separating.
+ */
+
+body th,
+body td {
+  padding: 6px 12px;
+}
+
+body th {
+  font-weight: 600;
+}
+
+/* Leading and trailing cells align with the prose margin rather than being
+   inset by the cell padding. */
+body table tr > :first-child {
+  padding-left: 0;
+}
+body table tr > :last-child {
+  padding-right: 0;
+}
+
+body table {
+  margin-bottom: 16px;
+}
+
 /* ------------------------------------------------------- code colours ---
  * The preview does NOT use the active colour theme for fenced code. It ships
  * highlight.js' "VS2015" palette hardcoded in highlight.css, with a partial
