@@ -334,10 +334,14 @@ Residual gotchas:
   uniform 6.5% black (`243 × 0.935` on every channel), one of Cursor's own
   `color-mix` design tokens rather than `textCodeBlock.background`. It sits a
   full rung below anything the theme controls, so those two key families are
-  laddered against `#e3e1dc` — five paper values dropped 1.6–4 OKLCh points at
-  unchanged hue and chroma to clear 4.5:1 there, which costs nothing on the
-  lighter surfaces they normally land on (min 5.27:1 on the editor). A fence
-  with no language tag gets no tokens at all and renders as flat ink.
+  laddered against that measured surface — `#e3e1dc` on paper and `#2b2a27` on
+  night (the editor background under a uniform +17 white, ~7.4%) — rather than
+  against `editor.background`. Five paper values dropped 1.6–4 OKLCh points and
+  three night values lifted ~2, all at unchanged hue and chroma, which costs
+  nothing on the lighter surfaces these keys normally land on (min 5.27:1 paper
+  / 5.59:1 night on the editor). Measure both modes: night's overlay is not the
+  mirror of paper's, and estimating it left three values short at 4.39–4.42. A
+  fence with no language tag gets no tokens at all and renders as flat ink.
 - Reinstall with `./vscode/install-vscode.sh` — it repackages the `.vsix` and
   force-installs into both editors. Symlinking into `~/.cursor/extensions`
   does not work; see the header of that script.
