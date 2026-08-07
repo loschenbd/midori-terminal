@@ -82,6 +82,24 @@ const TITLE_SELECTION_BODY_CLASS = 'midori-title-selection-active';
 // draw the caret ~13px high — hence a class those builds do not set.
 const TITLE_SLOT_BODY_CLASS = 'midori-title-slot-active';
 
+/* THIS PLUGIN IS ONLY MEANINGFUL UNDER THE MIDORI STYLESHEET. Obsidian installs
+ * plugins per VAULT but themes are chosen per vault too, so a vault can easily
+ * end up with this plugin enabled and a different theme selected — which is
+ * exactly what happened: a vault running an unrelated theme had the body
+ * classes set and invisible markers drawn into it, because nothing there styles
+ * .midori-selection. Harmless by luck rather than by design, and it would stop
+ * being harmless the moment another theme used one of these class names.
+ *
+ * Detected by probing for a custom property the theme defines rather than by
+ * comparing the theme NAME, so a renamed copy or a fork that pulls in these
+ * rules still works. The check is re-run on every css-change, which is what
+ * Obsidian fires when the theme is switched. */
+const THEME_SENTINEL = '--midori-slot-rise';
+
+function midoriStylesheetActive() {
+  return getComputedStyle(document.body).getPropertyValue(THEME_SENTINEL).trim() !== '';
+}
+
 /* The blink is restarted by flipping between two identical keyframes, the same
  * trick CodeMirror uses: re-assigning the same animation name would not
  * retrigger it, so the caret would keep blinking on its old schedule and could
@@ -360,7 +378,13 @@ function setupTitleOverlay(plugin) {
     hideBandsFrom(rects.length);
   };
 
+  plugin.hideTitleOverlay = hide;
+
   const place = () => {
+    // Nothing here is styled unless the Midori stylesheet is loaded, and the
+    // vault may have switched to another theme since load.
+    if (!midoriStylesheetActive()) return hide();
+
     const sel = document.getSelection();
     if (!sel || sel.rangeCount === 0) return hide();
 
@@ -418,8 +442,16 @@ module.exports = class MidoriCaret extends Plugin {
     // switched off (it repaints a band Obsidian usually leaves to the
     // compositor) without giving up the caret — which is exactly what mobile
     // needs, since the native band there cannot be painted out at all.
-    document.body.classList.add(BODY_CLASS);
-    if (SELECTION_IS_SUPPORTED) document.body.classList.add(SELECTION_BODY_CLASS);
+    this.syncTheme = () => {
+      const on = midoriStylesheetActive();
+      const cls = document.body.classList;
+      cls.toggle(BODY_CLASS, on);
+      cls.toggle(SELECTION_BODY_CLASS, on && SELECTION_IS_SUPPORTED);
+      cls.toggle(TITLE_BODY_CLASS, on);
+      cls.toggle(TITLE_SELECTION_BODY_CLASS, on && SELECTION_IS_SUPPORTED);
+      cls.toggle(TITLE_SLOT_BODY_CLASS, on);
+      if (!on && this.hideTitleOverlay) this.hideTitleOverlay();
+    };
 
     setupTitleOverlay(this);
     // Added LAST and only after setupTitleOverlay has actually installed its
@@ -431,9 +463,10 @@ module.exports = class MidoriCaret extends Plugin {
     // for the same reason again: the 1.1.0 build already set the caret class,
     // so hanging the new ::selection rule on it would have blanked the title
     // selection for anyone running the new CSS against the old code.
-    document.body.classList.add(TITLE_BODY_CLASS);
-    if (SELECTION_IS_SUPPORTED) document.body.classList.add(TITLE_SELECTION_BODY_CLASS);
-    document.body.classList.add(TITLE_SLOT_BODY_CLASS);
+    this.syncTheme();
+    // Obsidian fires css-change when the theme is switched, so a vault that
+    // moves on or off Midori picks this up without a reload.
+    this.registerEvent(this.app.workspace.on('css-change', () => this.syncTheme()));
   }
 
   onunload() {
