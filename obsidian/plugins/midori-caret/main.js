@@ -223,7 +223,29 @@ function buildLayer({ cls, markerClass, above, wantEmpty }) {
     },
 
     update(update, dom) {
-      if (wantEmpty && update.transactions.some((tr) => tr.selection)) flipBlink(dom);
+      if (wantEmpty) {
+        /* STEADY WHILE A RANGE IS SELECTED. The blink lives on the layer, so
+         * once the caret started being drawn at the head of a non-empty range
+         * it inherited it — and a caret flashing on and off at the end of a
+         * highlight reads as the selection itself flickering. It marks where
+         * the selection ends, which is a position, not an invitation to type
+         * there, so it holds still until the selection collapses.
+         *
+         * Driven by the inline animation-name rather than a class, because
+         * flipBlink already owns that property; a stylesheet rule would have
+         * to fight it with !important. 'none' also gives flipBlink a value it
+         * does not recognise, so the branch below restores a real keyframe
+         * name the moment the selection collapses. */
+        const hasRange = update.state.selection.ranges.some((r) => !r.empty);
+        if (hasRange) {
+          dom.style.animationName = 'none';
+        } else if (
+          dom.style.animationName === 'none'
+          || update.transactions.some((tr) => tr.selection)
+        ) {
+          flipBlink(dom);
+        }
+      }
       // geometryChanged matters: a font finishing loading or the pane being
       // resized moves both without touching doc or selection.
       return update.docChanged || update.selectionSet || update.geometryChanged;
