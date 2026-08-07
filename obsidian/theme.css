@@ -705,7 +705,7 @@ body.midori-title-selection-active .inline-title::selection,
 body.midori-title-selection-active .inline-title ::selection {
   background-color: transparent;
 }
-.midori-title-selection {
+body.midori-title-selection-active .midori-title-selection {
   position: absolute;
   margin-top: calc(-1 * var(--midori-title-slot-rise));
   height: calc(var(--midori-title-slot-rise) + var(--midori-title-slot-drop));
@@ -728,7 +728,18 @@ body.midori-title-selection-active .inline-title ::selection {
    band Obsidian normally leaves to the compositor.
 
    Both forms are needed: `.cm-content::selection` for text directly in the
-   editor element and the descendant form for text inside its child spans. */
+   editor element and the descendant form for text inside its child spans.
+
+   DESKTOP ONLY, and the plugin is what enforces it — it withholds
+   midori-selection-active on mobile so none of this applies there. iOS ignores
+   `::selection` on an editable outright: the highlight is UIKit's text
+   interaction UI drawn ABOVE the web content, not a background a stylesheet
+   can reach. Verified in the Simulator — with this exact rule applied and
+   computing to rgba(0,0,0,0), iOS still drew its band with handles. Drawing
+   ours underneath an unremovable native one is a doubled highlight, which is
+   worse than the geometry it was fixing. `caret-color` is NOT affected: the
+   caret is WebKit's own editing code and honours it, so the caret half of this
+   file ships everywhere. */
 body.midori-selection-active .cm-content::selection,
 body.midori-selection-active .cm-content ::selection {
   background-color: transparent;
