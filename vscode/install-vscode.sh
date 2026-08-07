@@ -44,8 +44,8 @@ fi
 
 echo "Done. Reload the editor(s), then pick Midori Paper / Midori Night."
 echo
-echo "To wire everything up (auto light/dark + icons + matching terminal font),"
-echo "merge this into the editor's settings.json:"
+echo "To wire everything up (auto light/dark + icons + matching terminal font"
+echo "+ coloured nesting guides), merge this into the editor's settings.json:"
 cat <<'EOF'
   "window.autoDetectColorScheme": true,
   "workbench.preferredLightColorTheme": "Midori Paper",
@@ -53,4 +53,11 @@ cat <<'EOF'
   "workbench.iconTheme": "midori-icons",
   "workbench.productIconTheme": "midori-product-icons",
   "terminal.integrated.fontFamily": "'M Plus 1 Code', 'FiraCode Nerd Font'",
+  // Both are required. bracketPairs defaults to false, so the theme's
+  // editorBracketPairGuide.* colours stay inert without it; and
+  // highlightActiveIndentation's default of true means "unless bracket pair
+  // guides are enabled", so turning the first on silently kills the active
+  // indent rail — the only guide that follows JSX nesting. "always" keeps both.
+  "editor.guides.bracketPairs": true,
+  "editor.guides.highlightActiveIndentation": "always",
 EOF
