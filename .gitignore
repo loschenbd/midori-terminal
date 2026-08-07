@@ -4,3 +4,4 @@ vscode/.icon-cache/
 __pycache__/
 obsidian/.fontenv/
 .playwright-mcp/
+obsidian/extra-vaults.txt
