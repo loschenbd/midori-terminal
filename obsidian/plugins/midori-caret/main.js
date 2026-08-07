@@ -91,9 +91,97 @@ function flipBlink(el) {
     el.style.animationName === 'midori-blink' ? 'midori-blink2' : 'midori-blink';
 }
 
+/* THE INVARIANT EVERY RULE IN theme.css DEPENDS ON: one marker == one visual
+ * row. The stylesheet takes `top: 50%` of a marker as the baseline, which is
+ * only true for a box that is one row tall — the 0.9em content area and the
+ * 24px line box are both centred on the baseline under A = D, but a box
+ * spanning SEVERAL rows is centred on nothing.
+ *
+ * RectangleMarker.forRange breaks that invariant by design. For anything
+ * larger than a single row it returns three pieces — the first partial row,
+ * the last partial row, and ONE block rectangle covering everything between:
+ *
+ *   selection across 4 wrapped rows -> h=14, h=82 (3.42 rows), h=14
+ *   selection across 3 logical lines -> h=14, h=106 (4.42 rows), h=14
+ *
+ * The middle piece then got a single 19px band at its centre and every row
+ * inside it went unpainted — a selection with holes, plus a stray bar floating
+ * in the gap. It looked correct for a year of single-row selections because
+ * those are the one case forRange does not decompose.
+ *
+ * So don't ask CodeMirror where the rows are; ask the browser. A DOM Range's
+ * getClientRects() IS the line-box decomposition — one rect per visual row, at
+ * that row's own font size, which is what makes this work across headings and
+ * wrapped lines alike rather than assuming a 24px pitch. An empty line comes
+ * back as its 24px line box, so blank lines inside a selection still paint,
+ * and both boxes satisfy the 50% rule. */
+function layerBase(view) {
+  // Mirrors CodeMirror's own (unexported) getBase, which is what marker
+  // coordinates are relative to.
+  const rect = view.scrollDOM.getBoundingClientRect();
+  const scaleX = view.scaleX || 1;
+  const scaleY = view.scaleY || 1;
+  const rtl = cmView.Direction && view.textDirection === cmView.Direction.RTL;
+  const left = rtl
+    ? rect.right - view.scrollDOM.clientWidth * scaleX
+    : rect.left;
+  return {
+    left: left - view.scrollDOM.scrollLeft * scaleX,
+    top: rect.top - view.scrollDOM.scrollTop * scaleY,
+  };
+}
+
+function rowMarkers(view, markerClass, range) {
+  const { RectangleMarker } = cmView;
+  let rects;
+  try {
+    const start = view.domAtPos(range.from);
+    const end = view.domAtPos(range.to);
+    const dom = document.createRange();
+    dom.setStart(start.node, start.offset);
+    dom.setEnd(end.node, end.offset);
+    rects = Array.from(dom.getClientRects());
+  } catch (err) {
+    // domAtPos can land inside a widget/decoration it cannot map. Falling back
+    // to forRange is worse geometry, not no geometry.
+    return RectangleMarker.forRange(view, markerClass, range);
+  }
+
+  const base = layerBase(view);
+  const out = [];
+  for (const r of rects) {
+    if (r.width <= 0 || r.height <= 0) continue;
+    out.push(new RectangleMarker(
+      markerClass, r.left - base.left, r.top - base.top, r.width, r.height,
+    ));
+  }
+  return out.length ? out : RectangleMarker.forRange(view, markerClass, range);
+}
+
+/* A caret for a NON-EMPTY range, i.e. the blinking bar at the end you are
+ * dragging. theme.css paints the native caret out inside .cm-content, and this
+ * layer used to skip non-empty ranges entirely — so selecting anything left no
+ * caret at all, native or drawn. CodeMirror's own drawSelection does the same
+ * thing via its drawRangeCursor option, which defaults to on.
+ *
+ * Duck-typed rather than built with EditorSelection.cursor(): forRange's empty
+ * branch reads only .empty, .head and .assoc, so this avoids taking a second
+ * externalised CodeMirror module as a dependency just to make one object. */
+function headCursor(range) {
+  if (range.empty) return range;
+  return {
+    empty: true,
+    from: range.head,
+    to: range.head,
+    head: range.head,
+    assoc: range.head > range.anchor ? -1 : 1,
+  };
+}
+
 /* Both layers are the same shape: collect RectangleMarkers for the ranges we
- * care about and let CSS do the rest. `empty` splits them — a collapsed range
- * is a caret, anything else is a selection. */
+ * care about and let CSS do the rest. `wantEmpty` picks which one this is —
+ * the caret draws for EVERY range (at its head), the band only for non-empty
+ * ones. */
 function buildLayer({ cls, markerClass, above, wantEmpty }) {
   const { layer, RectangleMarker } = cmView;
   if (!layer || !RectangleMarker) return null;
@@ -105,9 +193,12 @@ function buildLayer({ cls, markerClass, above, wantEmpty }) {
     markers(view) {
       const out = [];
       for (const range of view.state.selection.ranges) {
-        if (range.empty !== wantEmpty) continue;
-        for (const piece of RectangleMarker.forRange(view, markerClass, range)) {
-          out.push(piece);
+        if (wantEmpty) {
+          for (const piece of RectangleMarker.forRange(view, markerClass, headCursor(range))) {
+            out.push(piece);
+          }
+        } else if (!range.empty) {
+          for (const piece of rowMarkers(view, markerClass, range)) out.push(piece);
         }
       }
       return out;
