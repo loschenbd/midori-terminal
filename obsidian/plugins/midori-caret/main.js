@@ -191,26 +191,59 @@ function rowMarkers(view, markerClass, range) {
   const base = layerBase(view);
   const live = rects.filter((r) => r.width > 0 && r.height > 0);
 
-  /* SQUARE OFF THE MIDDLE ROWS when we are drawing under a native scrim we
-   * cannot remove (see BLOCK_ROWS). getClientRects hugs the text, so a row
-   * ending mid-line leaves the rest of that row to the scrim alone — a ragged
-   * sage edge with a dark tail past it, which is the doubling complaint in
-   * another form. Every row except the one the selection starts on runs from
-   * the content's left edge, and every row except the one it ends on runs to
-   * the right edge, which is the same three-piece shape the scrim uses. */
-  const content = BLOCK_ROWS && live.length > 1
-    ? view.contentDOM.getBoundingClientRect()
-    : null;
-
   const out = [];
-  live.forEach((r, i) => {
-    const left = content && i > 0 ? content.left : r.left;
-    const right = content && i < live.length - 1 ? content.right : r.right;
+  const pieces = BLOCK_ROWS ? blockRows(view, live) : live;
+  for (const r of pieces) {
     out.push(new RectangleMarker(
-      markerClass, left - base.left, r.top - base.top, right - left, r.height,
+      markerClass, r.left - base.left, r.top - base.top, r.width, r.height,
     ));
-  });
+  }
   return out.length ? out : RectangleMarker.forRange(view, markerClass, range);
+}
+
+/* SQUARE OFF THE MIDDLE ROWS when we are drawing under a native scrim we
+ * cannot remove (see BLOCK_ROWS). getClientRects hugs the text, so a row
+ * ending mid-line leaves the rest of that row to the scrim alone — a ragged
+ * sage edge with a dark tail past it, which is the doubling complaint in
+ * another form. Every row except the one the selection starts on runs from the
+ * content's left edge, and every row except the one it ends on runs to the
+ * right edge: the same three-piece shape the scrim uses.
+ *
+ * ONE RECT IS NOT ONE ROW, which is what the first version of this got wrong.
+ * getClientRects returns a rect per BOX FRAGMENT, and a decoration splits a row
+ * into several — the row ending a selection came back as two, 75+43 and 117+53.
+ * Indexing the flat list then squared off every fragment that was not literally
+ * last, so the closing row ran the full width past the caret with a rule along
+ * its bottom edge. Group into visual rows first, then decide.
+ *
+ * Rows are grouped on the vertical CENTRE rather than on top/height, because
+ * fragments in one row differ in height whenever their font sizes do (inline
+ * code, a smaller face) — but under A = D they all centre on the same baseline,
+ * so a centre inside the row's span means same row and one 24px lower does not.
+ * Taking the union of a row's fragments keeps that: intervals symmetric about a
+ * shared centre stay symmetric about it, so `top: 50%` is still the baseline. */
+function blockRows(view, live) {
+  const sorted = live.slice().sort((a, b) => (a.top - b.top) || (a.left - b.left));
+  const rows = [];
+  for (const r of sorted) {
+    const row = rows[rows.length - 1];
+    const mid = r.top + r.height / 2;
+    if (row && mid > row.top && mid < row.bottom) {
+      row.top = Math.min(row.top, r.top);
+      row.bottom = Math.max(row.bottom, r.bottom);
+      row.left = Math.min(row.left, r.left);
+      row.right = Math.max(row.right, r.right);
+    } else {
+      rows.push({ top: r.top, bottom: r.bottom, left: r.left, right: r.right });
+    }
+  }
+
+  const content = rows.length > 1 ? view.contentDOM.getBoundingClientRect() : null;
+  return rows.map((row, i) => {
+    const left = content && i > 0 ? content.left : row.left;
+    const right = content && i < rows.length - 1 ? content.right : row.right;
+    return { left, top: row.top, width: right - left, height: row.bottom - row.top };
+  });
 }
 
 /* A caret for a NON-EMPTY range, i.e. the blinking bar at the end you are
