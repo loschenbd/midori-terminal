@@ -1,7 +1,7 @@
 {
   "id": "midori-caret",
   "name": "Midori Caret",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "minAppVersion": "1.4.0",
   "description": "Draws the editor caret, the editor selection band, the note-title caret and the note-title selection band as real elements so the Midori theme can size them. Needed because the Midori fonts carry symmetric ascent/descent overrides, which makes everything the browser derives from font metrics centre on the baseline instead of on the ink. The two selection bands are desktop-only: iOS ignores ::selection on an editable, so a drawn band there would sit under an unremovable native one.",
   "author": "Benjamin Loschen",
