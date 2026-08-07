@@ -249,6 +249,43 @@ Residual gotchas:
 - Elements with arbitrary heights (images, Mermaid diagrams, embeds) knock
   following lines off-register — inherent to baseline grids.
 
+## Cursor / VS Code notes
+
+- **Judge syntax contrast at 1x, never on the retina display.** Decomposing a
+  non-retina screenshot into per-pixel ink coverage: across every token colour
+  only **8–11% of glyph pixels reach ≥90% coverage**, and the median glyph
+  pixel sits at 0.13–0.27. A WCAG ratio describes that ~9% core only — the rest
+  of the letterform is partial-coverage pixels much nearer the background. So
+  the nominal number overstates legibility, and it does so worst where you can
+  least afford it. Measured at the 90th-percentile pixel: ink `#2a2825` held
+  13.01 → 8.73:1, keywords 6.83 → 5.10:1, but functions at `#b88a3a` went
+  2.76 → **2.42:1**, with a median glyph pixel of 1.13:1 — essentially no pixel
+  in the glyph was legible. Retina has the subpixels to hold the true colour
+  and hides all of this, which is why it only ever gets reported on the
+  external monitor. Compensate with headroom: aim ~5–8:1 nominal for 12–13px
+  body text, not a bare 4.5.
+- **Lightness is the lever; chroma is not.** Raising saturation was tried first
+  and made things *worse* — the accents rely on chroma *tiers* to stay apart
+  when they share a line, and lifting everything collapsed those tiers,
+  reintroducing collisions and clipping sRGB. Paper's 11 syntax roles are now
+  an OKLCh lightness ladder (L 27.8 → 54) with hues unchanged; the pairwise
+  `ΔL<6 and ΔC<3` check goes 5 flagged pairs → 0, min contrast 2.76 → 4.46:1.
+  Night had no contrast problem (everything ≥5.7:1) but 9 collisions from
+  stacking all 11 roles into L 59–78; same re-laddering, now 0 and ≥4.93:1.
+- **Two tiers, on purpose.** Code-surface keys (`tokenColors`,
+  `semanticTokenColors`, `editorBracketHighlight.*`, `symbolIcon.*`) take the
+  full ladder value. Diagnostics, git decorations, testing and charts take a
+  separate *status* value per hue fixed only to clear 4.5:1 — so a warning
+  still reads as ochre instead of inheriting the ladder's much darker rung.
+- **`terminal.ansi*` is deliberately untouched.** Those 16 keys mirror
+  `ghostty/themes/midori-*` and are consumed by the shell, tmux and fzf
+  fragments; changing them here alone would drift the palette across tools.
+  They still carry the old light values (`ansiYellow` `#b88a3a` is 2.76:1 on
+  paper), so the integrated terminal is the one surface this pass did not fix.
+- Reinstall with `./vscode/install-vscode.sh` — it repackages the `.vsix` and
+  force-installs into both editors. Symlinking into `~/.cursor/extensions`
+  does not work; see the header of that script.
+
 ## Antinote notes
 
 Two themes (`antinote/midori-paper.json`, `antinote/midori-night.json`), flat
