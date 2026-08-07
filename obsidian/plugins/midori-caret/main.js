@@ -440,6 +440,38 @@ function titleFontSize(title) {
   return `${parseFloat(getComputedStyle(title).fontSize) || 16}px`;
 }
 
+/* Every visual row of the WHOLE title, not just the selected part. The line box
+ * below is the height of one row, and only the full element gives the divisor. */
+function titleRowCount(title) {
+  const all = document.createRange();
+  all.selectNodeContents(title);
+  const live = Array.from(all.getClientRects())
+    .filter((r) => r.width > 0 && r.height > 0);
+  if (!live.length) return 1;
+  return blockRows(live, contentBox(title)).length || 1;
+}
+
+/* ...and its LINE BOX, which the iOS band needs and the theme variable does not
+ * give. --inline-title-line-height is 24px, but the phone measured the scrim
+ * 22px tall and dead centred on the baseline — and dead centred is exactly what
+ * a symmetric face produces, so 22px is the line-height the title actually uses
+ * there. Somewhere on mobile the variable is not reaching the element that
+ * governs the box; the header-stack block hit the same wall from the other side
+ * when a line-height override "barely applied".
+ *
+ * So measure the box rather than read the number that was meant to produce it.
+ * Content height over row count is true however the cascade got there, and it
+ * tracks Appearance -> Font size for free. */
+function titleLineBox(title) {
+  const cs = getComputedStyle(title);
+  const box = title.getBoundingClientRect();
+  const inner = box.height
+    - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0)
+    - parseFloat(cs.borderTopWidth || 0) - parseFloat(cs.borderBottomWidth || 0);
+  const row = inner / titleRowCount(title);
+  return `${row > 0 ? row : parseFloat(cs.lineHeight) || 0}px`;
+}
+
 /* Which .inline-title, if any, the range is in. Ranges normalise so that start
  * precedes end, so dragging up out of the title still puts the title end at
  * `start` — but either endpoint can also be an ancestor element when the drag
@@ -538,6 +570,10 @@ function setupTitleOverlay(plugin) {
     // with it instead of being chased by a scroll handler.
     const host = title.parentElement || document.body;
 
+    // Measured once for the element, not once per band.
+    const fontSize = titleFontSize(title);
+    const lineBox = titleLineBox(title);
+
     rects.forEach((rect, i) => {
       while (bands.length <= i) {
         const fresh = document.createElement('div');
@@ -553,9 +589,11 @@ function setupTitleOverlay(plugin) {
       const origin = (band.offsetParent || host).getBoundingClientRect();
       const baseline = rect.top + rect.height / 2; // A = D again
 
-      // JS supplies the baseline; the rise above it and the drop below it stay
-      // in CSS — see titleFontSize above for why the font size comes along.
-      band.style.fontSize = titleFontSize(title);
+      // JS supplies the baseline and the line box; the rise above the baseline
+      // and the drop below it stay in CSS — see titleFontSize above for why the
+      // font size comes along, and titleLineBox for why the box is measured.
+      band.style.fontSize = fontSize;
+      band.style.setProperty('--midori-title-line-box', lineBox);
       band.style.left = `${rect.left - origin.left}px`;
       band.style.width = `${rect.width}px`;
       band.style.top = `${baseline - origin.top}px`;

@@ -865,7 +865,9 @@ body.midori-drawn .midori-selection::before {
 
    It is not the CSS line box. Probed in the page, .cm-line and .inline-title
    both put their content box exactly 12 up and 12 down from the baseline, as
-   symmetric overrides require.
+   symmetric overrides require. (Probed on DESKTOP. The phone later measured the
+   title's box at 11 and 11 — still centred, but 22px rather than 24, which is
+   its own finding and is handled where the title's pair is set below.)
 
    It is not the fonts' real metrics either. The overrides are BAKED INTO the
    woff2s here, not just declared — hhea, OS/2 typo and OS/2 win all read
@@ -879,14 +881,15 @@ body.midori-drawn .midori-selection::before {
    phone's measured lean was 5.0 CSS px at a 14px prose face, i.e. 0.357em, and
    1 device px at 3x is 0.33 CSS px, so those agree inside the measurement.
 
-   The consequence that matters: THE LEAN SCALES WITH FONT SIZE. It is not a
-   flat 5px, which is why the title needs its own numbers rather than the prose
-   ones — at 22.652px the same 0.357em is 8.1px, not 5. Both slots are written
-   as half the row plus or minus the lean so neither has to be re-measured when
-   Appearance -> Font size moves. em resolves at the element that uses it, and
-   both bands carry the right font-size to use it against: the prose markers
-   inherit the editor's 14px, and the plugin sets each title band's font-size to
-   the title's own.
+   The consequence that matters for the PROSE: THE LEAN SCALES WITH FONT SIZE.
+   It is not a flat 5px, so the slot is written as half the line box plus or
+   minus the lean and does not have to be re-measured when Appearance -> Font
+   size moves. em resolves at the element that uses it, and the prose markers
+   inherit the editor's 14px to resolve it against.
+
+   Do NOT carry this lean over to the title. Extrapolating it there — 0.357em is
+   8.1px at the title's face, not 5 — is exactly the mistake the block below
+   documents undoing: the title's scrim is centred and does not lean at all.
 
    The plugin squares off the middle rows to match the scrim's width (see
    BLOCK_ROWS); this is the vertical half of the same match.
@@ -950,14 +953,60 @@ body.is-ios.midori-drawn .midori-selection-handle-end::after {
   top: calc(50% + var(--midori-sel-drop));
 }
 
+/* ONE RULE, TWO SURFACES: half the line box, plus and minus that surface's
+   lean. Both numbers in it are now per-surface facts rather than one shared
+   guess, which is what it took to make the title right without moving the
+   prose.
+
+   THE TITLE DOES NOT LEAN. Measured on the phone with "meets Bimba" selected:
+   the title's baseline sits at device y 513 (the ink of a run with no
+   descenders stops there), our band ran 453..524 and the scrim ran 480..545.
+   In CSS px about the baseline that is our band at [-20.0, +4.0] against a
+   scrim at [-11.0, +11.0] — the scrim is symmetric to a third of a pixel, and
+   symmetric is what a centred line box on a symmetric face looks like. So the
+   prose lean applied to the title face (0.357em x 22.4px = 8px) was pure
+   error: it dragged the band 8px up out of a box that never moved.
+
+   Why the prose leans and the title does not is not settled — the system-font
+   model above predicts the prose exactly and the title not at all. What IS
+   settled is which of the two the measurement says each surface does, and that
+   is what these two pairs now carry.
+
+   AND ITS BOX IS 22px, NOT THE 24px OF --inline-title-line-height. The same
+   measurement fixes the height: a centred scrim 11px either side of the
+   baseline IS a 22px line box, because a symmetric face puts half the box on
+   each side whatever the leading. The variable says 24. The plugin therefore
+   measures the element instead of trusting the variable and hands the answer
+   in as --midori-title-line-box; see titleLineBox in main.js. The fallback
+   here keeps a build that predates that measurement at 12/12 — 1px proud of
+   the scrim rather than 9px above it. */
 body.is-ios {
   --midori-scrim-lean: 0.357em;
-  --midori-sel-rise: calc(12px + var(--midori-scrim-lean));
-  --midori-sel-drop: calc(12px - var(--midori-scrim-lean));
-  --midori-title-sel-rise:
-    calc(var(--inline-title-line-height) / 2 + var(--midori-scrim-lean));
-  --midori-title-sel-drop:
-    calc(var(--inline-title-line-height) / 2 - var(--midori-scrim-lean));
+  --midori-line-box: 24px;
+  --midori-title-scrim-lean: 0px;
+  --midori-sel-rise: calc(var(--midori-line-box) / 2 + var(--midori-scrim-lean));
+  --midori-sel-drop: calc(var(--midori-line-box) / 2 - var(--midori-scrim-lean));
+}
+/* ON THE BAND, NOT ON body, and that is not a style choice. A var() inside a
+   custom property is substituted at the element the declaration sits on, so a
+   pair declared up here would resolve --midori-title-line-box against BODY —
+   where the plugin's per-element value does not exist — and inherit down as a
+   literal 12px whatever the plugin measured. Declared here it substitutes on
+   the band, which is the element carrying the measurement.
+
+   em is the opposite case and that is why this was easy to miss: a length in a
+   custom property is NOT resolved until it is substituted into a real property,
+   so --midori-title-slot-rise: 0.83em declared on body still resolves against
+   the band's own font-size. Substitution moves; unit resolution does not. */
+body.is-ios .midori-title-selection {
+  --midori-title-sel-rise: calc(
+    var(--midori-title-line-box, var(--inline-title-line-height)) / 2
+      + var(--midori-title-scrim-lean)
+  );
+  --midori-title-sel-drop: calc(
+    var(--midori-title-line-box, var(--inline-title-line-height)) / 2
+      - var(--midori-title-scrim-lean)
+  );
 }
 
 /* Two identical keyframes so the plugin can restart the blink by alternating

@@ -190,11 +190,26 @@ Residual gotchas:
   behind and could not dim. So it is a translucent scrim on top: unrecolourable,
   but see-through, and a band underneath returns at 80%. Matching its shape is
   the whole job — the line box rather than the ink, middle rows squared off to
-  the content edges, and a box leaning above the baseline by
+  the content edges, and, in the prose, a box leaning above the baseline by
   `fontSize × (A−D)/2` for the **system** font, since UIKit lays the rect out
-  without ever resolving the webfont. That lean scales with font size (5px at
-  the 14px prose face, 8.1px at the 22.65px title), so both slots are written
-  as half the row ± `--midori-scrim-lean`.
+  without ever resolving the webfont. That lean scales with font size, so the
+  slot is written as half the line box ± `--midori-scrim-lean`.
+
+  **The title takes the same rule with different numbers, and extrapolating the
+  prose's was the bug.** Measured against the title's baseline on the phone: the
+  scrim sits at `[−11.0, +11.0]` — symmetric to a third of a pixel, which is
+  what a centred line box on a symmetric face looks like — while the prose lean
+  carried over put our band at `[−20.0, +4.0]`. So the title's lean is 0. Its
+  height is measured too: a scrim 11px either side of the baseline *is* a 22px
+  line box, against the 24px that `--inline-title-line-height` says, so the
+  plugin measures the element (content height ÷ visual rows) and hands the
+  answer in as `--midori-title-line-box` rather than trusting the variable.
+  Both surfaces are now `line box / 2 ± lean` with both terms measured per
+  surface. Note the pair must be *declared on the band*: a `var()` inside a
+  custom property is substituted at the element the declaration sits on, so
+  declaring it on `body` would resolve the measurement against `body`, where it
+  does not exist. (`em` is the opposite — it is not resolved until substituted
+  into a real property, which is why the `0.83em` slots can live on `body`.)
 
   Gated on **iOS, not mobile**: Android is Chrome, honours `::selection`, and
   so has no scrim left to match — it takes the desktop ink slot. `is-ios` /
