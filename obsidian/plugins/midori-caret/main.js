@@ -40,8 +40,30 @@
  * so there is no doubled band. That is the whole reason for the extra code.
  */
 
-const { Plugin, Notice } = require('obsidian');
+const { Plugin, Notice, Platform } = require('obsidian');
 const cmView = require('@codemirror/view');
+
+/* THE SELECTION HALF IS DESKTOP-ONLY, and this is a platform limit rather than
+ * a preference. Both replacements work by painting the native out and drawing
+ * over it, and on iOS only one of those two natives can be painted out:
+ *
+ *   caret-color: transparent                    -> honoured
+ *   ::selection { background-color: transparent } -> IGNORED
+ *
+ * Measured in the iOS Simulator against a plain contenteditable, not inferred:
+ * with the ::selection rule applied and computing to rgba(0,0,0,0), iOS still
+ * drew its full selection band with handles. The highlight on an editable is
+ * UIKit's text-interaction UI drawn ABOVE the web content, not a CSS-painted
+ * background, so no stylesheet reaches it. (The caret is drawn by WebKit's own
+ * editing code and does respect caret-color — verified the same way: the
+ * native caret blinked across 4 of 8 frames without the rule and 0 of 8 with
+ * it.)
+ *
+ * So on mobile the band would be drawn UNDER a native band that cannot be
+ * removed, which reads as a doubled highlight — two offset slabs of colour.
+ * Better to leave the native selection alone there and keep the caret fix,
+ * which does work. */
+const SELECTION_IS_SUPPORTED = !(Platform && Platform.isMobile);
 
 const CURSOR_LAYER = 'midori-cursorLayer';
 const CURSOR_CLASS = 'midori-cursor';
@@ -207,6 +229,8 @@ function setupTitleOverlay(plugin) {
 
   const drawBands = (range, title) => {
     bar.style.display = 'none';
+    // Mobile keeps its native band — see SELECTION_IS_SUPPORTED.
+    if (!SELECTION_IS_SUPPORTED) return hideBandsFrom(0);
 
     const clipped = clipToTitle(range, title);
     if (!clipped) return hide();
@@ -292,16 +316,19 @@ module.exports = class MidoriCaret extends Plugin {
       return;
     }
 
-    this.registerEditorExtension([caretLayer, selectionLayer]);
+    this.registerEditorExtension(
+      SELECTION_IS_SUPPORTED ? [caretLayer, selectionLayer] : [caretLayer],
+    );
 
     // The theme hides the natives ONLY under these classes, so theme.css stays
     // correct on its own — uninstall the plugin and the native caret and
     // selection come back, rather than the editor losing both entirely. They
-    // are two classes rather than one so the selection half can be switched off
-    // (it repaints a band Obsidian usually leaves to the compositor) without
-    // giving up the caret.
+    // are separate classes rather than one so the selection half can be
+    // switched off (it repaints a band Obsidian usually leaves to the
+    // compositor) without giving up the caret — which is exactly what mobile
+    // needs, since the native band there cannot be painted out at all.
     document.body.classList.add(BODY_CLASS);
-    document.body.classList.add(SELECTION_BODY_CLASS);
+    if (SELECTION_IS_SUPPORTED) document.body.classList.add(SELECTION_BODY_CLASS);
 
     setupTitleOverlay(this);
     // Added LAST and only after setupTitleOverlay has actually installed its
@@ -314,7 +341,7 @@ module.exports = class MidoriCaret extends Plugin {
     // so hanging the new ::selection rule on it would have blanked the title
     // selection for anyone running the new CSS against the old code.
     document.body.classList.add(TITLE_BODY_CLASS);
-    document.body.classList.add(TITLE_SELECTION_BODY_CLASS);
+    if (SELECTION_IS_SUPPORTED) document.body.classList.add(TITLE_SELECTION_BODY_CLASS);
     document.body.classList.add(TITLE_SLOT_BODY_CLASS);
   }
 

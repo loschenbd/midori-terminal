@@ -171,6 +171,18 @@ Residual gotchas:
   the note title, which is its own contenteditable outside CodeMirror and so
   misses every rule scoped to `.cm-content`. Uninstall it and the natives come
   back: each replacement is gated on a body class the plugin sets.
+- **The selection half is desktop-only; the caret half is everywhere.** Both
+  work by painting the native out and drawing over it, and on iOS only one of
+  the two natives can be painted out. Measured in the Simulator rather than
+  assumed: with `::selection { background-color: transparent }` applied and
+  computing to `rgba(0,0,0,0)`, iOS still drew its full band with handles —
+  the highlight on an editable is UIKit's text-interaction UI drawn *above* the
+  web content, not a background CSS can reach. `caret-color: transparent`, by
+  contrast, is honoured (the native caret blinked across 4 of 8 frames without
+  it and 0 of 8 with it) because the caret is WebKit's own editing code. So the
+  plugin withholds `midori-selection-active` on mobile and skips the selection
+  layer entirely; drawing a band *under* an unremovable native one reads as a
+  doubled highlight, which is worse than the geometry it set out to fix.
 - **The caret and the band share one "slot", deliberately.** They answer the
   same question — where the text on this line lives — so `--midori-slot-rise` /
   `--midori-slot-drop` (14px / 5px) size both, and the title's
