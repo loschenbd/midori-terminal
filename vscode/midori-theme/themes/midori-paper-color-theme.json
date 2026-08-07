@@ -36,8 +36,8 @@
 
     "list.activeSelectionBackground": "#ced1c8",
     "list.activeSelectionForeground": "#2a2825",
-    "list.inactiveSelectionBackground": "#d3dfd0",
-    "list.hoverBackground": "#e2ddd5",
+    "list.inactiveSelectionBackground": "#d7dad0",
+    "list.hoverBackground": "#e5e1d9",
     "list.focusBackground": "#ced1c8",
     "list.highlightForeground": "#3a5572",
     "list.errorForeground": "#8f4f38",
