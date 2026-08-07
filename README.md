@@ -299,6 +299,30 @@ Residual gotchas:
   indentation guide, which is why `editorIndentGuide.activeBackground1` is
   pitched to match the active bracket guides (2.4:1 paper / 3.0:1 night)
   instead of the near-invisible one-step-off-idle value it started at.
+- **The markdown preview is a separate stylesheet, and in Cursor it is not what
+  opens by default.** `markdown/midori-markdown.css` ships as a
+  `markdown.previewStyles` contribution (not the `markdown.styles` *setting* —
+  the preview webview's `localResourceRoots` only ever holds the open workspace
+  folders, so a global path into this repo would 404 in every other project;
+  an extension's own directory is always a resource root). It carries the
+  Spectral/M PLUS split, the `hljs-*` remap, and the surface fixes. Two traps:
+  `markdown.css` and `highlight.css` are themselves `previewStyles`
+  contributions, so they are *peers* in `<head>` and their order is just
+  extension enumeration order — every selector here is one step more specific
+  than it needs to be (`html body`, `body.vscode-light .hljs-keyword`) so the
+  cascade is decided by specificity, not luck. And Cursor's default `.md`
+  editor is its own native ProseMirror component (`markdown-editor-react`, the
+  `Preview | Markdown` toggle in the breadcrumb row), which is not a webview
+  and loads no contributed CSS at all. Use `Markdown: Open Preview` (⌘⇧V) to
+  see any of this.
+- **Fenced code in the preview is not themed by the theme.** `highlight.css`
+  hardcodes highlight.js' VS2015 palette with no reference to the active
+  colour theme, and its `.vscode-light` override block misses
+  `.hljs-selector-class`, `.hljs-selector-id` and `.hljs-bullet` — which keep
+  the *dark* theme's tan `#D7BA7D` on cream. The whole class set is remapped
+  per theme. Measure those against `textCodeBlock.background`, not
+  `editor.background`: the code block sits a rung darker, and three paper roles
+  tuned on the editor surface slipped under 4.5:1 there.
 - Reinstall with `./vscode/install-vscode.sh` — it repackages the `.vsix` and
   force-installs into both editors. Symlinking into `~/.cursor/extensions`
   does not work; see the header of that script.

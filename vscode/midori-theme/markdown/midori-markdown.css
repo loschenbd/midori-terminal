@@ -86,6 +86,113 @@ body table {
   font-family: "M PLUS 1p", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* ----------------------------------------------------- selection ---
+ * Neither markdown.css nor the webview host stylesheet defines ::selection,
+ * so dragging over preview text has been painting Chromium's UA default —
+ * the macOS system accent blue — straight through a warm cream page. Point it
+ * at the editor's own selection instead. Foreground is left alone: ink holds
+ * 9.5:1 on the paper selection and 8.04:1 on night.
+ */
+
+body ::selection,
+body::selection {
+  background-color: var(--vscode-editor-selectionBackground);
+}
+
+/* --------------------------------------------------------- links ---
+ * markdown.css turns underlines off and only restores them on hover, so a
+ * link in running prose is distinguished by colour alone — WCAG 1.4.1, and a
+ * real problem for the indigo, which is close enough to the ink at body size.
+ * Underline in prose contexts only (not headings, not image links), tinted
+ * back so it marks the word without boxing it in. Hover goes to full strength.
+ */
+
+body p a,
+body li a,
+body td a,
+body blockquote a {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+body p a:hover,
+body li a:hover,
+body td a:hover,
+body blockquote a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ------------------------------------------------------- rhythm ---
+ * Every heading level gets the same 24px of space above it in markdown.css,
+ * so an h3 opening a subsection is spaced exactly like the h2 opening the
+ * section that contains it, and the outline flattens. Scale the space above
+ * by level; the space below stays tight so a heading stays attached to the
+ * text it introduces.
+ */
+
+body h2 {
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+}
+body h3 {
+  margin-top: 1.6em;
+  margin-bottom: 0.5em;
+}
+body h4,
+body h5,
+body h6 {
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
+}
+
+/* Stock h5 and h6 are 0.875em and 0.85em — a heading rendered *smaller* than
+   the body text it introduces. Hold them at body size and let the last rung
+   step back in colour instead of in scale. */
+body h4 {
+  font-size: 1.1em;
+  font-weight: 600;
+}
+body h5,
+body h6 {
+  font-size: 1em;
+}
+body h6 {
+  color: var(--vscode-descriptionForeground);
+}
+
+body h1,
+body h2,
+body h3,
+body h4,
+body h5,
+body h6 {
+  scroll-margin-top: 1em;
+}
+
+/* A paragraph break should be worth more than a line break. 16px against a
+   24.75px line box reads as one continuous column; 1.25em restores the beat. */
+body p {
+  margin-bottom: 1.25em;
+}
+
+/* The browser default of 40px pushes list content clear of the prose it
+   belongs to. A marker only needs its own width. */
+body ul,
+body ol {
+  padding-inline-start: 1.6em;
+  margin-bottom: 1.25em;
+}
+
+body li + li {
+  margin-top: 0.25em;
+}
+
+body hr {
+  margin: 2em 0;
+}
+
 /* --------------------------------------------------------- rules ---
  * markdown.css draws every rule with neutral alpha over the background —
  * rgba(0,0,0,.18) light, rgba(255,255,255,.18) dark, and .69 for the table
@@ -142,6 +249,11 @@ body blockquote > :last-child {
 body th,
 body td {
   padding: 6px 12px;
+}
+
+/* Columns of durations, counts and sizes only line up if the digits do. */
+body table {
+  font-variant-numeric: tabular-nums;
 }
 
 body th {
