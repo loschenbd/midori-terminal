@@ -171,18 +171,34 @@ Residual gotchas:
   the note title, which is its own contenteditable outside CodeMirror and so
   misses every rule scoped to `.cm-content`. Uninstall it and the natives come
   back: each replacement is gated on a body class the plugin sets.
-- **The selection half is desktop-only; the caret half is everywhere.** Both
-  work by painting the native out and drawing over it, and on iOS only one of
-  the two natives can be painted out. Measured in the Simulator rather than
-  assumed: with `::selection { background-color: transparent }` applied and
-  computing to `rgba(0,0,0,0)`, iOS still drew its full band with handles —
-  the highlight on an editable is UIKit's text-interaction UI drawn *above* the
-  web content, not a background CSS can reach. `caret-color: transparent`, by
-  contrast, is honoured (the native caret blinked across 4 of 8 frames without
-  it and 0 of 8 with it) because the caret is WebKit's own editing code. So the
-  plugin withholds `midori-selection-active` on mobile and skips the selection
-  layer entirely; drawing a band *under* an unremovable native one reads as a
-  doubled highlight, which is worse than the geometry it set out to fix.
+- **On iOS the band is drawn under a native one, and shaped to match it.** Both
+  replacements work by painting the native out and drawing over it, and on iOS
+  only one of the two natives can be painted out. Measured in the Simulator
+  rather than assumed: with `::selection { background-color: transparent }`
+  applied and computing to `rgba(0,0,0,0)`, iOS still drew its full band with
+  handles — the highlight is UIKit's text-interaction UI drawn *above* the web
+  content, not a background CSS can reach, on static text as much as in an
+  editable. `caret-color: transparent`, by contrast, is honoured (the native
+  caret blinked across 4 of 8 frames without it and 0 of 8 with it) because the
+  caret is WebKit's own editing code.
+
+  The first response was to withhold the band on mobile, because drawing under
+  an unremovable native one read as a doubled highlight. That blamed the
+  drawing for a fault in the shape. Sampling a dark-mode iPhone screenshot,
+  the selected region is every underlying pixel times 0.8 — including the
+  **glyphs**, 234,232,227 → 187,185,181, which a selection *background* sits
+  behind and could not dim. So it is a translucent scrim on top: unrecolourable,
+  but see-through, and a band underneath returns at 80%. Matching its shape is
+  the whole job — the line box rather than the ink, middle rows squared off to
+  the content edges, and a box leaning above the baseline by
+  `fontSize × (A−D)/2` for the **system** font, since UIKit lays the rect out
+  without ever resolving the webfont. That lean scales with font size (5px at
+  the 14px prose face, 8.1px at the 22.65px title), so both slots are written
+  as half the row ± `--midori-scrim-lean`.
+
+  Gated on **iOS, not mobile**: Android is Chrome, honours `::selection`, and
+  so has no scrim left to match — it takes the desktop ink slot. `is-ios` /
+  `Platform.isIosApp`, both of which Obsidian ships.
 - **The caret and the band share one "slot", deliberately.** They answer the
   same question — where the text on this line lives — so `--midori-slot-rise` /
   `--midori-slot-drop` (14px / 5px) size both, and the title's
