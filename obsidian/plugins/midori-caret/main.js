@@ -1,53 +1,90 @@
 'use strict';
 
-/* Midori Caret — draw the editor caret as an element the theme can size.
+/* Midori Caret — draw the editor caret, the selection band and the note-title
+ * caret as elements the theme can size.
  *
  * WHY THIS EXISTS. The Midori theme renders prose in font faces carrying
  * symmetric metric overrides (ascent-override: 45%, descent-override: 45%).
  * That is what puts every baseline at exactly line-height/2 and lets the whole
  * theme use plain multiples of the 24px row instead of a per-heading ladder of
- * magic numbers. The cost is the caret: Obsidian's editor is a plain
- * contenteditable, so the caret is the BROWSER's, and Chromium takes its height
- * from the font's content area. Symmetric metrics make that area symmetric
- * about the baseline, so the caret runs [baseline +/- 0.45em] while the glyphs
- * run about 0.72em up and 0.22em down — a short tick sitting ~3px too low.
+ * magic numbers. The cost lands on everything the BROWSER draws from font
+ * metrics rather than from glyph outlines:
  *
- * No CSS can fix that. `caret-color` is the only property that touches the
- * native caret, and it only sets the colour. So this plugin hides the native
- * caret and draws its own, which the theme then sizes with a transform.
+ *   - the caret. Chromium takes its height from the font's content area, which
+ *     symmetric metrics make symmetric about the baseline, so it runs
+ *     [baseline +/- 0.45em] while the glyphs run about 0.72em up and 0.22em
+ *     down — a short tick sitting ~3px too low.
+ *   - the selection band. Native selection paints the line box, and the
+ *     baseline is at its centre, so the band is 24px with the ink crowded into
+ *     its top half: measured 1.5px of tan above the ascenders and 12.25px
+ *     below the baseline. It reads as a band the text is sitting on top of
+ *     rather than one drawn around the text.
  *
- * WHY NOT drawSelection(). CodeMirror ships drawSelection(), which would do
- * this in one line — but it replaces the native SELECTION too, and Obsidian's
- * live preview leans on native selection for widget interaction and IME. This
- * uses the same primitives (layer + RectangleMarker) to draw cursors ONLY,
- * leaving selection rendering exactly as Obsidian had it. That is the whole
- * reason for the extra thirty lines.
+ * No CSS reaches either. `caret-color` is the only property that touches the
+ * native caret and it only sets the colour; `::selection` accepts colour
+ * properties only, never geometry. So this plugin hides both natives and draws
+ * replacements the theme can size.
+ *
+ * THE ONE PROPERTY THAT MAKES THE CSS SIMPLE: because A = D, the baseline is
+ * the vertical CENTRE of a text box — of the 0.9em font content area AND of
+ * the 24px line box, since line-height centring puts the baseline at L/2 too.
+ * So `top: 50%` of any rect handed to us here is the baseline, whichever of
+ * the two CodeMirror happened to measure. Every rule in theme.css leans on
+ * that instead of on a font size it cannot see.
+ *
+ * WHY NOT drawSelection(). CodeMirror ships drawSelection(), which would draw
+ * the band in one line — but it replaces the selection MECHANISM, and
+ * Obsidian's live preview leans on native selection for widget interaction and
+ * IME. This uses the layer() primitive, which only draws: the real selection
+ * stays native and keeps behaving, and the theme merely paints it transparent
+ * so there is no doubled band. That is the whole reason for the extra code.
  */
 
 const { Plugin, Notice } = require('obsidian');
 const cmView = require('@codemirror/view');
 
-const LAYER_CLASS = 'midori-cursorLayer';
+const CURSOR_LAYER = 'midori-cursorLayer';
 const CURSOR_CLASS = 'midori-cursor';
+const SELECTION_LAYER = 'midori-selectionLayer';
+const SELECTION_CLASS = 'midori-selection';
+const TITLE_CARET_CLASS = 'midori-title-caret';
+const TITLE_SELECTION_CLASS = 'midori-title-selection';
+
 const BODY_CLASS = 'midori-caret-active';
+const SELECTION_BODY_CLASS = 'midori-selection-active';
+const TITLE_BODY_CLASS = 'midori-title-caret-active';
+const TITLE_SELECTION_BODY_CLASS = 'midori-title-selection-active';
+// New in the build that moved the title caret's height out of this file and
+// into theme.css. Older builds set an inline height and never set the bar's
+// font-size, so the em-based rules would resolve against the body's 16px and
+// draw the caret ~13px high — hence a class those builds do not set.
+const TITLE_SLOT_BODY_CLASS = 'midori-title-slot-active';
 
 /* The blink is restarted by flipping between two identical keyframes, the same
  * trick CodeMirror uses: re-assigning the same animation name would not
  * retrigger it, so the caret would keep blinking on its old schedule and could
  * be invisible at the moment you start typing. */
-function buildCaretLayer() {
+function flipBlink(el) {
+  el.style.animationName =
+    el.style.animationName === 'midori-blink' ? 'midori-blink2' : 'midori-blink';
+}
+
+/* Both layers are the same shape: collect RectangleMarkers for the ranges we
+ * care about and let CSS do the rest. `empty` splits them — a collapsed range
+ * is a caret, anything else is a selection. */
+function buildLayer({ cls, markerClass, above, wantEmpty }) {
   const { layer, RectangleMarker } = cmView;
   if (!layer || !RectangleMarker) return null;
 
   return layer({
-    above: true,
-    class: LAYER_CLASS,
+    above,
+    class: cls,
 
     markers(view) {
       const out = [];
       for (const range of view.state.selection.ranges) {
-        if (!range.empty) continue; // ranges keep the native selection
-        for (const piece of RectangleMarker.forRange(view, CURSOR_CLASS, range)) {
+        if (range.empty !== wantEmpty) continue;
+        for (const piece of RectangleMarker.forRange(view, markerClass, range)) {
           out.push(piece);
         }
       }
@@ -55,42 +92,237 @@ function buildCaretLayer() {
     },
 
     update(update, dom) {
-      if (update.transactions.some((tr) => tr.selection)) {
-        dom.style.animationName =
-          dom.style.animationName === 'midori-blink' ? 'midori-blink2' : 'midori-blink';
-      }
+      if (wantEmpty && update.transactions.some((tr) => tr.selection)) flipBlink(dom);
       // geometryChanged matters: a font finishing loading or the pane being
-      // resized moves the caret without touching doc or selection.
+      // resized moves both without touching doc or selection.
       return update.docChanged || update.selectionSet || update.geometryChanged;
     },
   });
 }
 
+/* THE NOTE TITLE IS NOT IN CODEMIRROR. `.inline-title` is its own
+ * contenteditable, outside .cm-content, so neither the layers above nor
+ * theme.css's rules scoped to .cm-content reach it — which is why the title
+ * kept the dropped native caret after the editor stopped having one, and then
+ * kept the native selection band after the editor stopped having that too. It
+ * has no CodeMirror view to hang a layer on, so this draws both directly off
+ * the DOM selection.
+ *
+ * NEITHER ONE CARRIES ITS GEOMETRY HERE. Both get the title's own font-size
+ * copied onto them, and theme.css sizes them in em off --midori-title-slot-*
+ * — one slot, two renderings, the same arrangement the prose caret and band
+ * have. That division matters because the title is the one place in the theme
+ * whose font size is a user setting, so its slot has to track the glyphs
+ * rather than the 24px row. All this code supplies is the BASELINE.
+ *
+ * The caret's height used to be computed here, as 0.82 of the measured caret
+ * box. That ratio predates any measurement of the rendered face: it put the
+ * bar 0.4px short of Spectral's ascenders and stopped it dead on the baseline,
+ * so it cleared no descender at all. */
+
+/* theme.css sizes the title caret and the title bands in em, and both live
+ * OUTSIDE .inline-title — so they carry the title's own font size and the em
+ * resolves against the face they are wrapping rather than against the body. */
+function titleEm(title) {
+  return `${parseFloat(getComputedStyle(title).fontSize) || 16}px`;
+}
+
+/* Which .inline-title, if any, the range is in. Ranges normalise so that start
+ * precedes end, so dragging up out of the title still puts the title end at
+ * `start` — but either endpoint can also be an ancestor element when the drag
+ * left the title entirely, hence the fallback scan. */
+function titleFor(range) {
+  for (const node of [range.startContainer, range.endContainer]) {
+    const el = node && (node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement);
+    const hit = el && el.closest && el.closest('.inline-title');
+    if (hit) return hit;
+  }
+  for (const candidate of document.querySelectorAll('.inline-title')) {
+    if (range.intersectsNode(candidate)) return candidate;
+  }
+  return null;
+}
+
+/* A selection dragged from the title down into the note is ONE range covering
+ * both, and its rects would then include every prose line — which the editor's
+ * own layer is already drawing. Clip to the title's contents so each surface
+ * paints exactly its own half. */
+function clipToTitle(range, title) {
+  const bounds = document.createRange();
+  bounds.selectNodeContents(title);
+  const clipped = range.cloneRange();
+  if (clipped.compareBoundaryPoints(Range.START_TO_START, bounds) < 0) {
+    clipped.setStart(bounds.startContainer, bounds.startOffset);
+  }
+  if (clipped.compareBoundaryPoints(Range.END_TO_END, bounds) > 0) {
+    clipped.setEnd(bounds.endContainer, bounds.endOffset);
+  }
+  return clipped.collapsed ? null : clipped;
+}
+
+function setupTitleOverlay(plugin) {
+  const bar = document.createElement('div');
+  bar.className = TITLE_CARET_CLASS;
+  bar.style.display = 'none';
+  document.body.appendChild(bar);
+
+  // One band per visual line of the selection; the pool is reused rather than
+  // rebuilt so a drag does not churn the DOM on every selectionchange.
+  const bands = [];
+  plugin.register(() => {
+    bar.remove();
+    for (const band of bands) band.remove();
+  });
+
+  const hideBandsFrom = (from) => {
+    for (let i = from; i < bands.length; i += 1) bands[i].style.display = 'none';
+  };
+  const hide = () => {
+    bar.style.display = 'none';
+    hideBandsFrom(0);
+  };
+
+  const drawCaret = (range, title) => {
+    hideBandsFrom(0);
+
+    // A collapsed range in an empty title has no rects at all; fall back to the
+    // element box, which has the same metric centring.
+    let rect = range.getBoundingClientRect();
+    if (!rect || (rect.height === 0 && rect.width === 0 && rect.top === 0)) {
+      rect = title.getBoundingClientRect();
+    }
+    if (!rect.height) return hide();
+
+    // A = D, so the box centres on the baseline — see the header comment.
+    // `top` IS the baseline; theme.css lifts the bar by the slot's rise and
+    // carries it the drop past, exactly as it does for the bands.
+    const baseline = rect.top + rect.height / 2;
+
+    bar.style.display = 'block';
+    bar.style.fontSize = titleEm(title);
+    bar.style.left = `${rect.left}px`;
+    bar.style.top = `${baseline}px`;
+    flipBlink(bar);
+  };
+
+  const drawBands = (range, title) => {
+    bar.style.display = 'none';
+
+    const clipped = clipToTitle(range, title);
+    if (!clipped) return hide();
+
+    const rects = Array.from(clipped.getClientRects())
+      .filter((r) => r.width > 0 && r.height > 0);
+    if (!rects.length) return hide();
+
+    // The bands live next to the title rather than on <body> so they scroll
+    // with it instead of being chased by a scroll handler.
+    const host = title.parentElement || document.body;
+
+    rects.forEach((rect, i) => {
+      while (bands.length <= i) {
+        const fresh = document.createElement('div');
+        fresh.className = TITLE_SELECTION_CLASS;
+        bands.push(fresh);
+      }
+      const band = bands[i];
+      if (band.parentElement !== host) host.appendChild(band);
+      band.style.display = 'block';
+
+      // Positioned against whatever containing block the host resolved to,
+      // which is only knowable once the element is laid out.
+      const origin = (band.offsetParent || host).getBoundingClientRect();
+      const baseline = rect.top + rect.height / 2; // A = D again
+
+      // JS supplies the baseline; the rise above it and the drop below it stay
+      // in CSS — see titleEm above for why the font size comes along.
+      band.style.fontSize = titleEm(title);
+      band.style.left = `${rect.left - origin.left}px`;
+      band.style.width = `${rect.width}px`;
+      band.style.top = `${baseline - origin.top}px`;
+    });
+
+    hideBandsFrom(rects.length);
+  };
+
+  const place = () => {
+    const sel = document.getSelection();
+    if (!sel || sel.rangeCount === 0) return hide();
+
+    const range = sel.getRangeAt(0);
+    const title = titleFor(range);
+    if (!title) return hide();
+
+    if (range.collapsed) drawCaret(range, title);
+    else drawBands(range, title);
+  };
+
+  // selectionchange is the only event that fires for every way the caret can
+  // move (typing, arrows, clicking, undo). The rest are for cases where the
+  // caret does not move but its SCREEN position does. The bands are positioned
+  // inside the title's own container, so scroll only matters to the caret.
+  plugin.registerDomEvent(document, 'selectionchange', place);
+  plugin.registerDomEvent(window, 'resize', place);
+  plugin.registerDomEvent(document, 'scroll', place, true);
+  plugin.registerDomEvent(document, 'focusout', (e) => {
+    if (e.target && e.target.closest && e.target.closest('.inline-title')) hide();
+  });
+
+  return place;
+}
+
 module.exports = class MidoriCaret extends Plugin {
   onload() {
-    const caretLayer = buildCaretLayer();
+    const caretLayer = buildLayer({
+      cls: CURSOR_LAYER, markerClass: CURSOR_CLASS, above: true, wantEmpty: true,
+    });
+    const selectionLayer = buildLayer({
+      cls: SELECTION_LAYER, markerClass: SELECTION_CLASS, above: false, wantEmpty: false,
+    });
 
-    if (!caretLayer) {
+    if (!caretLayer || !selectionLayer) {
       // Obsidian externalises @codemirror/view, so which version is present is
       // the app's business, not ours. Say so rather than failing silently and
-      // leaving the user with an invisible caret.
+      // leaving the user with an invisible caret or an invisible selection.
       new Notice(
         'Midori Caret: this Obsidian build does not expose the CodeMirror ' +
-          'layer API, so the caret is left as the browser draws it.',
+          'layer API, so the caret and selection are left as the browser draws them.',
         10000,
       );
       return;
     }
 
-    this.registerEditorExtension(caretLayer);
+    this.registerEditorExtension([caretLayer, selectionLayer]);
 
-    // The theme hides the native caret ONLY under this class, so theme.css
-    // stays correct on its own — uninstall the plugin and the native caret
-    // comes back rather than the editor losing its cursor entirely.
+    // The theme hides the natives ONLY under these classes, so theme.css stays
+    // correct on its own — uninstall the plugin and the native caret and
+    // selection come back, rather than the editor losing both entirely. They
+    // are two classes rather than one so the selection half can be switched off
+    // (it repaints a band Obsidian usually leaves to the compositor) without
+    // giving up the caret.
     document.body.classList.add(BODY_CLASS);
+    document.body.classList.add(SELECTION_BODY_CLASS);
+
+    setupTitleOverlay(this);
+    // Added LAST and only after setupTitleOverlay has actually installed its
+    // listeners: these classes are what make theme.css hide the native title
+    // caret and the native title selection, so anything that throws above must
+    // leave the natives alone rather than trade them for nothing. It is also
+    // why they are separate classes from BODY_CLASS — see the matching note in
+    // theme.css. TITLE_SELECTION_BODY_CLASS is separate from TITLE_BODY_CLASS
+    // for the same reason again: the 1.1.0 build already set the caret class,
+    // so hanging the new ::selection rule on it would have blanked the title
+    // selection for anyone running the new CSS against the old code.
+    document.body.classList.add(TITLE_BODY_CLASS);
+    document.body.classList.add(TITLE_SELECTION_BODY_CLASS);
+    document.body.classList.add(TITLE_SLOT_BODY_CLASS);
   }
 
   onunload() {
     document.body.classList.remove(BODY_CLASS);
+    document.body.classList.remove(SELECTION_BODY_CLASS);
+    document.body.classList.remove(TITLE_BODY_CLASS);
+    document.body.classList.remove(TITLE_SELECTION_BODY_CLASS);
+    document.body.classList.remove(TITLE_SLOT_BODY_CLASS);
   }
 };

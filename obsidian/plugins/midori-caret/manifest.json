@@ -1,9 +1,9 @@
 {
   "id": "midori-caret",
   "name": "Midori Caret",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "minAppVersion": "1.4.0",
-  "description": "Draws the editor caret as a real element so the Midori theme can size it. Needed because the Midori fonts carry symmetric ascent/descent overrides, which makes the browser's native caret centre on the baseline.",
+  "description": "Draws the editor caret, the editor selection band, the note-title caret and the note-title selection band as real elements so the Midori theme can size them. Needed because the Midori fonts carry symmetric ascent/descent overrides, which makes everything the browser derives from font metrics centre on the baseline instead of on the ink.",
   "author": "Benjamin Loschen",
   "isDesktopOnly": false
 }

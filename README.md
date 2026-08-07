@@ -2,8 +2,8 @@
 
 A complete terminal theme system based on [benjaminloschen.com](https://benjaminloschen.com)'s
 "Midori MD Paper" design language — Ghostty, Claude Code, tmux, fzf, oh-my-posh,
-Vivaldi, and Cursor/VS Code, all switching light/dark together with macOS
-appearance.
+Vivaldi, Cursor/VS Code, Obsidian, and Antinote, all switching light/dark
+together with macOS appearance.
 
 **Midori Paper** (light) · **Midori Night** (dark)
 
@@ -23,7 +23,9 @@ for an interactive profile picker (`--profile "Artisan Studios"` / `--profile al
 to skip the prompt). After tweaking hotkeys in Vivaldi's UI, re-export them with
 `./vivaldi/export-keyboard.sh` so the repo stays the source of truth. For Cursor/VS Code: `./vscode/install-vscode.sh`
 (it prints the settings snippet to wire up auto light/dark + icons). For
-Obsidian: `./obsidian/install-obsidian.sh`.
+Obsidian: `./obsidian/install-obsidian.sh`. For Antinote:
+`./antinote/install-antinote.sh`, then Settings → Visuals → "Reload Custom
+Themes".
 
 Safe to re-run `./install.sh` any time (it's idempotent) — that's also the
 update path: `git pull && ./install.sh`.
@@ -61,6 +63,7 @@ this layer to re-skin everything without touching the infrastructure.
 | `tmux/midori.tmux.conf` | Pane borders, status/message styles (sourced from `.tmux.conf`) |
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |
 | `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, Phosphor Duotone file icons, Phosphor product icons for the workbench chrome (`build-icons.py` / `build-product-icons.py` regenerate), installer |
+| `antinote/` | Midori Paper/Night Antinote themes (24-key JSON), installer, and a transcription of Antinote's undocumented theme schema |
 | `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret` companion plugin, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
 | `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
 | `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
@@ -154,13 +157,38 @@ Residual gotchas:
   iOS cannot install fonts, and Obsidian injects theme CSS into a `<style>`
   element rather than `<link>`ing it, so relative `url()` resolves against the
   app document and loose `.woff2` files 404.
-- **The caret needs a plugin** — `obsidian/plugins/midori-caret`, fanned out by
-  the installer alongside the theme. Obsidian's editor is a plain
-  contenteditable, so the caret is the *browser's*, and Chromium takes its
-  height from the font's content area — which the symmetric metrics centre on
-  the baseline, leaving a short tick sitting low. `caret-color` is the only CSS
-  lever and it only sets colour. The plugin hides the native caret and draws
-  one the theme can size; uninstall it and the native caret comes back.
+- **The caret and the selection band need a plugin** —
+  `obsidian/plugins/midori-caret`, fanned out by the installer alongside the
+  theme. Obsidian's editor is a plain contenteditable, so both are the
+  *browser's*, and the browser derives both from the font's content area —
+  which the symmetric metrics centre on the baseline. The caret came out a
+  short tick sitting low; the selection band came out a full 24px slab with the
+  ink crowded into its top half (1.5px of colour above the ascenders against
+  12.25px below the baseline). Neither is reachable from CSS: `caret-color`
+  only sets colour, and `::selection` accepts colour properties **only**, never
+  height or offset. The plugin hides all four natives and draws replacements
+  the theme can size — editor caret, editor band, and the same pair again for
+  the note title, which is its own contenteditable outside CodeMirror and so
+  misses every rule scoped to `.cm-content`. Uninstall it and the natives come
+  back: each replacement is gated on a body class the plugin sets.
+- **The caret and the band share one "slot", deliberately.** They answer the
+  same question — where the text on this line lives — so `--midori-slot-rise` /
+  `--midori-slot-drop` (14px / 5px) size both, and the title's
+  `--midori-title-slot-*` pair (0.83em / 0.30em) does the same job for the
+  title. Letting them drift is a real bug: put the caret on a character, select
+  that character, and the highlight would sit 5px lower than the caret did.
+  The caret's bottom therefore hangs 5px **below** the baseline rather than
+  landing on a baseline dot — which is both the measured browser convention
+  (across five real faces, 17–22% of a native caret sits below the baseline and
+  its bottom edge tracks the descender depth to within 0.6px) and the only way
+  it can enclose the descenders it sits beside. Text hangs from the bottom of
+  its cell, so nothing sized to the ink can also be dot-aligned.
+- **px in the editor, em in the title, and the distinction is load-bearing.**
+  `.cm-line` has an absolute `line-height: 24px` that does *not* move with
+  Appearance → Font size, so anything sized against the ROW is px. The title
+  has no fixed row and its size *is* a user setting, so its slot is em. The
+  plugin makes that expressible by copying the title's font size onto the
+  elements it draws, which live outside `.inline-title`.
 - **The properties widget opts out, onto its own paper.** Its rows are flex
   boxes full of inputs, icons and pills whose heights Obsidian derives from
   content the theme never sees. The block's *outer* box is a whole number of
@@ -174,6 +202,38 @@ Residual gotchas:
   clears them.
 - Elements with arbitrary heights (images, Mermaid diagrams, embeds) knock
   following lines off-register — inherent to baseline grids.
+
+## Antinote notes
+
+Two themes (`antinote/midori-paper.json`, `antinote/midori-night.json`), flat
+24-key JSON, no nesting. Antinote publishes no schema — the role of each key was
+transcribed out of the theme-maker's Svelte route chunk and lives in
+`antinote/README.md`, so a colour can be picked for its job instead of by
+nudging sliders.
+
+- **Turn translucency off before judging any colour.** `translucentWindow: true`
+  with `translucentAmount: 0.6` composites the whole note against the desktop:
+  measured `#E5E4E2` against the theme's `#F3F1EB` on paper and `#636464`
+  against `#1A1917` on night — 29 points of lightness gone, dragging
+  `typeLight` down to **1.08:1**. Every "these colours look washed out" report
+  traced back to this and not to the palette.
+- **The `math` block is what constrains the palette.** Everywhere else in Midori
+  roles are separated by *position*; the math block puts four roles on one line
+  in one monospace weight (`deducted: income * taxes = 459.20` — assignment,
+  use, use, total). In OKLCh every Midori accent sits at chroma 4–7, and below
+  roughly C 12 hue barely registers at 13px, so separation has to come from
+  lightness — and the first cut had four roles stacked at L 53–57. The fix was
+  to give the *total* the extreme rung (darkest on paper, lightest on night;
+  ΔL against variable-use went 0.7 → 16.1) and lift chroma ~1.7× across every
+  accent. This is why the Antinote files diverge from `obsidian/theme.css`
+  rather than copying it.
+- **No font setting exists.** Antinote exposes `fontSize` / `doubleFontSize`
+  only; `availableFontFamilies` is an AppKit call, and "Reset Font & Offsets to
+  Defaults" belongs to the Non-English Typography beta. Custom faces are not a
+  theme's lever.
+- **`sync.sh` does not round-trip these** — nothing edits them on the machine,
+  so the repo is the only copy. Edit the JSON, re-run
+  `./antinote/install-antinote.sh`, hit "Reload Custom Themes"; no restart.
 
 ## Claude Code notes
 

@@ -89,7 +89,7 @@ body {
   --link-external-color-hover: #4a5749;   /* --accent-hover */
   --link-unresolved-color: #6b5f52;       /* --accent-mythic */
 
-  --text-selection: rgba(201, 145, 107, 0.25);  /* --accent-warm @ 25% */
+  --text-selection: rgba(95, 111, 94, 0.25);    /* --accent (sage) @ 25% */
   --text-highlight-bg: #e2d4b9;                 /* ochre wash — --color-yellow @ 28% on paper */
 
   --hr-color: rgba(60, 58, 54, 0.1);
@@ -215,7 +215,7 @@ body {
   --link-external-color-hover: #b4c0b0;   /* --accent-hover */
   --link-unresolved-color: #c4b8a8;       /* --accent-mythic */
 
-  --text-selection: rgba(212, 160, 122, 0.25); /* --accent-warm @ 25% */
+  --text-selection: rgba(154, 171, 151, 0.25); /* --accent (sage) @ 25% */
   --text-highlight-bg: #483d2b;                /* ochre wash — --color-yellow @ 24% on paper */
 
   --hr-color: rgba(235, 232, 226, 0.1);
@@ -532,13 +532,15 @@ body.midori-caret-active .cm-editor.cm-focused .midori-cursorLayer {
   animation: midori-blink 1.2s steps(1) infinite;
 }
 
-/* THE POINT OF ALL THIS: make the caret one grid row — bottom on the baseline
-   dot, top on the dot above. It reads as part of the lattice rather than as a
-   tick floating in the middle of the line.
+/* THE POINT OF ALL THIS: put the caret in the same slot as the selection
+   band, because they answer the same question — where does the text on this
+   line actually live. Both are --midori-slot-rise above the baseline and
+   --midori-slot-drop below it, so putting the caret on a character and then
+   selecting that character no longer describes two different boxes.
 
-   The awkward part is that "one row" is an absolute 24px while the marker's
-   box is 0.9em, so it is a different height on a heading line than on a body
-   line. Two steps, neither of which needs to know the font size:
+   The awkward part is that the slot is an absolute px pair while the marker's
+   box is 0.9em, so the box is a different height on a heading line than on a
+   body line. Two steps, neither of which needs to know the font size:
 
    1. translateY(-50%) on the marker. The box is 0.9em CENTRED ON THE BASELINE
       (that is what the symmetric metrics guarantee), so shifting it up by half
@@ -549,11 +551,36 @@ body.midori-caret-active .cm-editor.cm-focused .midori-cursorLayer {
       kind of line a caret sits over.
 
    2. Draw the visible bar as a pseudo-element anchored to that bottom edge,
-      with a fixed pixel height. The transform on the parent carries the child
-      along, but a translate does not scale it, so that height is absolute.
+      then push it BELOW the baseline by --midori-slot-drop. The transform on
+      the parent carries the child along, but a translate does not scale it, so
+      those lengths stay absolute.
 
    The marker element itself is left invisible; it exists only to position the
    pseudo. Its own width is irrelevant — the bar carries its own.
+
+   IT MUST DESCEND PAST THE BASELINE, and this was wrong for a long time. The
+   bar used to be 20px ending exactly ON the baseline dot, on the theory that a
+   caret which lands on the lattice reads as part of it. Measured against the
+   rendered face that is 8px of dead air above the ascenders and 3.7px SHORT of
+   the descenders — the caret floats above the tail of any p, y or g it is
+   sitting next to.
+
+   Nothing draws a caret that way. A collapsed Range's client rect IS the rect
+   Chromium draws its caret in, so the convention is measurable: across
+   Georgia, Helvetica, Times, Menlo and system-ui at 16px, 17-22% of the caret
+   sits below the baseline, its bottom edge lands within 0.6px of the descender
+   depth, and its top clears the ascenders by ~3px. CodeMirror inherits the
+   same rect (RectangleMarker.forRange hands an empty range straight to
+   coordsAtPos); VS Code goes further and uses the whole line box.
+
+   VS Code also CENTRES a shortened cursor inside the line height — do not copy
+   that one. Under A = D the centre of the line box IS the baseline, so that
+   rule reproduces exactly the dropped native caret this file exists to fix.
+
+   The cost is that the bottom edge no longer lands on a baseline dot. That
+   trade was already made for the selection band: text hangs from the bottom of
+   its cell rather than filling it, so nothing sized to the ink can also be
+   dot-aligned. A blinking caret has the weaker claim on the lattice.
 
    NO NEGATIVE MARGIN. CodeMirror's own .cm-cursor centres itself on the text
    position with margin-left: -0.6px against a 1.2px border. Copying that here
@@ -562,14 +589,15 @@ body.midori-caret-active .cm-editor.cm-focused .midori-cursorLayer {
    a 0px gap. The caret marks the boundary between two characters, so it is
    drawn from that boundary rightward, the way the native caret does.
 
-   Height is a variable because it is the one part of this that is taste
-   rather than arithmetic. 20px sits just inside the row: bottom still exactly
-   on the baseline dot, top a few pixels shy of the dot above, which reads as
-   deliberate rather than as a caret that missed. Set it to 24px for a caret
-   that spans dot to dot. The colour is the palette's ink indigo via
-   --color-blue, so it follows light/dark without a second declaration. */
+   The colour is the palette's ink indigo via --color-blue, so it follows
+   light/dark without a second declaration. */
+/* THE TEXT SLOT, used by the caret and the selection band alike — the two
+   surfaces that have to agree. Declared here, next to the first thing that
+   reads them; the band's block below explains where the numbers came from.
+   The title has its own pair, in em, further down. */
 body {
-  --midori-caret-height: 20px;
+  --midori-slot-rise: 14px;
+  --midori-slot-drop: 5px;
   --midori-caret-width: 1.5px;
 }
 body.midori-caret-active .midori-cursor {
@@ -579,11 +607,198 @@ body.midori-caret-active .midori-cursor {
 body.midori-caret-active .midori-cursor::before {
   content: "";
   position: absolute;
-  bottom: 0;                    /* = the baseline, after the translate */
+  /* 0 would be the baseline, after the translate; this hangs below it. */
+  bottom: calc(-1 * var(--midori-slot-drop));
   inset-inline-start: 0;
   width: var(--midori-caret-width);
-  height: var(--midori-caret-height);
+  height: calc(var(--midori-slot-rise) + var(--midori-slot-drop));
   background: var(--color-blue);
+}
+
+/* THE NOTE TITLE IS NOT IN CODEMIRROR, so nothing above reaches it. The rule
+   at the top of this block hides the native caret inside .cm-content, and
+   .inline-title is its own contenteditable outside that subtree — which is why
+   the title kept a dropped native caret long after the editor stopped having
+   one. The plugin draws a bar for it off the DOM selection, positioned in
+   viewport coordinates, hence `fixed`.
+
+   THE TITLE'S OWN SLOT, in em. The prose pair is absolute px tuned to the
+   24px row and would read as a stub against a display serif; the title's font
+   size is a user setting (Appearance → Font size drives it too), so its slot
+   has to track the glyphs. The plugin makes em usable here by setting the
+   bar's own font-size to the title's, so the units below resolve against the
+   title's face even though this element is not inside it. The plugin sets
+   `top` to the BASELINE and these two do the rest — the same numbers the title
+   selection band uses, for the same reason the prose caret and band share
+   theirs. See the band's block below for where they were measured.
+
+   The 0.82-of-the-measured-box ratio this used to carry was tuned before the
+   face was measured: at 19px it clipped Spectral's ascenders by 0.4px and
+   cleared no descender at all.
+
+   ITS OWN BODY CLASS, not midori-caret-active. Obsidian hot-reloads theme CSS
+   but NOT plugin code — a plugin keeps running its previous build until it is
+   toggled off and on, or the app restarts. So for one reload cycle this
+   stylesheet is new while main.js is old. Hanging this rule on the class the
+   OLD build already sets hid the native title caret with nothing drawn in its
+   place: no caret at all in the title. Gate every rule on a class introduced
+   BY THE SAME BUILD that implements it and that window is harmless — the rule
+   simply does not apply until the code behind it is live. */
+body.midori-title-caret-active .inline-title {
+  caret-color: transparent;
+}
+.midori-title-caret {
+  position: fixed;
+  width: var(--midori-caret-width);
+  background: var(--color-blue);
+  pointer-events: none;
+  z-index: var(--layer-popover, 100);
+  animation: midori-blink 1.2s steps(1) infinite;
+}
+/* A THIRD title class, for the reason the second one exists. Builds before
+   this one set an inline height on the bar and never set its font-size, so
+   these two rules would resolve their em against the body's 16px and draw a
+   13px caret for as long as the old code kept running. The height stays with
+   the old build until the new one is actually live. */
+body.midori-title-slot-active .midori-title-caret {
+  margin-top: calc(-1 * var(--midori-title-slot-rise));
+  height: calc(var(--midori-title-slot-rise) + var(--midori-title-slot-drop));
+}
+
+/* ...and the title's SELECTION band, which is off by even more than the
+   caret was. The title's line box is 24px (--inline-title-line-height) while
+   its face runs ~25.9px, so the native band is 12px either side of the
+   baseline against ink that reaches ~19px up and ~6px down: it starts
+   halfway up the capitals and hangs well below the descenders. That is the
+   band in the screenshot, and it is the same root cause as the prose one —
+   A = D centres everything the browser derives on the baseline.
+
+   EM HERE, PX IN THE EDITOR, and the contrast is the point. The prose band is
+   sized against the 24px ROW, which does not move with Appearance → Font size.
+   The title has no fixed row to sit in — its line box is one row but its
+   glyphs overflow it — so this one is sized against the GLYPHS and has to
+   track the title's font size. The plugin makes that expressible by setting
+   each band's own font-size to the title's, so `em` below resolves against
+   the title's face even though the element is not inside it.
+
+   The plugin sets `top` to the BASELINE; the negative margin lifts the band
+   by --rise and the height carries it --drop past. Same division of labour as
+   the prose band's `top: 50%`, just with the midpoint measured in JS because
+   there is no CodeMirror rect to take 50% of.
+
+   Measured on Spectral at the default title size (25.888px): ink runs 19.41px
+   above the baseline and 6.21px below. 0.83em / 0.30em is 21.5 / 7.8 at that
+   size — 2.07px clear above the ascenders and 1.55px below the descenders,
+   matching the prose band's 2.0 / 1.5 so the two read as one treatment.
+
+   The title caret above shares these, exactly as the prose caret shares the
+   prose band's pair. One slot per surface, two renderings of it.
+
+   z-index: -1 puts it behind the title text; without it the band paints over
+   the glyphs and tints them, since it is a sibling that comes later in the
+   document. No border-radius, for the same reason as everywhere else. */
+body {
+  --midori-title-slot-rise: 0.83em;
+  --midori-title-slot-drop: 0.30em;
+}
+body.midori-title-selection-active .inline-title::selection,
+body.midori-title-selection-active .inline-title ::selection {
+  background-color: transparent;
+}
+.midori-title-selection {
+  position: absolute;
+  margin-top: calc(-1 * var(--midori-title-slot-rise));
+  height: calc(var(--midori-title-slot-rise) + var(--midori-title-slot-drop));
+  background: var(--text-selection);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* SELECTION. Native selection paints the LINE BOX, and symmetric metrics put
+   the baseline at its centre, so the band ran the full 24px row with the ink
+   crowded into the top half — measured 1.5px of colour above the ascenders
+   against 12.25px below the baseline. That is not a band drawn around the
+   text, it is a band the text is sitting on top of.
+
+   ::selection cannot fix it: the spec allows colour properties there and
+   nothing else, so height and offset are unreachable. The plugin therefore
+   draws its own markers and this paints the native one out. Gated on its own
+   body class, separate from the caret's, so the selection half can be turned
+   off without losing the caret — it is the more invasive of the two, being a
+   band Obsidian normally leaves to the compositor.
+
+   Both forms are needed: `.cm-content::selection` for text directly in the
+   editor element and the descendant form for text inside its child spans. */
+body.midori-selection-active .cm-content::selection,
+body.midori-selection-active .cm-content ::selection {
+  background-color: transparent;
+}
+
+/* The markers carry only inline left/top/width/height, so the container is
+   restated here rather than inherited from whichever CM base theme loaded.
+   `above: false` in the plugin puts this layer UNDER the text. */
+body.midori-selection-active .midori-selectionLayer {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  pointer-events: none;
+  contain: size style;
+  z-index: 0;
+}
+
+/* 50% IS THE BASELINE. CodeMirror hands back either the 0.9em font content
+   area or the 24px line box depending on how the range falls, and because
+   A = D both are centred on the baseline — so one percentage works for either
+   without this rule needing to know which it got, or what the font size is.
+
+   The band is then drawn from that midpoint: --rise upward, --drop downward.
+
+   THE BAND WRAPS THE INK; IT DOES NOT FILL THE CELL. Those are different
+   things here, and the difference is not obvious until you measure it.
+
+   Baselines sit exactly on the dot rows — measured live at rise 24px/drop 0:
+   band 220.0..244.0 against dot rows at 219.98 and 243.98. Grid-exact. It
+   still looked wrong, because TEXT DOES NOT FILL ITS CELL — it hangs from the
+   bottom of it. The baseline IS the cell's bottom edge and the ink only
+   reaches 12px up into a 24px cell, so a band that fills the cell is half
+   empty above the words. There is no band that is both dot-aligned and
+   centred on the text; the text is not centred in its cell.
+
+   So: centred on the ink. Measured on the rendered face at a 16px base, the
+   ink runs 12px above the baseline and 3.5px below it. 14 / 5 leaves 2px
+   clear above the ascenders and 1.5px below the descenders, and the 19px band
+   still leaves 5px of the row between consecutive selected lines so they read
+   as separate lines rather than one column of colour.
+
+   px, NOT em — and this is the trap. The row is an absolute 24px, set by
+   `.cm-line { line-height: 24px }` near the top of this file, and it does NOT
+   move with Appearance → Font size. An em band tracks the font while the row
+   it lives in does not, so `1.5em` was one row only by the coincidence of a
+   16px base. Anything sized against the ROW belongs in px; only things sized
+   against the GLYPHS belong in em. (The title's pair is the mirror case — it
+   is in em precisely because the title has no fixed row.)
+
+   SAME PAIR AS THE CARET. --midori-slot-rise / --midori-slot-drop are declared
+   up in the caret block and used by both, which is the point: the caret and
+   the band are two renderings of one slot, and a theme that let them drift
+   would put the caret on a character whose selection box sits 5px lower.
+
+   No border-radius: a mark on a dot lattice, not a chip — see the note on
+   selection in the file tree for the same argument.
+
+   The marker itself is transparent and exists only to position the pseudo,
+   the same division of labour as the caret. */
+body.midori-selection-active .midori-selection {
+  position: absolute;
+  background: transparent;
+}
+body.midori-selection-active .midori-selection::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: calc(50% - var(--midori-slot-rise));
+  height: calc(var(--midori-slot-rise) + var(--midori-slot-drop));
+  background: var(--text-selection);
 }
 
 /* Two identical keyframes so the plugin can restart the blink by alternating
