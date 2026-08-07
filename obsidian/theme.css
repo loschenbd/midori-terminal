@@ -215,7 +215,14 @@ body {
   --link-external-color-hover: #b4c0b0;   /* --accent-hover */
   --link-unresolved-color: #c4b8a8;       /* --accent-mythic */
 
-  --text-selection: rgba(154, 171, 151, 0.25); /* --accent (sage) @ 25% */
+  /* 38%, not the 25% light mode uses. Equal alpha does NOT read as equal
+     strength on the two grounds. Screenshotted and measured: sage @ 25% on the
+     paper ground is a L* step of 11.9 and reads as a deliberate band; the same
+     25% on the near-black ground is a step of 16.9, larger on paper and yet
+     weaker to look at, because down here the band also has to out-read the dot
+     grid and the halation around light text on dark. 38% puts it at 24.6,
+     which is where it stops looking like a smudge. */
+  --text-selection: rgba(154, 171, 151, 0.38); /* --accent (sage) @ 38% */
   --text-highlight-bg: #483d2b;                /* ochre wash — --color-yellow @ 24% on paper */
 
   --hr-color: rgba(235, 232, 226, 0.1);
@@ -826,13 +833,40 @@ body.midori-selection-active .midori-selection::before {
    2. It fails safe. If the platform check ever regresses, the worst case is a
       missing enhancement rather than a doubled highlight.
 
-   iOS ignores ::selection on an editable outright — verified in the Simulator
-   with `background-color: rgb(255,0,0)`, which still painted the system blue —
-   so the native band cannot be hidden and anything we draw lands UNDER it.
-   Two offset slabs of colour is worse than the geometry it was fixing. */
+   iOS ignores ::selection outright — verified in the Simulator with a loud
+   green, which still painted the system blue, in a contenteditable and in a
+   static paragraph alike — so we cannot hide whatever band mobile already
+   paints, and a drawn one only ever adds a SECOND slab beside it. Two slabs at
+   two different geometries is worse than the geometry it was fixing, which is
+   exactly how this looked on the phone before the guard went in. Colouring the
+   band mobile already has (below) is the move here, not drawing our own. */
 body.is-mobile .midori-selection::before,
 body.is-mobile .midori-title-selection {
   display: none !important;
+}
+
+/* …but the band mobile DOES paint is ours to colour, because it is not the
+   system's. Measured off a dark-mode iPhone screenshot, the selected region was
+   every underlying pixel multiplied by 0.8 — background 26,25,23 -> 21,20,18,
+   dot-grid dots 49,53,51 -> 39,43,40. Perfectly achromatic, so nothing of
+   --text-selection's sage was reaching it, and a L* step of 3 against the
+   ground, which is the "really hard to see" this rule exists to fix.
+
+   It is not the system band either. In the Simulator, iOS paints its selection
+   system blue whether the range is inside a contenteditable or in a plain
+   static paragraph, and ignores ::selection in both cases. Achromatic dark is
+   therefore something Obsidian mobile draws in the DOM — which means it takes
+   CSS, unlike the system one.
+
+   Which element it is, is the part a phone screenshot cannot tell us, so this
+   names all three candidates Obsidian ships selection styling for. They only
+   ever match selection bands, so the extra reach costs nothing, and routing
+   them through --text-selection keeps one variable in charge of every surface
+   instead of starting a mobile-only colour. */
+body.is-mobile .cm-selectionBackground,
+body.is-mobile .cm-selectionLayer > *,
+body.is-mobile .cm-line .cm-selection {
+  background-color: var(--text-selection) !important;
 }
 
 /* Two identical keyframes so the plugin can restart the blink by alternating
