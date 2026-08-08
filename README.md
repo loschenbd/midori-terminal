@@ -425,11 +425,27 @@ Residual gotchas:
   80° step at C 6). Every alternative lightness was worse — L ≥ 79 collides
   with the function ochre and the mint, L ≤ 67 collides with storage itself,
   which is the pair being separated. Control flow is then separated on two
-  further channels that cost no hue: chroma (night C 9 → 12, paper C 6.6 → 9.4,
-  which is the largest in-gamut chroma at that lightness — 9.5 clips sRGB) and
-  **real weight**. Final values: night `#65a6ea` bold at 6.86:1, paper
-  `#002e5b` bold at 12.06:1, separated from storage by ΔL 8.0 + ΔC 3.0 and
-  ΔL 7.9 + ΔC 2.8 respectively, plus 250 units of font weight.
+  further channels that cost no hue: chroma (C 9 → 12 in both) and **real
+  weight**. Final values: night `#65a6ea` bold at 6.86:1, paper `#175a98` bold
+  at 6.30:1, separated from storage by ΔL 8.0 + ΔC 3.0 and ΔL 8.1 + ΔC 5.4,
+  plus 250 units of font weight. The rule is the same in both themes: control
+  flow is the **lighter, more chromatic** blue and storage is the deeper,
+  quieter one.
+- **On a light background, "more contrast" and "more visible" are not the same
+  thing.** Paper's control flow first shipped at `#002e5b`, mirroring night's
+  *direction* — night raises control from 5.05:1 to 6.86:1, so paper raised it
+  from 8.88:1 to 12.06:1. That was wrong, and reported as "I'm not sure it's in
+  the light theme?". Sampling the reported screenshot proved the theme *was*
+  applied — `#002c58` at 198 px alongside storage's `#244460`, with the
+  previous value absent — so the failure was perceptual, not mechanical. Night
+  had headroom because its storage sits at 5.05:1; paper's already sat at
+  8.88:1, and past roughly 8:1 on cream both values simply read as near-black
+  and further darkening buys nothing. The fix was to mirror night's *effect*
+  instead: move control **lighter** and much more chromatic, so a medium blue
+  sits against a deep navy. Searching every (L, C) at the indigo hue for slots
+  with no flagged pair showed paper's L 42–54 band is only passable at C ≥ 9.6
+  — below that the comment, plum, string, mint and number rungs block it — which
+  is why the answer needed chroma and lightness together.
 - **`fontStyle: bold` is a real axis here; `fontStyle: italic` is not.**
   `MPLUS1Code[wght].ttf` is a variable font carrying Thin → Bold, so bold is an
   actual instance rather than a synthetic smear — and because heavier strokes
