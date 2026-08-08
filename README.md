@@ -1,9 +1,10 @@
 # midori-terminal
 
-A complete terminal theme system based on [benjaminloschen.com](https://benjaminloschen.com)'s
-"Midori MD Paper" design language — Ghostty, Claude Code, tmux, fzf, oh-my-posh,
-Vivaldi, Cursor/VS Code, Obsidian, and Antinote, all switching light/dark
-together with macOS appearance.
+A complete terminal theme system built on the Midori design language from
+[benjaminloschen.com](https://benjaminloschen.com) — warm paper neutrals and a
+sage accent, taking their cue from Japanese MD-style notebook stock. It covers
+Ghostty, Claude Code, tmux, fzf, oh-my-posh, Vivaldi, Cursor/VS Code, Obsidian
+and Antinote, all switching light/dark together with macOS appearance.
 
 **Midori Paper** (light) · **Midori Night** (dark)
 
@@ -675,3 +676,10 @@ On this machine the live `CSSMods` folder is a **symlink to `vivaldi/css-mods/`*
 so the repo *is* what Vivaldi serves — no copy step, drift impossible. `install.sh`
 and `sync.sh` both detect this and skip their copy. To revert to a managed copy:
 `rm "$HOME/Library/Application Support/Vivaldi/CSSMods" && ./vivaldi/install-vivaldi.sh`.
+
+## A note on the name
+
+Midori is an independent project. It is not affiliated with, endorsed by, or
+sponsored by Designphil Inc. or any other company. "Midori" is used here in its
+ordinary sense — 緑, the Japanese word for green — which is also why the theme's
+accent is sage.
