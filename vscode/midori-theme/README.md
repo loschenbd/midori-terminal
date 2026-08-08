@@ -4,8 +4,15 @@ Two themes for people who read code on a laptop *and* on an external monitor.
 **Midori Paper** is cream and ink; **Midori Night** is warm charcoal. They ship
 with a matching file icon set, workbench icons, and a styled markdown preview.
 
-<!-- SCREENSHOT: Midori Paper, a TypeScript file, ~900px wide -> media/paper.png -->
-<!-- SCREENSHOT: Midori Night, the same file           -> media/night.png -->
+<!--
+  Absolute raw URLs on purpose. vsce rewrites relative links assuming the
+  extension sits at the repo root, so `media/paper.png` in this subdirectory
+  package becomes .../blob/HEAD/media/paper.png and 404s on the Marketplace.
+  Verified: the rewritten CREDITS.md link returned 404, the absolute one 200.
+-->
+![Midori Paper](https://raw.githubusercontent.com/loschenbd/midori-terminal/main/vscode/midori-theme/media/paper.png)
+
+![Midori Night](https://raw.githubusercontent.com/loschenbd/midori-terminal/main/vscode/midori-theme/media/night.png)
 
 ## Install
 
@@ -84,9 +91,10 @@ Obsidian and Antinote — all switching with macOS appearance together.
 ## Licence and credits
 
 MIT. The icon artwork is derived from two third-party sets, both modified,
-both credited in [CREDITS.md](CREDITS.md) with full licence texts in
-`licenses/`: **Material Symbols** (Google, Apache-2.0) and **Phosphor Icons**
-(MIT).
+both credited in
+[CREDITS.md](https://github.com/loschenbd/midori-terminal/blob/main/vscode/midori-theme/CREDITS.md)
+with full licence texts in `licenses/`: **Material Symbols** (Google,
+Apache-2.0) and **Phosphor Icons** (MIT).
 
 *Midori is an independent project. It is not affiliated with, endorsed by, or
 sponsored by Designphil Inc. or any other company. "Midori" is used here in its
