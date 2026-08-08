@@ -315,6 +315,25 @@ Residual gotchas:
   `Preview | Markdown` toggle in the breadcrumb row), which is not a webview
   and loads no contributed CSS at all. Use `Markdown: Open Preview` (⌘⇧V) to
   see any of this.
+- **That `Preview` chip is a trap, and it is stickier than it looks.** It is
+  `markdownEditor.toggleMode`, which swaps the *native* editor between rich and
+  raw — `RAW → Ny.id` (plain text), `RICH → V9.EditorID`
+  (`workbench.editor.markdown`). Neither position is the webview. Worse, it
+  calls `replaceEditors` with an explicit `options.override`, so it walks
+  straight past `workbench.editorAssociations`, and it writes the choice to
+  `markdownEditorModePreferences` keyed by URI — one click re-pins that file to
+  the native editor for good. Two more reasons the association looks broken:
+  `MarkdownEditorInput` has an editor serializer whose `deserialize()` builds
+  the input straight from JSON, so *restored* tabs never consult the resolver
+  at all; and eligibility is `endsWith('.md') && !endsWith('.plan.md')` minus a
+  hardcoded dot-dir list — `['.cursor', '.claude', '.codex']` — so markdown
+  under exactly those three opens normally and everything else does not. There
+  is no setting to disable the native editor (nothing registers under
+  `markdownEditor.*`), but the chip only mounts when it finds a live
+  breadcrumbs control, so `"breadcrumbs.enabled": false` removes it entirely.
+  Default mode is RAW (`kXu(uri) => isMermaid(uri) ? RICH : RAW`), so a file
+  showing the rich render has a stored preference; closing and reopening the
+  tab is the only way to clear it short of the state DB.
 - **Fenced code in the preview is not themed by the theme.** `highlight.css`
   hardcodes highlight.js' VS2015 palette with no reference to the active
   colour theme, and its `.vscode-light` override block misses
