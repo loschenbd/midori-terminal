@@ -458,6 +458,33 @@ Residual gotchas:
   four roles already claim it. Style is the rare channel among the surveyed
   themes — only 5% italicise storage and 8% control — so it is worth spending
   where colour has run out rather than as a first move.
+- **Weight is spent on declarations, and that is a Midori decision rather than
+  a convention.** The survey is nearly silent here: of 44 theme files, bold
+  goes to `markup.bold` (93%) and `markup.heading` (84%), and the 82% figure
+  for `entity.name` is almost entirely `entity.name.section` — markdown
+  headings again. In actual code the field barely uses it: `entity.name.type`
+  2%, `entity.name.function` 2%, `keyword.control` 5%. So there is no consensus
+  to adopt, only a lever nobody is using. Midori spends it on **where a name is
+  introduced**, which is the same split the fonts already state — Spectral is
+  the naming voice, M PLUS the working voice — applied inside the working
+  voice. That requires the semantic layer, because TextMate cannot tell a
+  definition from a call: `entity.name.function` fires on both, so bolding it
+  would bold every call site. `semanticHighlighting` was already true here, so
+  seven rules carry it: `function.declaration`, `method.declaration`, and
+  `class`/`interface`/`enum`/`type`/`namespace.declaration`. Foregrounds are
+  restated explicitly in each rather than left to fall through specificity —
+  and note this is the one change in this section that the tokenising harness
+  **cannot** verify, since it resolves TextMate only and semantic tokens come
+  from the language server. Variables are deliberately excluded: `*.declaration`
+  would bold every `const`, which is most lines.
+- **`editor.fontWeight` sets the ceiling on how much bold can say.** Measured
+  off a reported screenshot by run-length: control-flow stems came out at
+  1.63 px mean against storage's 1.40, a ratio of **1.166**. Bold rendered — it
+  is simply a small step, because the base is `450` and `fontStyle: bold` is
+  700, and 250 units of a variable axis is about 0.2 px of stem at 13 px. A
+  lower base widens every bold contrast in the theme at once, but thins body
+  text, which trades directly against the 1x coverage problem in the first
+  bullet. Measure before moving it.
 - **Midori cannot afford a hue for every role, and that is the palette
   working as designed.** Tokenising one line of HTML through every installed
   theme and deduping by colour signature gives 40 distinct schemes, and they
