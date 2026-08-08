@@ -677,6 +677,33 @@ so the repo *is* what Vivaldi serves — no copy step, drift impossible. `instal
 and `sync.sh` both detect this and skip their copy. To revert to a managed copy:
 `rm "$HOME/Library/Application Support/Vivaldi/CSSMods" && ./vivaldi/install-vivaldi.sh`.
 
+### Marketplace icon
+
+`vscode/midori-theme/media/icon.png` is four stadium bars — ink, slate, ochre,
+sage — staggered like indented code on cream. It follows the brand guide that
+lives in the sibling repos (`benjaminloschen/docs/brand-images.md` and
+`tokentrail/docs/brand-images.md`), not this one, which is worth knowing before
+regenerating it. Two of its rules shape how it was built:
+
+- **The model never draws the background.** It generates the mark on flat
+  cream; the base is then snapped to exactly `#f3f1eb` and the mint `#9ebfb4`
+  dot grid composited through a background mask. That is what keeps the
+  background pixel-identical across every image in the set regardless of model
+  drift.
+- **Sage is punctuation, not paint.** It gets one bar, not the whole mark. The
+  cool accent is Color-Dot slate `#3a5572` rather than the theme's own syntax
+  indigo, which sits outside the brand palette.
+
+`media/finish_icon.py` is the post-processing step and `media/icon-raw.png` the
+untouched generation, both kept in git and both excluded from the `.vsix`, so
+the icon can be rebuilt without another round of generation. The bars snapped
+to exact palette hexes at 99.6% coverage; the remaining 0.4% is antialiased
+edges, left alone deliberately.
+
+The grid pitch is the one place the guide is knowingly departed from: the brand
+draws dots at ~1/50 of the frame width, which on a 128px icon would be 2.5px
+and disappear, so it is scaled up to 8 columns.
+
 ## A note on the name
 
 Midori is an independent project. It is not affiliated with, endorsed by, or
