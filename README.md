@@ -477,14 +477,37 @@ Residual gotchas:
   **cannot** verify, since it resolves TextMate only and semantic tokens come
   from the language server. Variables are deliberately excluded: `*.declaration`
   would bold every `const`, which is most lines.
-- **`editor.fontWeight` sets the ceiling on how much bold can say.** Measured
-  off a reported screenshot by run-length: control-flow stems came out at
-  1.63 px mean against storage's 1.40, a ratio of **1.166**. Bold rendered — it
-  is simply a small step, because the base is `450` and `fontStyle: bold` is
-  700, and 250 units of a variable axis is about 0.2 px of stem at 13 px. A
-  lower base widens every bold contrast in the theme at once, but thins body
-  text, which trades directly against the 1x coverage problem in the first
-  bullet. Measure before moving it.
+- **Bold is already at the ceiling, and `editor.fontWeight: 450` is exactly
+  right — both measured, neither guessed.** `MPLUS1Code[wght].ttf` declares
+  `wght` **100–700** (`fvar`), and `fontStyle: bold` renders 700, so bold sits
+  on the axis maximum with nowhere left to go. There is no `editor.fontWeightBold`
+  either — VS Code exposes that only for the terminal — so the base weight is
+  the sole remaining lever, and it should not move. Rendering the real font at
+  the real `editor.fontSize: 14` and tracking the ochre function colour (the
+  tightest regular-weight token, 4.54:1 nominal) against `#f3f1eb`:
+
+  | base `wght` | p90 ink coverage | p90 rendered contrast |
+  |---|---|---|
+  | 300 | 0.757 | 2.97:1 |
+  | 350 | 0.910 | 3.86:1 |
+  | 400 | 0.984 | **4.41:1** |
+  | **450** | **1.000** | **4.54:1** |
+  | 500 | 1.000 | 4.54:1 |
+
+  450 is precisely the lowest weight at which coverage saturates: one step down
+  to 400 and the ochre falls to 4.41:1, under the floor this whole section
+  exists to hold. Widening the bold gap would buy weight contrast by spending
+  the 1x contrast in the first bullet.
+
+  **Measure weight as total ink, not stem width.** A first pass ran horizontal
+  run-lengths over a screenshot and reported bold at only 1.166× — misleading,
+  because at 14 px a run-length threshold misassigns the antialiased edges
+  between two colours as close as `#264464` and `#002e5b`, and it degenerates
+  badly (base 600 measured a 3.00 px "stem", above bold's own). Summed coverage
+  is stable and gives the real figure: **bold carries 1.48× the ink of base
+  450**, a 48% increase. That is a strong signal — it reads as weak only when
+  one lone role carries it, which is why weight is spent across declarations
+  and control flow rather than on a single scope.
 - **Midori cannot afford a hue for every role, and that is the palette
   working as designed.** Tokenising one line of HTML through every installed
   theme and deduping by colour signature gives 40 distinct schemes, and they
