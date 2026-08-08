@@ -1,0 +1,73 @@
+{
+  "$comment": [
+    "Midori — HTML markup inside JS/TS template literals.",
+    "",
+    "The TypeScript grammar gives a template literal body a single contentName,",
+    "'string.template.ts', and only two sub-patterns: ${...} and character",
+    "escapes. So `<div class=\"muted\">` is one scope from end to end, and no",
+    "theme can split it — tags, attribute names and values are all one colour.",
+    "",
+    "This injection emits the scopes the theme already styles for real .html",
+    "files (entity.name.tag, entity.other.attribute-name, string.quoted), so no",
+    "new palette values are introduced; the existing tag/attribute rules just",
+    "start firing where they previously could not.",
+    "",
+    "The selector subtracts meta.template.expression because ${...} inherits",
+    "string.template from the enclosing literal — without it these rules would",
+    "also fire on real code inside interpolations."
+  ],
+  "scopeName": "midori.injection.html-in-template",
+  "injectionSelector": "L:string.template -comment -meta.template.expression",
+  "patterns": [{ "include": "#tag" }],
+  "repository": {
+    "tag": {
+      "name": "meta.tag.html.template.midori",
+      "begin": "(</?)([a-zA-Z][a-zA-Z0-9]*(?:-[a-zA-Z0-9]+)*)(?=[\\s/>])",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html.template.midori" },
+        "2": { "name": "entity.name.tag.html.template.midori" }
+      },
+      "end": "(/?>)|(?=`)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.end.html.template.midori" }
+      },
+      "patterns": [
+        { "include": "#interpolation" },
+        {
+          "match": "([a-zA-Z][a-zA-Z0-9:._-]*)(?=\\s*=)",
+          "name": "entity.other.attribute-name.html.template.midori"
+        },
+        { "include": "#attribute-value-double" },
+        { "include": "#attribute-value-single" }
+      ]
+    },
+
+    "$comment-interpolation": [
+      "Included first everywhere, so ${...} keeps its normal expression",
+      "highlighting inside a tag and inside an attribute value. Without this",
+      "the injection's span would shadow the base grammar's substitution rule."
+    ],
+    "interpolation": {
+      "patterns": [{ "include": "source.ts#template-substitution-element" }]
+    },
+
+    "$comment-attribute-value": [
+      "Quoted values are matched explicitly rather than left to fall through.",
+      "That protects their contents from the attribute-name rule (a value like",
+      "\"a=b\" would otherwise pick up a false attribute) and lands them on",
+      "string.quoted, which is the colour they already had."
+    ],
+    "attribute-value-double": {
+      "name": "string.quoted.double.html.template.midori",
+      "begin": "\"",
+      "end": "\"|(?=`)",
+      "patterns": [{ "include": "#interpolation" }]
+    },
+    "attribute-value-single": {
+      "name": "string.quoted.single.html.template.midori",
+      "begin": "'",
+      "end": "'|(?=`)",
+      "patterns": [{ "include": "#interpolation" }]
+    }
+  }
+}
