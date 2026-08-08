@@ -424,7 +424,24 @@ Residual gotchas:
   ΔC<3` heuristic is calibrated for *near-hue* pairs (its worked example is an
   80° step at C 6). Every alternative lightness was worse — L ≥ 79 collides
   with the function ochre and the mint, L ≤ 67 collides with storage itself,
-  which is the pair being separated.
+  which is the pair being separated. Control flow is then separated on two
+  further channels that cost no hue: chroma (night C 9 → 12, paper C 6.6 → 9.4,
+  which is the largest in-gamut chroma at that lightness — 9.5 clips sRGB) and
+  **real weight**. Final values: night `#65a6ea` bold at 6.86:1, paper
+  `#002e5b` bold at 12.06:1, separated from storage by ΔL 8.0 + ΔC 3.0 and
+  ΔL 7.9 + ΔC 2.8 respectively, plus 250 units of font weight.
+- **`fontStyle: bold` is a real axis here; `fontStyle: italic` is not.**
+  `MPLUS1Code[wght].ttf` is a variable font carrying Thin → Bold, so bold is an
+  actual instance rather than a synthetic smear — and because heavier strokes
+  raise the share of full-coverage pixels, it is the one differentiator that
+  *helps* the 1x problem in the first bullet instead of trading against it.
+  Neither M PLUS face ships an italic, so every italic in these themes
+  (comments, `variable.parameter`, `variable.language`,
+  `entity.other.attribute-name`) is a synthesized oblique. That still reads,
+  but it is a reason not to keep spending italic: it is a skew, not a face, and
+  four roles already claim it. Style is the rare channel among the surveyed
+  themes — only 5% italicise storage and 8% control — so it is worth spending
+  where colour has run out rather than as a first move.
 - **Midori cannot afford a hue for every role, and that is the palette
   working as designed.** Tokenising one line of HTML through every installed
   theme and deduping by colour signature gives 40 distinct schemes, and they
