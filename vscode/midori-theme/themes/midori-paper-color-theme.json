@@ -366,12 +366,13 @@
       }
     },
     {
-      "name": "Control flow \u2014 indigo at the extreme rung, so structure outranks declaration",
+      "name": "Control flow \u2014 extreme rung, extra chroma and real weight",
       "scope": [
         "keyword.control"
       ],
       "settings": {
-        "foreground": "#112f4e"
+        "foreground": "#002e5b",
+        "fontStyle": "bold"
       }
     },
     {
