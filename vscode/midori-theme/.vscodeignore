@@ -8,3 +8,14 @@ media/icon-source-1k.png
 media/icon-raw.png
 media/finish_icon.py
 media/measure_bars.py
+
+# Screenshot source + brief: needed in git so the images can be reshot,
+# but not shipped to users.
+media/SCREENSHOTS.md
+media/screenshot-sample.tsx
+
+# The listing screenshots are referenced by absolute raw.githubusercontent
+# URL (see the note at the top of README.md), so packaged copies would never
+# be rendered — they would be pure weight in every download.
+media/paper.png
+media/night.png
