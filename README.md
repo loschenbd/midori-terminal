@@ -405,6 +405,26 @@ Residual gotchas:
   sits on the same line as `` `<div ``, which is exactly the co-occurrence the
   Antinote notes warn about. Attribute names stay ochre, which is also the
   function colour, but attributes are italic and functions are not.
+- **`if`/`return`/`for`/`catch` sharing a colour is standard; `const` joining
+  them is not.** Same tokenising survey, 39 schemes with all five keyword roles
+  resolved: **82%** give the four control-flow roles one colour, but **62%**
+  give `storage.type` (`const`, `let`, `var`, `function`) a *different* colour
+  from `keyword.control`. Only 38% collapse all five, which is what Midori did.
+  The interesting precedent is Nightfox and Nordfox: they split by **lightness
+  at one hue** (`const #9D79D6` vs `if #BAA1E2`) rather than by inventing a
+  second accent — which is the only split a low-chroma palette can afford, and
+  the same lever the bullet above describes. Control flow now takes the extreme
+  rung and storage stays at the resting one: night `#5f8dbe` → `#77a6d8`
+  (L 63 → 71, 6.89:1), paper `#264464` → `#112f4e` (L 37.9 → 30, 12.07:1), hue
+  and chroma unchanged in both. The reasoning is that `const` opens most lines
+  and carries almost no information, while `if`/`return`/`for` are the shape of
+  the function. Paper flags nothing. Night flags one pair — control vs number,
+  ΔL 2.0 and ΔC 1.5 — which is accepted rather than fixed: the two are **166°
+  apart in hue**, near-complementary blue against orange, and the `ΔL<6 and
+  ΔC<3` heuristic is calibrated for *near-hue* pairs (its worked example is an
+  80° step at C 6). Every alternative lightness was worse — L ≥ 79 collides
+  with the function ochre and the mint, L ≤ 67 collides with storage itself,
+  which is the pair being separated.
 - **Midori cannot afford a hue for every role, and that is the palette
   working as designed.** Tokenising one line of HTML through every installed
   theme and deduping by colour signature gives 40 distinct schemes, and they

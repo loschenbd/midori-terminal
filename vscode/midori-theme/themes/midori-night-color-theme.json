@@ -354,16 +354,24 @@
       }
     },
     {
-      "name": "Keywords & storage \u2014 midori-indigo (fountain-pen ink, lifted)",
+      "name": "Storage & declarations \u2014 midori-indigo, the resting rung",
       "scope": [
         "keyword",
-        "keyword.control",
         "storage",
         "storage.type",
         "storage.modifier"
       ],
       "settings": {
         "foreground": "#5f8dbe"
+      }
+    },
+    {
+      "name": "Control flow \u2014 indigo at the extreme rung, so structure outranks declaration",
+      "scope": [
+        "keyword.control"
+      ],
+      "settings": {
+        "foreground": "#77a6d8"
       }
     },
     {
