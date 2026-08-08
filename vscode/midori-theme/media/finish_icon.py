@@ -8,7 +8,9 @@ background stays pixel-identical across the brand's image set.
 import numpy as np
 from PIL import Image, ImageDraw
 
-SRC = "icon-raw.png"
+import sys
+
+SRC = sys.argv[1] if len(sys.argv) > 1 else "icon-raw.png"
 OUT_1024 = "icon-1024.png"
 OUT_128 = "icon-128.png"
 

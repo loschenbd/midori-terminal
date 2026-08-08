@@ -680,7 +680,9 @@ and `sync.sh` both detect this and skip their copy. To revert to a managed copy:
 ### Marketplace icon
 
 `vscode/midori-theme/media/icon.png` is four stadium bars — ink, slate, ochre,
-sage — staggered like indented code on cream. It follows the brand guide that
+sage — on cream, their left edges stepping in, in, then back out one level, so
+the block reads as nested code rather than a ragged stack. It follows the brand
+guide that
 lives in the sibling repos (`benjaminloschen/docs/brand-images.md` and
 `tokentrail/docs/brand-images.md`), not this one, which is worth knowing before
 regenerating it. Two of its rules shape how it was built:
@@ -699,6 +701,21 @@ untouched generation, both kept in git and both excluded from the `.vsix`, so
 the icon can be rebuilt without another round of generation. The bars snapped
 to exact palette hexes at 99.6% coverage; the remaining 0.4% is antialiased
 edges, left alone deliberately.
+
+**The indentation is measured, not eyeballed** — `media/measure_bars.py` asserts
+the staircase (bar 1 alone at the outer margin, bar 3 the most indented, bars 2
+and 4 level). The first generation failed all of it while looking plausible at a
+glance. Two traps make that measurement harder than it sounds, and both bit:
+
+- Matching bar colours by nearest-palette-distance is not enough. The
+  ink-to-cream antialiasing ramp passes through mid-greys that land almost
+  exactly on sage `#5f6f5e`, so sage's bounding box swallowed the whole image.
+  Filtering to pixels inside a horizontal run of 50+ separates a real bar
+  (hundreds of px wide) from a ramp (~3px).
+- The model does not honour absolute coordinates, but it does honour
+  *relationships*. Asking for pixel positions produced a group shifted ~25px
+  right with a 72px indent step instead of 96 — while the staircase pattern
+  itself came out exact. Specify the relationships and check those.
 
 The grid pitch is the one place the guide is knowingly departed from: the brand
 draws dots at ~1/50 of the frame width, which on a 128px icon would be 2.5px
