@@ -12,11 +12,21 @@ import sys
 
 SRC = sys.argv[1] if len(sys.argv) > 1 else "icon-raw.png"
 OUT_1024 = "icon-1024.png"
-OUT_128 = "icon-128.png"
+OUT_256 = "icon-256.png"
 
 CREAM = (0xF3, 0xF1, 0xEB)
 MINT = (0x9E, 0xBF, 0xB4)
 MINT_ALPHA = 0.55
+# No bezel: the icon is edge-to-edge paper, deliberately.
+#
+# The tradeoff is known and accepted. Cream #f3f1eb against VS Code's light
+# list background #f3f3f3 is 1.02:1, so on light chrome the square has no
+# visible boundary and the mark reads as four bars floating free. A 4px
+# ink-muted rule was tried and fixes it (7.54:1), but it frames the paper and
+# turns the sheet into a card, which is not what this mark is. Every other
+# theme in the top 40 keeps a defined silhouette — almost always a dark disc
+# on transparency — so being the one borderless light square is the point.
+BEZEL_AT_256 = 0
 
 # The mark's sanctioned hexes. Everything in the render snaps to one of these.
 PALETTE = {
@@ -86,10 +96,16 @@ final = Image.composite(
     mint_layer, base, Image.fromarray(alpha.astype(np.uint8))
 )
 
-final.save(OUT_1024)
-final.resize((128, 128), Image.LANCZOS).save(OUT_128)
+t = BEZEL_AT_256 * (1024 // 256)
+if t:
+    # Would sit over the dot grid as the edge of the sheet.
+    ImageDraw.Draw(final).rectangle([0, 0, 1023, 1023], outline=INK_MUTED, width=t)
 
-corner = np.asarray(final)[4, 4]
-print(f"\ncorner pixel: #{corner[0]:02x}{corner[1]:02x}{corner[2]:02x} "
-      f"(want #f3f1eb)")
-print(f"wrote {OUT_1024} and {OUT_128}")
+final.save(OUT_1024)
+# 256 is what ships. 59% of the top-100 themes ship >= 256 on the long edge
+# and only 18% are exactly 128; 128 is the documented minimum, not the target.
+final.resize((256, 256), Image.LANCZOS).save(OUT_256)
+
+edge = np.asarray(final)[1, 1]
+print(f"\ncorner pixel: #{edge[0]:02x}{edge[1]:02x}{edge[2]:02x} (want #f3f1eb)")
+print(f"wrote {OUT_1024} and {OUT_256}")
