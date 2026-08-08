@@ -383,6 +383,37 @@ Residual gotchas:
   make it work: `MarkdownItEngine` applies contributed plugins *after* it sets
   its own `highlight` option, so ours wins; and it normalises aliases first, so
   `shell` arrives as `sh`.
+- **HTML inside a template literal is one scope, so it was one colour.** The
+  TypeScript grammar gives a template body `contentName: "string.template.ts"`
+  and exactly two sub-patterns — `#template-substitution-element` and
+  `#string-character-escape`. Nothing else. So every character of
+  `<div class="muted">` carried a single scope, and a theme cannot split one
+  scope into three colours; the `entity.name.tag` and
+  `entity.other.attribute-name` values were already defined and simply never
+  fired. `syntaxes/midori-html-in-template.tmLanguage.json` injects into
+  `source.ts`/`.tsx`/`.js`/`.js.jsx` with selector
+  `L:string.template -comment -meta.template.expression` and emits those same
+  scopes, so no new palette values were needed. Three things it has to get
+  right: the selector must subtract `meta.template.expression`, because `${…}`
+  inherits `string.template` from the enclosing literal and the rules would
+  otherwise fire on real code inside interpolations; the tag span must
+  `include: source.ts#template-substitution-element` or it shadows the base
+  grammar and kills `${…}` highlighting inside tags; and quoted attribute
+  values need an explicit rule so a value like `"a=b"` can't produce a phantom
+  attribute name. Tag *brackets* take the punctuation neutral rather than the
+  tag indigo — `entity.name.tag` is the same value as `keyword`, and `return`
+  sits on the same line as `` `<div ``, which is exactly the co-occurrence the
+  Antinote notes warn about. Attribute names stay ochre, which is also the
+  function colour, but attributes are italic and functions are not.
+- **Verify a grammar change by tokenising, not by looking.** Cursor ships
+  `vscode-textmate` and `vscode-oniguruma` in `Contents/Resources/app/node_modules`,
+  so a ~60-line script can load the real grammars *and* the real theme through
+  `Registry({theme})`, run `tokenizeLine2`, and resolve `getColorMap()` — the
+  same tokenizer the editor runs, reporting the actual hex per token. That is
+  how the keyword collision above was caught before shipping, and how the
+  no-false-positive cases were confirmed: `` `SELECT … WHERE a = "b" AND x < y` ``
+  and `` `total = ${a > b ? "hi" : 'lo'}` `` both tokenise identically with the
+  injection on and off.
 - Reinstall with `./vscode/install-vscode.sh` — it repackages the `.vsix` and
   force-installs into both editors. Symlinking into `~/.cursor/extensions`
   does not work; see the header of that script.
