@@ -17,6 +17,13 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # OVSX_PAT is hoisted to the job so the Open VSX step's `if` can see it.
+    # A step's own `env:` block is not in scope for that same step's `if` — the
+    # condition is evaluated before the step environment is built, so the
+    # previous `if: env.OVSX_PAT != ''` was always false and Open VSX would
+    # have been skipped even with the secret set. Job-level env is in scope.
+    env:
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
     defaults:
       run:
         working-directory: vscode/midori-theme
@@ -49,6 +56,4 @@ jobs:
 
       - name: Publish to Open VSX
         if: ${{ env.OVSX_PAT != '' }}
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
         run: npx -y ovsx publish midori-theme.vsix -p "$OVSX_PAT"
