@@ -37,6 +37,10 @@
           "match": "([a-zA-Z][a-zA-Z0-9:._-]*)(?=\\s*=)",
           "name": "entity.other.attribute-name.html.template.midori"
         },
+        {
+          "match": "=",
+          "name": "punctuation.separator.key-value.html.template.midori"
+        },
         { "include": "#attribute-value-double" },
         { "include": "#attribute-value-single" }
       ]
