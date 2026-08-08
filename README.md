@@ -718,8 +718,35 @@ glance. Two traps make that measurement harder than it sounds, and both bit:
   itself came out exact. Specify the relationships and check those.
 
 The grid pitch is the one place the guide is knowingly departed from: the brand
-draws dots at ~1/50 of the frame width, which on a 128px icon would be 2.5px
+draws dots at ~1/50 of the frame width, which on a small icon would be 2.5px
 and disappear, so it is scaled up to 8 columns.
+
+**It ships at 256×256**, set by surveying the field rather than guessing: the
+top 100 themes on the Marketplace were pulled by install count and their icons
+measured. 59% ship ≥256px on the long edge and only 18% are exactly 128 — 128
+is the documented minimum, not the target.
+
+That survey also mapped the genre. 70% of the 87 colour themes use a disc or
+rounded mark on transparency (41% strongly circular); only 23% are full-bleed
+squares. Of those with opaque backgrounds, 50% are dark against 17% light. The
+three archetypes are coloured palette-dots on a dark disc, a mascot (the
+largest group — vampire, owl, bear, cat, panda, penguin), and a wordmark.
+Midori is deliberately none of them: it is the only light, flat, mascot-free,
+full-bleed icon in the top 40, and it sits at the 13th percentile for
+saturation against a field median of 0.38.
+
+**It has no border, and that is a decision rather than an oversight.** Cream
+`#f3f1eb` against VS Code's light list background `#f3f3f3` is 1.02:1, so on
+light chrome the square has no visible boundary and the mark reads as four
+bars floating free. A 4px ink-muted rule was built and measured — it fixes the
+edge outright at 7.54:1 — but it frames the paper and turns a sheet into a
+card. Being edge-to-edge paper matters more than having a silhouette.
+
+One measurement that looks like a contradiction: the icon reads as flat but
+scores 58 quantised colours, dead on the field median of 56. The 1024 master
+holds exactly five hexes; the mint dot grid plus downsampling generates the
+rest. Low saturation is what makes it read flat, not a small palette — so
+judge that quality by saturation, not by colour count.
 
 ## A note on the name
 
