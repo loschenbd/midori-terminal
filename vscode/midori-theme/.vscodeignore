@@ -1,3 +1,9 @@
 .DS_Store
 **/.DS_Store
+
+# Icon masters and the post-processing recipe. media/icon.png is the only
+# image the Marketplace needs; these are kept in git so the icon can be
+# rebuilt without re-generating it.
 media/icon-source-1k.png
+media/icon-raw.png
+media/finish_icon.py
