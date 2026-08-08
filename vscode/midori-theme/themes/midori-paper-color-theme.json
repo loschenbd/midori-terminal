@@ -642,6 +642,34 @@
     "namespace": "#744242",
     "function": "#906613",
     "method": "#906613",
-    "decorator": "#786275"
+    "decorator": "#786275",
+    "function.declaration": {
+      "foreground": "#906613",
+      "bold": true
+    },
+    "method.declaration": {
+      "foreground": "#906613",
+      "bold": true
+    },
+    "class.declaration": {
+      "foreground": "#744242",
+      "bold": true
+    },
+    "interface.declaration": {
+      "foreground": "#744242",
+      "bold": true
+    },
+    "enum.declaration": {
+      "foreground": "#744242",
+      "bold": true
+    },
+    "type.declaration": {
+      "foreground": "#744242",
+      "bold": true
+    },
+    "namespace.declaration": {
+      "foreground": "#744242",
+      "bold": true
+    }
   }
 }
