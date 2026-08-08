@@ -405,6 +405,28 @@ Residual gotchas:
   sits on the same line as `` `<div ``, which is exactly the co-occurrence the
   Antinote notes warn about. Attribute names stay ochre, which is also the
   function colour, but attributes are italic and functions are not.
+- **Midori cannot afford a hue for every role, and that is the palette
+  working as designed.** Tokenising one line of HTML through every installed
+  theme and deduping by colour signature gives 40 distinct schemes, and they
+  agree: brackets dim from the tag name (82%), the attribute name is its own
+  accent rather than a neutral (95%, only 15% near-neutral), the tag is the
+  most chromatic of the three (48%, best mean rank) and the value is the
+  loudest by lightness (38%, best mean rank). Midori now matches all four. The
+  one convention it does not is that its attribute name doubles as the function
+  ochre, which only 12% of themes do. That is not fixable by adding a colour.
+  Those 41 themes carry **14.0 distinct accents across 7.9 of 12 hue bins at
+  mean chroma 12.3**; Midori Night carries 10 accents over 7 bins at **8.3**,
+  Paper 8 over 6 at **8.5**. Below roughly C 12 hue does almost no work at body
+  size, so the field's 12.3 is exactly what buys them a spare hue slot. An 11th
+  Midori accent dropped into the 76° gap at 289° would sit at C 8 and read as
+  another muddy mid-tone — every candidate priced (plum 327°, cyan 212°) still
+  flagged `ΔL<6 and ΔC<3` against `function`, because at this chroma separation
+  has to come from lightness and night's L 73–86 band already holds function,
+  number, value, mint and plain. Raising chroma to open the slot is the
+  experiment in the second bullet that already failed. The role is separated on
+  an orthogonal channel instead: `entity.other.attribute-name` is italic and
+  `entity.name.function` is not — verified in the tokeniser, not assumed —
+  which is what 18% of the surveyed themes do deliberately.
 - **Verify a grammar change by tokenising, not by looking.** Cursor ships
   `vscode-textmate` and `vscode-oniguruma` in `Contents/Resources/app/node_modules`,
   so a ~60-line script can load the real grammars *and* the real theme through
