@@ -16,7 +16,7 @@ VSIX="$REPO_DIR/midori-theme.vsix"
 
 echo "Packaging midori-theme.vsix..."
 (cd "$REPO_DIR/midori-theme" && \
-  npx -y @vscode/vsce package --allow-missing-repository --skip-license -o "$VSIX")
+  npx -y @vscode/vsce package -o "$VSIX")
 
 installed=0
 

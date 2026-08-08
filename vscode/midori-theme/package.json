@@ -1,18 +1,43 @@
 {
   "name": "midori-theme",
   "displayName": "Midori",
-  "description": "Midori MD Paper \u2014 cream paper light + warm charcoal night, from benjaminloschen.com. Color Dot syntax set: indigo / olive / wine / ochre / sage. File icons recolored from Material Symbols Rounded (Apache-2.0); workbench-chrome icons built from Phosphor (MIT) \u2014 see CREDITS.md.",
+  "description": "Cream paper light and warm charcoal night, from benjaminloschen.com. Contrast tuned for non-retina 1x rendering. Matching file icons, workbench icons and markdown preview.",
   "version": "1.21.0",
   "publisher": "benjaminloschen",
   "license": "MIT",
+  "homepage": "https://github.com/loschenbd/midori-terminal#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/loschenbd/midori-terminal.git"
+  },
+  "bugs": {
+    "url": "https://github.com/loschenbd/midori-terminal/issues"
+  },
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#f3f1eb",
+    "theme": "light"
+  },
+  "keywords": [
+    "theme",
+    "light theme",
+    "dark theme",
+    "warm",
+    "cream",
+    "paper",
+    "low contrast",
+    "accessibility",
+    "icon theme",
+    "markdown"
+  ],
+  "categories": [
+    "Themes"
+  ],
   "engines": {
     "vscode": "^1.60.0"
   },
   "main": "./extension.js",
   "activationEvents": [],
-  "categories": [
-    "Themes"
-  ],
   "contributes": {
     "themes": [
       {

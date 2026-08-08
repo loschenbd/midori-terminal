@@ -1,0 +1,54 @@
+# Publishes the Cursor/VS Code extension when a tag like vscode-v1.21.0 is pushed.
+#
+# The tag's version must match vscode/midori-theme/package.json, which the first
+# step enforces — publishing a mismatched version is not reversible on the
+# Marketplace (a version number can never be reused).
+#
+# Secrets required:
+#   VSCE_PAT  Azure DevOps personal access token, Marketplace > Manage scope
+#   OVSX_PAT  open-vsx.org token (optional; the Open VSX step is skipped without it)
+name: release-vscode
+
+on:
+  push:
+    tags: ["vscode-v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode/midori-theme
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Tag matches package.json version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF#refs/tags/vscode-v}"
+          pkg=$(node -p "require('./package.json').version")
+          echo "tag=$tag package.json=$pkg"
+          [ "$tag" = "$pkg" ] || { echo "::error::tag $tag != package.json $pkg"; exit 1; }
+
+      - name: Package
+        run: npx -y @vscode/vsce package -o midori-theme.vsix
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: midori-theme-vsix
+          path: vscode/midori-theme/midori-theme.vsix
+
+      - name: Publish to the VS Code Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx -y @vscode/vsce publish --packagePath midori-theme.vsix
+
+      - name: Publish to Open VSX
+        if: ${{ env.OVSX_PAT != '' }}
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: npx -y ovsx publish midori-theme.vsix -p "$OVSX_PAT"
