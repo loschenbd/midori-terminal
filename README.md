@@ -95,6 +95,34 @@ Two surfaces deliberately don't follow:
   measurements. It is the one palette here that separates on hue rather than
   lightness, and 310° would move it *toward* its blue.
 
+### The palette is closed
+
+Purple was the last slot. Don't add an eighth accent without re-reading this —
+the instinct is to look for an empty hue, and hue is not the constraint.
+
+**The ANSI-16 seam has six chromatic slots and all six are filled**: red=wine
+20°, green=olive 144°, yellow=ochre 78°, blue=indigo 251°, magenta=purple
+310°, cyan=mint 171°. A new hue has nowhere to live downstream — every surface
+here speaks through that seam.
+
+**Lightness, not hue, is what ran out.** VS Code Paper packs 15 distinct syntax
+colours into L 27.8–54.1 — 26 points of range at a mean gap of **1.9**. Night
+packs 16 into L 62.6–93.2 at a mean gap of **2.0**. Neither has one rung
+10 points wide. Below C 12 hue does almost no work at body size, so an eighth
+accent would have to share a rung with an existing role and would read as a
+duplicate of it no matter how far apart their hues are.
+
+Four hue gaps ≥40° do exist (102°, 211°, 280°, 345°) and none is usable. The
+two widest are also the worst real estate: hue 211° has a ceiling of only
+**C 7.8** at L 45, the muddiest region of the wheel. Two candidates in these
+gaps were already priced and rejected — see the 289° and 212° note under
+"Cursor / VS Code notes".
+
+**If a future role genuinely needs its own colour**, the lever is not a new hue.
+It is the one control flow already used: take an *extreme* lightness rung and
+buy separation with chroma. That is how `#175a98` got in at C 12.0 / L 46.1
+without colliding with anything.
+
 ## What's in the box
 
 | Path | What |
@@ -622,13 +650,12 @@ Residual gotchas:
   mean chroma 12.3**; Midori Night carries 10 accents over 7 bins at **8.3**,
   Paper 8 over 6 at **8.5**. Below roughly C 12 hue does almost no work at body
   size, so the field's 12.3 is exactly what buys them a spare hue slot. An 11th
-  Midori accent dropped into the 76° gap at 289° would sit at C 8 and read as
-  another muddy mid-tone — every candidate priced (the then-plum at 327°,
-  cyan 212°) still
-  flagged `ΔL<6 and ΔC<3` against `function`, because at this chroma separation
-  has to come from lightness and night's L 73–86 band already holds function,
-  number, value, mint and plain. Raising chroma to open the slot is the
-  experiment in the second bullet that already failed. The role is separated on
+  Midori accent dropped into the gap at 289° would sit at C 8 and read as
+  another muddy mid-tone — every candidate priced (the then-plum at 327°, cyan
+  212°) still flagged `ΔL<6 and ΔC<3` against `function`, because at this
+  chroma separation has to come from lightness and night's L 73–86 band already
+  holds function, number, value, mint and plain. Raising chroma to open the
+  slot is the experiment in the second bullet that already failed. The role is separated on
   an orthogonal channel instead: `entity.other.attribute-name` is italic and
   `entity.name.function` is not — verified in the tokeniser, not assumed —
   which is what 18% of the surveyed themes do deliberately.
