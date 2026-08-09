@@ -19,7 +19,7 @@ Regenerate either set with `vscode/build-icons.py` /
 
 **Modifications made:** the SVGs were fetched from unpkg unaltered in geometry,
 then recoloured — a `fill` attribute in one of ten Midori palette roles (sage,
-muted, indigo, wine, olive, ochre, plum, mint, warm, faint) was applied, and a
+muted, indigo, wine, olive, ochre, purple, mint, warm, faint) was applied, and a
 separate light and dark variant of each glyph was emitted. No path data was
 changed. See `vscode/build-icons.py` for the exact glyph → role mapping.
 

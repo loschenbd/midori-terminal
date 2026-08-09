@@ -3,7 +3,7 @@
 Two Antinote themes cut from the same palette as `ghostty/themes/midori-*`,
 `obsidian/theme.css` and `vscode/midori-theme` — warm paper neutrals, sage
 accent, and the site's Color-Dot set (indigo / olive / wine / ochre / mint /
-plum / terracotta).
+purple / terracotta).
 
 ```sh
 ./install-antinote.sh
@@ -128,11 +128,22 @@ lightness, which is exactly the trap that produced the first cut.
   correctly as the caret. H1/H2/H3 descend by lightness within the ramp; the
   Tertiary step turns teal so that variable *use* is legible next to variable
   *assignment*.
-- **accent2 splits deliberately.** `accent2Main` is plum (the derived
-  wine × indigo hue the Ghostty themes use for ANSI 5) for the `list` keyword
-  and timers, but `accent2Secondary` is **sage** — a checked box is sage in
-  the Obsidian theme (`--checkbox-color`) and in the site's UI, and that
-  reads as the same product. The two roles never appear as a pair.
+- **accent2 splits deliberately.** `accent2Main` is purple for the `list`
+  keyword and timers, but `accent2Secondary` is **sage** — a checked box is
+  sage in the Obsidian theme (`--checkbox-color`) and in the site's UI, and
+  that reads as the same product. The two roles never appear as a pair.
+- **Antinote keeps its own purple hue (331°), and is the only surface that
+  does.** Aug 2026 gave the site a real `--midori-purple` at hue 310, and every
+  other surface moved onto it. Antinote did not, because it is the one palette
+  here that separates on *hue* rather than lightness: its night accents pack
+  into L 62–80 with nothing but hue between them. Rotating `accent2Main`
+  331° → 310° moves it **toward** `accent1Main` (blue), cutting the gap from
+  80° to 59° on a pair already only 1.9 apart in lightness — and a sweep of
+  every (L, C) at hue 310 found no slot that clears the ladder on lightness
+  instead (best was L 62.0 / C 13.5, exactly `accent1Main`'s lightness, at a
+  bare 4.55:1). The chroma tier already matches the new token (10.4 paper /
+  11.6 night vs the token's 10.9), so nothing here was part of the drift the
+  new token fixed. Hue tidiness is not worth 21° off the only working channel.
 - **accent3 = wine**, pushed to the extreme rung — see "the math block is the
   binding constraint" above. `accent3Secondary` (the `sum` total) goes one step
   further out again. This slot is *nominally* the green one in Antinote's stock

@@ -1,7 +1,8 @@
 # midori-night — from benjaminloschen.com (Midori MD Paper dark mode)
 # Tokens: app/globals.css .dark — warm charcoal paper, bone ink, lifted sage,
 # luminous Midori "Color Dot" set, terracotta warms.
-# Magenta (5/13) is derived (wine × indigo plum) — the site has no purple token.
+# Magenta (5/13) is --midori-purple, a real site token since Aug 2026. It used
+# to be a derived wine×indigo plum, which sat too close to wine to tell apart.
 
 # 0/8: card surface + muted ink (--card, --muted)
 palette = 0=#22211e
@@ -18,9 +19,9 @@ palette = 11=#e6c489
 # 4/12: midori-indigo (+lifted)
 palette = 4=#6c87a4
 palette = 12=#8ba3bd
-# 5/13: derived plum (+lifted)
-palette = 5=#a48ba3
-palette = 13=#c3a8c0
+# 5/13: midori-purple (+lifted)
+palette = 5=#a079be
+palette = 13=#b692d2
 # 6/14: dot-grid mint (--page-dot, works as-is on dark paper)
 palette = 6=#9ebfb4
 palette = 14=#bad5cb
