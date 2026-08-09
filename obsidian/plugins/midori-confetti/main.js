@@ -48,6 +48,7 @@ const DEFAULTS = {
   mode: 'session',     // 'session' = words added since you opened the note; 'total' = words in the note
   oncePerDay: true,
   particles: 140,
+  cannons: 3,          // 2 = the corner pair only; 3 = plus a fountain up the middle
   message: '',         // optional notice alongside the burst; empty = no notice
 };
 
@@ -84,7 +85,9 @@ function today() {
 /* ------------------------------------------------------------------ burst */
 
 class Burst {
-  constructor(count) {
+  // cannons: 2 = the corner pair only, 3 = plus the bottom fountain. Anything
+  // else falls back to 3 rather than producing a burst with no cannons at all.
+  constructor(count, cannons = 3) {
     this.canvas = document.createElement('canvas');
     // Fixed, inert and above the workspace. pointer-events:none matters —
     // without it the canvas would swallow clicks for its whole lifetime.
@@ -105,14 +108,16 @@ class Burst {
 
     const W = window.innerWidth, H = window.innerHeight;
     this.parts = [];
-    // Three cannons: two angled inward from the lower corners, plus a vertical
-    // fountain from the bottom centre. A single centre burst on its own reads
-    // as an explosion; the crossing arcs read as a celebration. The fountain
-    // adds a beat of lift up the middle — it does cross the text, which is why
-    // it is launched fast and narrow: it clears the reading area on the way up
-    // and again on the way down, rather than lingering in it.
+    // Two cannons angled inward from the lower corners, optionally plus a
+    // vertical fountain from the bottom centre. A single centre burst on its
+    // own reads as an explosion; the crossing arcs read as a celebration. The
+    // fountain adds a beat of lift up the middle — it does cross the text,
+    // which is why it is launched fast and narrow: it clears the reading area
+    // on the way up and again on the way down rather than lingering in it, and
+    // why it is the part that can be switched off.
+    const n = cannons === 2 ? 2 : 3;
     for (let i = 0; i < count; i++) {
-      const cannon = i % 3;                  // 0 = left, 1 = right, 2 = fountain
+      const cannon = i % n;                  // 0 = left, 1 = right, 2 = fountain
       // Elevation is measured from horizontal in every case, and BOTH velocity
       // components are derived from that one angle. Deriving them separately
       // and correcting the sign afterwards is how this got written wrong the
@@ -323,7 +328,10 @@ module.exports = class MidoriConfetti extends Plugin {
     }
 
     if (msg) new Notice(msg);
-    const b = new Burst(Math.max(20, Math.min(400, Number(this.settings.particles) || 140)));
+    const b = new Burst(
+      Math.max(20, Math.min(400, Number(this.settings.particles) || 140)),
+      Number(this.settings.cannons) === 2 ? 2 : 3,
+    );
     this.bursts.add(b);
     const done = b.destroy.bind(b);
     b.destroy = () => { done(); this.bursts.delete(b); };
@@ -381,6 +389,21 @@ class MidoriConfettiSettings extends PluginSettingTab {
       .addToggle((t) => t
         .setValue(this.plugin.settings.oncePerDay)
         .onChange(async (v) => { this.plugin.settings.oncePerDay = v; await this.plugin.saveSettings(); }));
+
+    new Setting(containerEl)
+      .setName('Cannons')
+      .setDesc('The corner pair always fires. The fountain adds a column up the middle.')
+      .addDropdown((d) => d
+        .addOption('2', 'Two — from the lower corners')
+        .addOption('3', 'Three — corners plus a centre fountain')
+        // Stored as a number but dropdown values are strings, so coerce on the
+        // way in as well as out; a stale string would fail the === 2 check and
+        // silently stick on three.
+        .setValue(String(this.plugin.settings.cannons))
+        .onChange(async (v) => {
+          this.plugin.settings.cannons = Number(v) === 2 ? 2 : 3;
+          await this.plugin.saveSettings();
+        }));
 
     new Setting(containerEl)
       .setName('Particles')
