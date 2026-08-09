@@ -72,6 +72,31 @@ this layer to re-skin everything without touching the infrastructure.
 Fonts follow the site's semantic split: **Spectral** is the naming voice
 (titles, headers), **M PLUS** is the working voice (text you read and type).
 
+**Spectral was re-examined in Aug 2026 and retained.** Twenty-seven libre
+serifs were measured against M PLUS straight out of the font binaries, and on
+metrics Spectral loses: its x-height is 454 against M PLUS's 520, so at the
+same font-size a title reads about 13% smaller than the body beneath it, and
+no variable font exists or is coming — fourteen discrete statics, no `wght`
+axis. Literata at a low optical size wins that comparison outright (x-height
+within 2% of M PLUS at *every* opsz, stem 53 vs 50).
+
+It was kept anyway, for two reasons a metrics table cannot see. Spectral's
+−10° italic carries the sublines and Literata's is −2°, near-upright by
+design. And **this repo is pixel-tuned to Spectral specifically**: the caret
+and selection band constants in `obsidian/theme.css` are derived from
+Spectral's measured ink at the title size (19.41px above the baseline, 6.21px
+below at 25.888px, giving the `0.83em / 0.30em` offsets), the h1–h4 line-box
+struts come from Spectral's *natural* boxes, and `midori-caret` shares those
+numbers. Swapping the face invalidates all of it, because a natural line box
+comes from the font's own ascent and descent. The general rule, since it will
+recur: before replacing any component, grep for constants derived from the
+incumbent — a comparison that only looks at the candidates understates the
+cost of moving.
+
+If a title ever reads too small, headings can absorb a size bump: the 48px
+line box has headroom over their ~24.5–27.5px natural boxes. The note title is
+the one to leave alone; its 24px box is tight.
+
 ## How the dot grid stays aligned (Ghostty)
 
 **The dots are drawn by the cursor shader, not the background image.**
@@ -195,6 +220,26 @@ Residual gotchas:
   did this — of 6,478 plugins, Writing Goals draws a progress bar and stops,
   Target Word Count *blocks editing* until you hit your number, and the one
   confetti plugin fires on every keystroke.
+- **Notices and tooltips are Obsidian's dark toast, and the text colour is not
+  a variable.** `.notice`, `.tooltip`, `.cm-completionInfo` and
+  `.cm-tooltip-docstring` all take their background from
+  `--background-modifier-message`, which app.css sets to `rgba(0, 0, 0, 0.9)`
+  on `body` everywhere except `.is-mobile.theme-dark` — so a paper theme always
+  got a near-black slab, full-width at the top of a phone. All four also
+  hardcode `color: #FAFAFA`, so retargeting only the background paints
+  near-white text on cream: unreadable, and worse than the slab. The fix has to
+  move the *variable*, not the elements, because the tooltip arrows are CSS
+  triangles coloured by `border-<side>: solid var(--same-var)` — style the
+  elements and the bodies go light while the arrows stay black, pointing at
+  them. Moving the variable then inherits app.css's specificity problem:
+  `.is-mobile.theme-dark` redefines it at (0,2,0) and beats a bare `body`
+  regardless of source order, hence the second selector. A notice's
+  `<progress>` needed a third fix for the same root cause — Obsidian themes it
+  correctly at (0,1,1) but a `.theme-light` hardcode of `#262626` at (0,2,1)
+  beats that, so light mode alone got a black track. Measured after: text at
+  10.89:1 on Paper and 13.17:1 on Night, with the card only 1.07:1 against the
+  page — which is why the border is explicit, since Obsidian drops the
+  box-shadow entirely on phone.
 
   The first response was to withhold the band on mobile, because drawing under
   an unremovable native one read as a doubled highlight. That blamed the
@@ -760,6 +805,48 @@ scores 58 quantised colours, dead on the field median of 56. The 1024 master
 holds exactly five hexes; the mint dot grid plus downsampling generates the
 rest. Low saturation is what makes it read flat, not a small palette — so
 judge that quality by saturation, not by colour count.
+
+### Publishing the VS Code extension
+
+Release is automated — `.github/workflows/release-vscode.yml` packages and
+publishes on a `vscode-v*` tag — but it cannot run until four one-time,
+account-level things exist. As of Aug 2026 none of them do, so the extension
+is packaged and installable locally but **not published**.
+
+1. **Two README screenshots**, `vscode/midori-theme/media/paper.png` and
+   `media/night.png`. `media/SCREENSHOTS.md` is the brief: same file and
+   scroll position in both themes, 1800px captured then halved to 900, with
+   the explorer strip and a tab visible. `media/screenshot-sample.tsx` is the
+   file to shoot — it is arranged to exercise control-flow vs declaration
+   colour, bold-on-introduction, and accents on a single line. Until these are
+   committed the Marketplace listing renders two broken images, because the
+   README links them by absolute raw URL (see below).
+2. **A publisher named `benjaminloschen`**, created once at
+   <https://marketplace.visualstudio.com/manage>.
+3. **An Azure DevOps PAT** with *Marketplace → Manage* scope and
+   *All accessible organizations* — the org dropdown defaults to a single org
+   and a PAT scoped that way fails at publish time with an unhelpful error.
+   Then `gh secret set VSCE_PAT`. `OVSX_PAT` is optional; the Open VSX step
+   skips cleanly without it.
+4. **Tag `vscode-v1.21.0`** to trigger the workflow.
+
+The version numbering starts at 1.21.0 deliberately: 1.0.0–1.20.0 were local
+builds that were never published, and a Marketplace version number can never
+be reused, so restarting the count would collide. `CHANGELOG.md` says so.
+
+**Why the README uses absolute raw URLs for images.** vsce rewrites relative
+links assuming the extension sits at the *repo root*, so `media/paper.png` in
+this subdirectory package becomes `.../blob/HEAD/media/paper.png` and 404s.
+Verified by unzipping the built `.vsix` and curling both forms. The
+alternatives are `--baseContentUrl` / `--baseImagesUrl` or
+`--no-rewrite-relative-links`; absolute URLs were chosen because they are
+correct regardless of which tool builds the package. Full write-up in the
+`vsce-readme-links-rewritten-relative-to-repo-root` skill.
+
+Local installs are a different path and do **not** go through any of this —
+see the Cursor/VS Code notes above: a folder drop is silently ignored, only a
+`.vsix` installed through each editor's own CLI registers in
+`extensions.json`.
 
 ## A note on the name
 
