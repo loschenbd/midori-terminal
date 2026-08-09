@@ -126,16 +126,29 @@ class Burst {
       // spread the same way — from cos() of an elevation that straddles 90° —
       // so there is still no second place for a sign to disagree.
       const corner = cannon !== 2;
+      // The fountain's spread is what makes it read as a fountain. At a narrow
+      // ±13° every fleck went up and came almost straight back down, so the
+      // whole cannon landed as one dense block in the middle of the page with
+      // no visible arc. Widening to ±38° is the difference between a column and
+      // a spray: the mid-80% landing spread goes from 31% of the window width
+      // to 83%, which is wide enough to interleave with the corner arcs instead
+      // of sitting in a square between them. Wider still (±45° and up) starts
+      // throwing a third of the flecks off screen for no extra effect.
       const elev = corner
         ? (38 + Math.random() * 34) * Math.PI / 180
-        : (90 + (Math.random() - 0.5) * 26) * Math.PI / 180;
-      // The fountain is launched harder than the arcs on purpose: at the corner
-      // cannons' mean it apexes around 400px, so anything slower would top out
-      // inside their crossfire and never read as its own gesture.
-      const speed = corner ? 13 + Math.random() * 14 : 18 + Math.random() * 7;
+        : (90 + (Math.random() - 0.5) * 76) * Math.PI / 180;
+      // Launched harder than the arcs on purpose: the corner cannons apex
+      // around 400px, so anything slower would top out inside their crossfire
+      // and never read as its own gesture. The upper bound rises with the
+      // spread — angled flecks spend their speed sideways, so without it the
+      // fan would sag well below the arcs it is meant to rise through.
+      const speed = corner ? 13 + Math.random() * 14 : 18 + Math.random() * 8;
       const left = cannon === 0;
       this.parts.push({
-        x: corner ? (left ? -12 : W + 12) : W * 0.5 + (Math.random() - 0.5) * W * 0.1,
+        // A muzzle band rather than a point: a real spray leaves from a mouth
+        // with some width, and it softens the seam where the fan's two halves
+        // cross at the centre.
+        x: corner ? (left ? -12 : W + 12) : W * 0.5 + (Math.random() - 0.5) * W * 0.16,
         // Below the bottom edge, matching how the corner pair starts off-screen
         // — the fleck should enter the frame already moving. Nothing culls on
         // position (only ttl), so starting outside the viewport is safe.
