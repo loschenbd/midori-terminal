@@ -105,22 +105,37 @@ class Burst {
 
     const W = window.innerWidth, H = window.innerHeight;
     this.parts = [];
-    // Two cannons angled inward from the lower corners. A single centre burst
-    // reads as an explosion; two crossing arcs read as a celebration and, more
-    // practically, keep the middle of the screen — where the text is — clearer.
+    // Three cannons: two angled inward from the lower corners, plus a vertical
+    // fountain from the bottom centre. A single centre burst on its own reads
+    // as an explosion; the crossing arcs read as a celebration. The fountain
+    // adds a beat of lift up the middle — it does cross the text, which is why
+    // it is launched fast and narrow: it clears the reading area on the way up
+    // and again on the way down, rather than lingering in it.
     for (let i = 0; i < count; i++) {
-      const left = i % 2 === 0;
-      // Elevation measured from horizontal, so the two cannons differ only in
-      // the sign of vx. Deriving both components from one angle and then
-      // trying to correct the sign afterwards is how this got written wrong
-      // the first time: every particle launched leftward and the right-hand
-      // arc flew straight off screen, unseen.
-      const elev = (38 + Math.random() * 34) * Math.PI / 180;
-      const speed = 13 + Math.random() * 14;
+      const cannon = i % 3;                  // 0 = left, 1 = right, 2 = fountain
+      // Elevation is measured from horizontal in every case, and BOTH velocity
+      // components are derived from that one angle. Deriving them separately
+      // and correcting the sign afterwards is how this got written wrong the
+      // first time: every particle launched leftward and the right-hand arc
+      // flew straight off screen, unseen. The fountain gets its left/right
+      // spread the same way — from cos() of an elevation that straddles 90° —
+      // so there is still no second place for a sign to disagree.
+      const corner = cannon !== 2;
+      const elev = corner
+        ? (38 + Math.random() * 34) * Math.PI / 180
+        : (90 + (Math.random() - 0.5) * 26) * Math.PI / 180;
+      // The fountain is launched harder than the arcs on purpose: at the corner
+      // cannons' mean it apexes around 400px, so anything slower would top out
+      // inside their crossfire and never read as its own gesture.
+      const speed = corner ? 13 + Math.random() * 14 : 18 + Math.random() * 7;
+      const left = cannon === 0;
       this.parts.push({
-        x: left ? -12 : W + 12,
-        y: H * (0.74 + Math.random() * 0.18),
-        vx: Math.cos(elev) * speed * (left ? 1 : -1),
+        x: corner ? (left ? -12 : W + 12) : W * 0.5 + (Math.random() - 0.5) * W * 0.1,
+        // Below the bottom edge, matching how the corner pair starts off-screen
+        // — the fleck should enter the frame already moving. Nothing culls on
+        // position (only ttl), so starting outside the viewport is safe.
+        y: corner ? H * (0.74 + Math.random() * 0.18) : H + 12,
+        vx: Math.cos(elev) * speed * (corner && !left ? -1 : 1),
         vy: -Math.sin(elev) * speed,
         w: 6 + Math.random() * 7,
         h: 4 + Math.random() * 4,
