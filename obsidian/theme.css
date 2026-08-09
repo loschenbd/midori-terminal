@@ -168,7 +168,11 @@ body {
   --color-green-rgb: 108, 125, 82;        --color-green: var(--midori-olive);       /* olive      */
   --color-cyan-rgb: 84, 131, 115;         --color-cyan: var(--midori-mint);         /* mint       */
   --color-blue-rgb: 58, 85, 114;          --color-blue: var(--midori-indigo);       /* indigo     */
-  --color-purple-rgb: 101, 63, 127;        --color-purple: var(--midori-purple);     /* purple     */
+  --color-purple-rgb: 101, 63, 127;       --color-purple: var(--midori-purple);     /* purple     */
+  /* "pink" is Obsidian's slot name, not a description: wine-lift is hue 20
+     (light) / 13 (dark) — the wine family, not pink. The palette has no pink
+     and there is no rung free for one; see the README's "the palette is
+     closed". Keeping Obsidian's name so callouts resolve. */
   --color-pink-rgb: 157, 97, 97;          --color-pink: var(--midori-wine-lift);    /* wine lift  */
   /* Quote callouts hardcode a neutral grey rather than deriving from a hue. */
   --callout-quote: 82, 77, 70;
@@ -331,6 +335,10 @@ body {
   --color-cyan-rgb: 158, 191, 180;        --color-cyan: var(--midori-page-dot);  /* mint       */
   --color-blue-rgb: 108, 135, 164;        --color-blue: var(--midori-indigo);    /* indigo     */
   --color-purple-rgb: 160, 121, 190;      --color-purple: var(--midori-purple);  /* purple     */
+  /* "pink" is Obsidian's slot name, not a description: wine-lift is hue 20
+     (light) / 13 (dark) — the wine family, not pink. The palette has no pink
+     and there is no rung free for one; see the README's "the palette is
+     closed". Keeping Obsidian's name so callouts resolve. */
   --color-pink-rgb: 208, 162, 166;        --color-pink: var(--midori-wine-lift); /* wine lift  */
   --callout-quote: 156, 149, 138;
   --text-highlight-bg-rgb: 216, 176, 106;
