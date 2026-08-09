@@ -55,8 +55,8 @@ this into `settings.json`:
 | **Midori Product Icons** | workbench chrome, built from Phosphor |
 | markdown preview | Spectral headings, M PLUS body, themed code blocks |
 
-Syntax uses five accents — indigo, olive, wine, ochre, sage — kept at low
-chroma on purpose.
+Syntax uses seven accents — indigo, olive, wine, ochre, sage, purple, mint —
+kept at low chroma on purpose.
 
 ## Why it looks the way it does
 

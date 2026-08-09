@@ -53,6 +53,48 @@ background symlinks between `@1x`/`@2x` assets (see below).
 the Claude Code token map, tmux border hexes, and the Vivaldi themes. Swap
 this layer to re-skin everything without touching the infrastructure.
 
+## The accent palette
+
+Every surface here draws from one named set, mirrored from
+`benjaminloschen.com`'s `app/globals.css` (which is the source of truth):
+
+| Token | Light | Dark | Role |
+|---|---|---|---|
+| `--midori-indigo` | `#3a5572` | `#6c87a4` | links, `function` |
+| `--midori-olive` | `#6c7d52` | `#9eaf85` | `string` |
+| `--midori-wine` | `#7a4a4a` | `#b8868a` | ANSI red, `operator` |
+| `--midori-ochre` | `#b88a3a` | `#d8b06a` | ANSI yellow, `value` |
+| `--midori-sage` | `#5f6f5e` | `#9aab97` | the UI accent |
+| `--midori-purple` | `#653f7f` | `#a079be` | ANSI magenta, `keyword` |
+| `--midori-mint` | `#548373` | `#9ebfb4` | ANSI cyan, `property` |
+
+plus a warm ramp (wash → light → clay → terracotta → deep) and
+`--midori-mythic` for unresolved/faint text.
+
+**Purple is new (Aug 2026), and the old one was broken.** The site had no
+purple token, so this repo derived a plum (`#664f63` / `#a48ba3`) for the ANSI
+magenta slot; it spread to seven surfaces and drifted to `#7f5a74` in one.
+Measured in OKLCh it sat **0.6 lightness and 2.2 chroma from wine** — well
+under the C 12 mark where hue stops doing any work at body size, so `keyword`
+and `operator` read as a single colour in a code fence. The replacement is not
+a chroma *lift above* the palette but a lift *up to* it: C 10.9, where ochre is
+11.1 and terracotta 9.9 and the old plum was the outlier at 4.3. Hue 310 clears
+wine by ~70° and indigo by ~59°, the two neighbours it has to beat.
+
+Dark is L 64, not the 65 a straight mirror of light would give: on the charcoal
+ground terracotta rises to L 70, and *every* close neighbour sits above purple,
+so dropping a point widens all four gaps at once. It still reads 5.00:1.
+
+Two surfaces deliberately don't follow:
+
+- **Obsidian dark** uses the dot-grid mint `#9ebfb4` as `property` ink rather
+  than `--midori-mint`. The site's dark mint lands at L 71.2 / C 5.7 and
+  indigo-lift at L 70.6 / C 6.3 — 0.6 apart on both axes. Light has no such
+  problem and uses the real mint.
+- **Antinote** keeps its own 331° purple — see `antinote/README.md` for the
+  measurements. It is the one palette here that separates on hue rather than
+  lightness, and 310° would move it *toward* its blue.
+
 ## What's in the box
 
 | Path | What |
@@ -503,7 +545,7 @@ Residual gotchas:
   instead: move control **lighter** and much more chromatic, so a medium blue
   sits against a deep navy. Searching every (L, C) at the indigo hue for slots
   with no flagged pair showed paper's L 42–54 band is only passable at C ≥ 9.6
-  — below that the comment, plum, string, mint and number rungs block it — which
+  — below that the comment, purple, string, mint and number rungs block it — which
   is why the answer needed chroma and lightness together.
 - **`fontStyle: bold` is a real axis here; `fontStyle: italic` is not.**
   `MPLUS1Code[wght].ttf` is a variable font carrying Thin → Bold, so bold is an
@@ -581,7 +623,8 @@ Residual gotchas:
   Paper 8 over 6 at **8.5**. Below roughly C 12 hue does almost no work at body
   size, so the field's 12.3 is exactly what buys them a spare hue slot. An 11th
   Midori accent dropped into the 76° gap at 289° would sit at C 8 and read as
-  another muddy mid-tone — every candidate priced (plum 327°, cyan 212°) still
+  another muddy mid-tone — every candidate priced (the then-plum at 327°,
+  cyan 212°) still
   flagged `ΔL<6 and ΔC<3` against `function`, because at this chroma separation
   has to come from lightness and night's L 73–86 band already holds function,
   number, value, mint and plain. Raising chroma to open the slot is the
