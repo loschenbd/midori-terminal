@@ -1531,6 +1531,48 @@ body {
 }
 
 /* --------------------------------------------------------------------------
+   Notices: Obsidian's dark toast, on a paper page.
+
+   A notice arrives as a near-black slab in the middle of the cream. Two
+   separate causes, and fixing only the obvious one makes it strictly worse.
+
+   BACKGROUND. .notice reads --background-modifier-message, which app.css sets
+   to rgba(0, 0, 0, 0.9) on `body` for EVERY context except
+   `.is-mobile.theme-dark` — the single place it resolves to
+   --background-secondary. So a light theme always gets the slab, and on a
+   phone in light mode the notice is the first thing the eye lands on.
+
+   TEXT IS NOT A VARIABLE. app.css hardcodes `color: #FAFAFA` on .notice.
+   Retarget the background alone and you paint near-white text onto a cream
+   card — unreadable, and worse than the slab it replaced. The colour needs
+   its own declaration, which is why this is a block and not a palette line.
+
+   SET THE BACKGROUND HERE, NOT ON THE VARIABLE. Retargeting
+   --background-modifier-message looks tidier but is wrong twice over. It is
+   shared with .tooltip, .cm-completionInfo and .cm-tooltip-docstring — all of
+   which ALSO hardcode #FAFAFA — so it silently restyles every hover tooltip
+   in the app. And `.is-mobile.theme-dark` redefines it at (0,2,0), which beats
+   a `body` override on specificity no matter the source order, so phone-dark
+   would quietly diverge from everywhere else. Declaring background-color on
+   the element sidesteps both.
+
+   Styled as a raised card rather than a toast: --background-primary-alt is the
+   same surface the settings rows and callouts use, so a notice reads as part
+   of the page it interrupts. A light card on a light page has no silhouette of
+   its own, hence the explicit border; Obsidian's box-shadow already resolves
+   through a themed variable and is left alone. .notice-cta needs nothing — it
+   goes through --text-accent.
+
+   `body` on the selector only to clear app.css's (0,1,0) without depending on
+   stylesheet order.
+   -------------------------------------------------------------------------- */
+body .notice {
+  background-color: var(--background-primary-alt);
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border);
+}
+
+/* --------------------------------------------------------------------------
    Icons.
 
    Obsidian ships Lucide; the design system is Phosphor at "thin" weight
