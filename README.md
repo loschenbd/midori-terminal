@@ -65,7 +65,7 @@ this layer to re-skin everything without touching the infrastructure.
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |
 | `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, file icons recolored from Material Symbols Rounded (Apache-2.0), workbench-chrome product icons built from Phosphor (MIT) — see `midori-theme/CREDITS.md`; `build-icons.py` / `build-product-icons.py` regenerate — plus installer |
 | `antinote/` | Midori Paper/Night Antinote themes (24-key JSON), installer, and a transcription of Antinote's undocumented theme schema |
-| `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret` companion plugin, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
+| `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret` and `midori-confetti` companion plugins, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
 | `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
 | `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
 
@@ -182,6 +182,19 @@ Residual gotchas:
   editable. `caret-color: transparent`, by contrast, is honoured (the native
   caret blinked across 4 of 8 frames without it and 0 of 8 with it) because the
   caret is WebKit's own editing code.
+- **Confetti fires on the crossing, not the value** —
+  `obsidian/plugins/midori-confetti`, also fanned out by the installer, throws
+  a burst when a note passes a word target you set. The obvious test, `words >=
+  target`, is wrong in a way that only shows up in use: a finished note is
+  above its target forever, so opening one and typing a single character would
+  set it off. It instead remembers the previous count per note and fires only
+  on the transition `prev < target <= now`, seeding `prev` on file-open so an
+  already-finished note stays quiet. Particle colours are read from the theme's
+  own CSS variables rather than hardcoded, so the burst follows Paper and Night
+  without the plugin knowing either exists. Nothing in the community registry
+  did this — of 6,478 plugins, Writing Goals draws a progress bar and stops,
+  Target Word Count *blocks editing* until you hit your number, and the one
+  confetti plugin fires on every keystroke.
 
   The first response was to withhold the band on mobile, because drawing under
   an unremovable native one read as a doubled highlight. That blamed the

@@ -1,0 +1,10 @@
+{
+  "id": "midori-confetti",
+  "name": "Midori Confetti",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Throws confetti across the screen when a note crosses a word-count target you set. Counts either the words written since you opened the note or the note's total, fires only on an upward crossing so it never triggers merely by opening a finished note, and celebrates once per note per day. Particle colours are read from the active theme's own CSS variables, so it matches Midori Paper and Midori Night without hardcoding either. Honours prefers-reduced-motion by showing a notice instead of an animation.",
+  "author": "Benjamin Loschen",
+  "authorUrl": "https://www.benjaminloschen.com",
+  "isDesktopOnly": false
+}

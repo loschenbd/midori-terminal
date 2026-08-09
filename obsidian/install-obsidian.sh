@@ -80,10 +80,17 @@ if cfg.get("cssTheme", "") in (os.environ["LEGACY"], ""):
 PY
   fi
 
-  # Companion plugin. The theme cannot size the editor caret on its own — the
-  # native contenteditable caret takes its height from the font, and the
-  # theme's symmetric metric overrides centre it on the baseline. This draws a
-  # caret the theme can style. See plugins/midori-caret/main.js.
+  # Companion plugins — every directory under plugins/ that carries a manifest.
+  #
+  #   midori-caret     the theme cannot size the editor caret on its own: the
+  #                    native contenteditable caret takes its height from the
+  #                    font, and the theme's symmetric metric overrides centre
+  #                    it on the baseline. This draws a caret the theme can style.
+  #   midori-confetti  throws confetti when a note crosses a word target, in the
+  #                    theme's own accent colours.
+  #
+  # Both are enabled below but neither is required by the theme; delete the
+  # directory and re-run to drop one.
   for plugin in "$REPO_DIR"/plugins/*/; do
     [ -f "$plugin/manifest.json" ] || continue
     id="$(basename "$plugin")"
