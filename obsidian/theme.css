@@ -1547,29 +1547,62 @@ body {
    card — unreadable, and worse than the slab it replaced. The colour needs
    its own declaration, which is why this is a block and not a palette line.
 
-   SET THE BACKGROUND HERE, NOT ON THE VARIABLE. Retargeting
-   --background-modifier-message looks tidier but is wrong twice over. It is
-   shared with .tooltip, .cm-completionInfo and .cm-tooltip-docstring — all of
-   which ALSO hardcode #FAFAFA — so it silently restyles every hover tooltip
-   in the app. And `.is-mobile.theme-dark` redefines it at (0,2,0), which beats
-   a `body` override on specificity no matter the source order, so phone-dark
-   would quietly diverge from everywhere else. Declaring background-color on
-   the element sidesteps both.
+   RETARGET THE VARIABLE, because the ARROWS have no other hook. .tooltip and
+   .cm-tooltip-docstring draw their pointers as CSS triangles whose colour is
+   `border-<side>: Npx solid var(--background-modifier-message)`. Set
+   background-color on the elements instead and the bodies turn into light
+   cards while the arrows stay black, pointing at them. Moving the variable is
+   the only fix that carries the arrows along.
+
+   That variable is shared by .notice, .tooltip, .cm-completionInfo and
+   .cm-tooltip-docstring — all four of which hardcode #FAFAFA — so all four are
+   restyled together here deliberately, not as a side effect.
+   `.is-mobile .suggestion-container` names it too but overwrites it on the very
+   next line with a color-mix over --suggestion-background, so it only ever sees
+   this as a fallback.
+
+   THE SECOND SELECTOR IS NOT REDUNDANT. app.css redefines the variable in
+   `.is-mobile.theme-dark` at (0,2,0), which beats a bare `body` (0,0,1) no
+   matter the source order — so without `body.is-mobile.theme-dark` at (0,2,1)
+   a phone in Night would quietly keep Obsidian's value and diverge from every
+   other surface.
 
    Styled as a raised card rather than a toast: --background-primary-alt is the
-   same surface the settings rows and callouts use, so a notice reads as part
+   same surface the settings rows and callouts use, so a message reads as part
    of the page it interrupts. A light card on a light page has no silhouette of
-   its own, hence the explicit border; Obsidian's box-shadow already resolves
-   through a themed variable and is left alone. .notice-cta needs nothing — it
-   goes through --text-accent.
+   its own, hence the explicit border — and on a phone Obsidian sets
+   `box-shadow: none` on .notice, leaving that border as the ONLY separation.
+   .notice-cta needs nothing; it goes through --text-accent.
 
-   `body` on the selector only to clear app.css's (0,1,0) without depending on
+   `body` on the selectors only to clear app.css's (0,1,0) without depending on
    stylesheet order.
    -------------------------------------------------------------------------- */
-body .notice {
-  background-color: var(--background-primary-alt);
+body,
+body.is-mobile.theme-dark {
+  --background-modifier-message: var(--background-primary-alt);
+}
+body .notice,
+body .tooltip,
+body .cm-tooltip.cm-completionInfo,
+body .cm-tooltip.cm-tooltip-docstring {
   color: var(--text-normal);
   border: 1px solid var(--background-modifier-border);
+}
+
+/* A notice can carry a <progress>, and in a light theme its track is a black
+   slab for the same reason the text was white: app.css assumed a dark notice
+   behind it.
+
+   Obsidian ALREADY themes this correctly in a general rule — track
+   --background-secondary, inset ring --background-modifier-border, value
+   --interactive-accent. It just loses: `.theme-light .notice progress[value]`
+   hardcodes #262626 / #363636 at (0,2,1) and beats the general rule's (0,1,1),
+   so light mode alone gets the slab. This restores Obsidian's own intended
+   values at (0,2,2) rather than inventing new ones, which is why the
+   declarations below deliberately mirror the general rule. */
+body.theme-light .notice progress[value]::-webkit-progress-bar {
+  background-color: var(--background-secondary);
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
 }
 
 /* --------------------------------------------------------------------------
