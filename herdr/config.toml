@@ -95,5 +95,12 @@ sidebar_start_collapsed = false
 agent_panel_sort = "spaces"
 
 show_agent_labels_on_pane_borders = true
+# Midori keeps chrome quiet and lets the paper carry the surface, and both of
+# these hand pixels back to the Ghostty dot grid showing through panel_bg.
+# Turning scrollbars off also keeps the scrollbar column out of terminal-native
+# selections, so mouse-copy from a pane stops picking it up.
+pane_scrollbars = false
+hide_tab_bar_when_single_tab = true
+
 [ui.toast]
 delivery = "system"

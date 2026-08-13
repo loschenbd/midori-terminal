@@ -122,6 +122,59 @@ Agent state colours are not overridden. `red`/`green`/`yellow` land on ANSI
 1/2/3 — wine, sage, ochre — already the mapping the design language wants
 (ochre = needs you, sage = progress, wine = failure).
 
+## What else the appearance surface offers (0.8.0, audited Aug 2026)
+
+`herdr --default-config` prints every key with its default and is the only
+complete reference — the published docs omit most of `[ui]`. Audited against it,
+three things were worth taking and one was worth refusing.
+
+**Taken.** `pane_scrollbars = false` and `hide_tab_bar_when_single_tab = true`.
+Both hand pixels back to the dot grid showing through `panel_bg = "reset"`,
+which is the main reason this still reads as Midori; turning scrollbars off also
+keeps that column out of terminal-native selections, so mouse-copy from a pane
+stops picking it up. The cost is real: no interactive scrollbars. Revert by
+deleting the two lines.
+
+**Refused: sidebar token styles are hex-only, so they can't be Midori.**
+`[ui.sidebar.agents]` and `[ui.sidebar.spaces]` accept per-token styling —
+`rows = [[{ token = "workspace", fg = "#89b4fa", bold = true }, "tab"], ...]` —
+which looks like the missing hook for painting individual sidebar elements
+Midori. It isn't, for the same reason `[theme.custom]` hex is refused above: the
+`fg` field takes **only** `#RGB`/`#RRGGBB`, and with `auto_switch = true` one
+global value has to serve both appearances. A named colour is rejected outright:
+
+```
+$ herdr config check      # rows = [[{ token = "branch", fg = "green" }, ...]]
+config parse error: TOML parse error at line 102, column 38
+data did not match any variant of untagged enum RawSidebarToken
+; using defaults
+```
+
+Verified on both `[ui.sidebar.agents]` and `[ui.sidebar.spaces]`. Note the tail:
+**`; using defaults`** — a bad `rows` array doesn't stop startup, it silently
+discards your whole sidebar layout. Same failure family as the theme-name
+fallback above, so the same rule applies: confirm by capturing a render.
+
+**Open, deliberately not taken:** `row_gap = 1` under either sidebar block
+restores the older, airier spacing. It suits Midori's typography everywhere
+else, but the sidebar is a *scanning* surface, not a reading one — the agent
+rollup is the reason to run herdr, and doubling row height halves how many
+agents you can see at once. Density wins here; take the air only if you run few
+agents.
+
+Two knobs that are per-machine rather than per-theme, noted so they aren't
+rediscovered: `sidebar_min_width` / `sidebar_max_width` (18/36) bracket the
+auto-scaled `sidebar_width`, and `mobile_width_threshold` (64) is the column
+count below which herdr switches to the single-column layout — the one that
+matters on a phone under Moshi.
+
+**A TOML trap worth stating**, because it cost a debugging round here: appending
+keys to the end of this file files them under the **last section**, which is
+`[ui.toast]`. `config check` catches it, but the message names the wrong owner
+(`unknown config key ui.toast.pane_scrollbars`), which reads like the key
+doesn't exist rather than like it's in the wrong place. `[ui]` keys must be
+inserted *above* `[ui.toast]`.
+
 ## Upstream
 
 Source is [github.com/herdrdev/herdr](https://github.com/herdrdev/herdr) (the
