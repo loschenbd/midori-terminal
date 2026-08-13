@@ -27,15 +27,32 @@ Nothing is installed on the host; `install.sh` does not touch these.
 ## These are generated — don't edit them
 
 `build-moshi-themes.py` reads `ghostty/themes/midori-paper` and
-`ghostty/themes/midori-night` and emits the JSON, the deep link, and the QR.
-Change a colour in the Ghostty theme and re-run:
+`ghostty/themes/midori-night` and emits **everything else in this directory**:
+both JSON themes, both deep links, both QR codes, and `import.html`. Change a
+colour in the Ghostty theme and re-run:
 
 ```sh
 python3 moshi/build-moshi-themes.py    # needs qrencode for the QR step
 ```
 
+It also **publishes to iCloud** — `~/Library/Mobile Documents/com~apple~CloudDocs/Dev/midori-moshi-theme`
+— so the phone copies can't go stale behind the repo. The copy is read back and
+compared, since on a synced volume a stale file looks exactly like a fresh one.
+If there's no iCloud Drive on the machine it says so and carries on.
+
+Verified end to end: change one hex in `ghostty/themes/midori-night`, re-run,
+and the JSON, the base64 payload inside `import.html`, the QR bitmap, and all
+four iCloud copies move together.
+
 It prints a contrast table for every colour against its own background, so a
 palette edit that hurts legibility on a phone is visible at build time.
+
+`import.html` derives its own chrome from the themes it hands out — page
+background, ink, card, border and accent all come from the palette, so the page
+cannot drift from the thing it is installing. The one judgement call: the card
+border uses `selectionBackground` (a sage wash) rather than the Ghostty
+split-divider colour, because that hex isn't part of a Moshi theme and copying
+it in would reintroduce a hand-maintained value.
 
 ## The format (undocumented — reverse-engineered)
 

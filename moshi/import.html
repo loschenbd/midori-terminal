@@ -5,16 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Midori for Moshi</title>
 <style>
-  :root {
-    --bg:#f3f1eb; --fg:#2a2825; --muted:#524d46; --card:#faf9f6;
-    --border:#e1dfd9; --accent:#5f6f5e; --indigo:#3a5572;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg:#1a1917; --fg:#ebe8e2; --muted:#9c958a; --card:#22211e;
-      --border:#2f2e2b; --accent:#9aab97; --indigo:#6c87a4;
-    }
-  }
+  :root { --bg:#f3f1eb; --fg:#2a2825; --muted:#524d46; --card:#faf9f6; --border:#ced1c8; --accent:#3a5572; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1a1917; --fg:#ebe8e2; --muted:#9c958a; --card:#22211e; --border:#40453d; --accent:#6c87a4; } }
   * { box-sizing:border-box; }
   body {
     margin:0; padding:2rem 1.25rem 3rem; background:var(--bg); color:var(--fg);
@@ -33,7 +25,7 @@
   .row { display:flex; align-items:center; gap:.85rem; }
   .name { font-weight:600; font-size:1.05rem; }
   .mode { color:var(--muted); font-size:.85rem; }
-  .go { margin-left:auto; color:var(--indigo); font-weight:600; font-size:.9rem; }
+  .go { margin-left:auto; color:var(--accent); font-weight:600; font-size:.9rem; }
   .swatches { display:flex; gap:5px; margin-top:.85rem; }
   .swatches i { width:100%; height:22px; border-radius:4px; display:block; }
   ol { color:var(--muted); font-size:.9rem; padding-left:1.15rem; margin:2rem 0 0; }
@@ -45,33 +37,21 @@
 <main>
   <h1>Midori for Moshi</h1>
   <p class="sub">Tap a theme on the device running Moshi.</p>
-
   <a class="theme" href="moshi://theme?d=eyJ2IjoxLCJuYW1lIjoiTWlkb3JpIFBhcGVyIiwibW9kZSI6ImxpZ2h0IiwiY29sb3JzIjp7ImJhY2tncm91bmQiOiIjZjNmMWViIiwiZm9yZWdyb3VuZCI6IiMyYTI4MjUiLCJjdXJzb3IiOiIjM2E1NTcyIiwiYmxhY2siOiIjMmEyODI1IiwicmVkIjoiIzdhNGE0YSIsImdyZWVuIjoiIzVmNmY1ZSIsInllbGxvdyI6IiNiODhhM2EiLCJibHVlIjoiIzNhNTU3MiIsIm1hZ2VudGEiOiIjNjUzZjdmIiwiY3lhbiI6IiM1NDgzNzMiLCJ3aGl0ZSI6IiNjOWM0YjgiLCJicmlnaHRCbGFjayI6IiM1MjRkNDYiLCJicmlnaHRSZWQiOiIjOWQ2MTYxIiwiYnJpZ2h0R3JlZW4iOiIjNmM3ZDUyIiwiYnJpZ2h0WWVsbG93IjoiI2NjOWM0MiIsImJyaWdodEJsdWUiOiIjNGQ3MDk1IiwiYnJpZ2h0TWFnZW50YSI6IiM4MTU2OWYiLCJicmlnaHRDeWFuIjoiIzZmOWM4ZCIsImJyaWdodFdoaXRlIjoiI2ZhZjlmNiIsInNlbGVjdGlvbkJhY2tncm91bmQiOiIjY2VkMWM4In19">
     <div class="row">
       <span class="name">Midori Paper</span>
       <span class="mode">light</span>
       <span class="go">Import &rsaquo;</span>
     </div>
-    <div class="swatches">
-      <i style="background:#7a4a4a"></i><i style="background:#5f6f5e"></i>
-      <i style="background:#b88a3a"></i><i style="background:#3a5572"></i>
-      <i style="background:#653f7f"></i><i style="background:#548373"></i>
-      <i style="background:#f3f1eb;border:1px solid #e1dfd9"></i>
-    </div>
+    <div class="swatches"><i style="background:#7a4a4a"></i><i style="background:#5f6f5e"></i><i style="background:#b88a3a"></i><i style="background:#3a5572"></i><i style="background:#653f7f"></i><i style="background:#548373"></i><i style="background:#f3f1eb;border:1px solid #ced1c8"></i></div>
   </a>
-
   <a class="theme" href="moshi://theme?d=eyJ2IjoxLCJuYW1lIjoiTWlkb3JpIE5pZ2h0IiwibW9kZSI6ImRhcmsiLCJjb2xvcnMiOnsiYmFja2dyb3VuZCI6IiMxYTE5MTciLCJmb3JlZ3JvdW5kIjoiI2ViZThlMiIsImN1cnNvciI6IiM2Yzg3YTQiLCJibGFjayI6IiMyMjIxMWUiLCJyZWQiOiIjYjg4NjhhIiwiZ3JlZW4iOiIjOWFhYjk3IiwieWVsbG93IjoiI2Q4YjA2YSIsImJsdWUiOiIjNmM4N2E0IiwibWFnZW50YSI6IiNhMDc5YmUiLCJjeWFuIjoiIzllYmZiNCIsIndoaXRlIjoiI2M1YmZiNCIsImJyaWdodEJsYWNrIjoiIzljOTU4YSIsImJyaWdodFJlZCI6IiNkMGEyYTYiLCJicmlnaHRHcmVlbiI6IiM5ZWFmODUiLCJicmlnaHRZZWxsb3ciOiIjZTZjNDg5IiwiYnJpZ2h0Qmx1ZSI6IiM4YmEzYmQiLCJicmlnaHRNYWdlbnRhIjoiI2I2OTJkMiIsImJyaWdodEN5YW4iOiIjYmFkNWNiIiwiYnJpZ2h0V2hpdGUiOiIjZmFmOWY2Iiwic2VsZWN0aW9uQmFja2dyb3VuZCI6IiM0MDQ1M2QifX0">
     <div class="row">
       <span class="name">Midori Night</span>
       <span class="mode">dark</span>
       <span class="go">Import &rsaquo;</span>
     </div>
-    <div class="swatches">
-      <i style="background:#b8868a"></i><i style="background:#9aab97"></i>
-      <i style="background:#d8b06a"></i><i style="background:#6c87a4"></i>
-      <i style="background:#a079be"></i><i style="background:#9ebfb4"></i>
-      <i style="background:#1a1917;border:1px solid #2f2e2b"></i>
-    </div>
+    <div class="swatches"><i style="background:#b8868a"></i><i style="background:#9aab97"></i><i style="background:#d8b06a"></i><i style="background:#6c87a4"></i><i style="background:#a079be"></i><i style="background:#9ebfb4"></i><i style="background:#1a1917;border:1px solid #40453d"></i></div>
   </a>
 
   <ol>
