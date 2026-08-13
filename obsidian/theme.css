@@ -1247,6 +1247,31 @@ body {
      applies per item rather than per list. Air between items has to come from
      the 24px line box itself. */
   --list-spacing: 0;
+  /* THE BULLET SITS ON THE BASELINE, AND THIS THEME IS WHY.
+
+     Obsidian draws the disc as `.list-bullet::after`, absolutely positioned
+     inside an `inline-flex` box with `align-items: center` — so the disc is
+     centred in a box exactly `line-height` tall. Where that centre lands
+     relative to the text is pure font metrics: a line box seats its baseline
+     at L/2 + F*(A-D)/2, so the disc ends up F*(A-D)/2 ABOVE the baseline. With
+     stock Inter that is 0.364em, comfortably up in the lowercase.
+
+     Our alias faces are declared `ascent-override: 45%; descent-override: 45%`
+     — deliberately symmetric, because A == D is what makes a line box come out
+     exactly `line-height` tall and keeps the 24px grid. But A == D also means
+     (A-D)/2 == 0, and the disc's centre collapses onto the baseline. Measured
+     in a stub harness at 16px: stock M PLUS 1p metrics put it 6.00px above the
+     baseline, the alias face 0.00px. Measured off a screenshot of the real
+     app, the disc's ink centroid sat 0.3px above the baseline — the harness
+     and the app agree.
+
+     So the grid override pays for itself in rhythm and bills the bullet. Half
+     an x-height puts it back: M PLUS 1p's `x` is 0.520em of ink, so -0.26em
+     lands the centre exactly on the x-height's middle (harness error 0.00px).
+     em, not px, so it scales with --font-text-size and with nested lists.
+     `--list-bullet-transform` is Obsidian's own knob and nothing else in
+     app.css writes `transform` on this element, so no rule fights it. */
+  --list-bullet-transform: translateY(-0.26em);
 }
 
 /* Horizontal rule. The stock margins are not rows and the border adds height
