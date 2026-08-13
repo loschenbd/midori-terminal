@@ -80,9 +80,15 @@ command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
 # only at launch, only after an update.
 if [ -f "$HOME/.config/midori/apply-claude-midori-patch.sh" ]; then
   claude() {
-    local real; real="$(readlink -f "$(command -v claude 2>/dev/null)" 2>/dev/null)"
+    # `whence -p`, NOT `command -v`: we are INSIDE a function named claude, and
+    # zsh's `command -v claude` resolves the function first and prints the bare
+    # word "claude". readlink of that is empty, `real` is empty, the guard below
+    # short-circuits, and the self-heal silently never runs — which is exactly
+    # how three Claude Code updates shipped unpatched. `whence -p` forces a PATH
+    # search and skips the function.
+    local real; real="$(readlink -f "$(whence -p claude 2>/dev/null)" 2>/dev/null)"
     if [ -n "$real" ] && [ "$real" != "$(cat "$HOME/.config/midori/claude-patched-path" 2>/dev/null)" ]; then
-      sh "$HOME/.config/midori/apply-claude-midori-patch.sh" || true
+      sh "$HOME/.config/midori/apply-claude-midori-patch.sh" --auto || true
     fi
     command claude "$@"
   }

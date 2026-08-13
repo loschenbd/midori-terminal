@@ -16,6 +16,12 @@
 # claude-code` if you installed via the brew cask).
 set -e
 
+# --auto: invoked by the shell wrapper on every `claude` launch. Suppresses the
+# "this build is unpatchable" notice so a blocked version does not print on each
+# shell. Hand-runs (no flag) still explain themselves.
+AUTO=0
+[ "$1" = "--auto" ] && AUTO=1
+
 # Find the JS patcher next to this script (installed copy in ~/.config/midori)
 # or one level up under tools/ (running straight from the repo).
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -29,10 +35,32 @@ else
 fi
 BACKUP_DIR="$HOME/.config/midori/claude-backup"
 STAMP="$HOME/.config/midori/claude-patched-path"
+# Records a binary tweakcc could not unpack, so we don't retry (and dump a Node
+# stack trace) on every single `claude` launch. Keyed on the binary PATH, so a
+# new Claude Code version retries automatically — the block is per-version, not
+# permanent. Cleared on the next successful patch.
+UNPATCHABLE="$HOME/.config/midori/claude-unpatchable"
 
 CLAUDE_BIN="$(readlink -f "$(command -v claude 2>/dev/null)" 2>/dev/null || true)"
 if [ -z "$CLAUDE_BIN" ] || [ ! -f "$CLAUDE_BIN" ]; then
   echo "!! claude binary not found on PATH — skipping diff patch." >&2
+  exit 0
+fi
+
+# Known-unpatchable build? Bail before anything expensive. This has to come
+# FIRST: the wrapper runs us on every `claude` launch, and the checks below cost
+# ~3 s on a 295 MB binary (two full-file greps plus a `--version` launch). Claude
+# Code 2.1.229 changed how the JS is embedded and tweakcc 4.3.1/4.3.2 can no
+# longer extract it (2.1.226-228 extract fine with the same tool), so this path
+# is the common one until upstream tooling catches up.
+if [ "$(cat "$UNPATCHABLE" 2>/dev/null)" = "$CLAUDE_BIN" ]; then
+  # --auto means the shell wrapper called us: stay silent. A hand-run explains.
+  if [ "$AUTO" != "1" ]; then
+    V="$("$CLAUDE_BIN" --version 2>/dev/null | awk '{print $1}')"
+    echo "-- Claude Code $V can't be unpacked by tweakcc; Midori patch skipped."
+    echo "   Recorded in $UNPATCHABLE. Retries by itself on the next Claude Code"
+    echo "   update, or delete that file to force another attempt."
+  fi
   exit 0
 fi
 
@@ -86,7 +114,20 @@ BACKUP="$BACKUP_DIR/claude-$VERSION.stock"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-npx --yes tweakcc@4.3.1 unpack "$WORK/cc.js" "$CLAUDE_BIN" >/dev/null
+# Unpack is the step that breaks on a repackaged binary, so handle its failure
+# rather than letting `set -e` kill us with a Node stack trace. Record the build
+# as unpatchable so the next launch is quiet; a new version clears the block.
+if ! npx --yes tweakcc@4.3.1 unpack "$WORK/cc.js" "$CLAUDE_BIN" >/dev/null 2>"$WORK/unpack.err" \
+   || [ ! -s "$WORK/cc.js" ]; then
+  echo "!! tweakcc could not extract the JS from Claude Code $VERSION." >&2
+  echo "   Upstream changed the binary packaging. Not retrying until the next" >&2
+  echo "   Claude Code update; check for a newer tweakcc that supports it." >&2
+  # Just the Error: line, truncated — tweakcc's stack trace embeds a whole
+  # minified module on one line and floods the terminal otherwise.
+  grep -m1 -a '^Error:' "$WORK/unpack.err" 2>/dev/null | cut -c1-160 >&2 || true
+  mkdir -p "$(dirname "$UNPATCHABLE")"; printf '%s\n' "$CLAUDE_BIN" > "$UNPATCHABLE"
+  exit 0
+fi
 python3 "$PATCHER" "$WORK/cc.js"
 npx --yes tweakcc@4.3.1 repack "$WORK/cc.js" "$CLAUDE_BIN" >/dev/null
 
@@ -117,4 +158,5 @@ if s.get("syntaxHighlightingDisabled"):
 PY
 
 printf '%s\n' "$CLAUDE_BIN" > "$STAMP"
+rm -f "$UNPATCHABLE"   # this build patched fine; clear any earlier block
 echo "   done — restart Claude Code to see Midori diffs + syntax highlighting."
