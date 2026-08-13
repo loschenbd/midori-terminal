@@ -82,6 +82,54 @@ $ strings "$(command -v herdr)" | grep -oiE '\b(bright)?(black|red|green|yellow|
 black blue cyan green magenta red white yellow
 ```
 
+## "Then just change Ghostty's index 8" — no, and here is the proof
+
+The obvious counter-move is to stop bending herdr and bend the palette instead:
+remap ANSI 8 to a dark surface so `name = "terminal"` becomes usable. It doesn't
+work, and the reason is a constraint rather than a preference.
+
+Index 8 has to serve three roles at once:
+
+| | role | wants index 8 to be |
+|---|---|---|
+| **A** | Midori dim text — tmux status, fzf `info`/`header`/`border`, zsh-autosuggestions | far from the **page background** |
+| **B** | herdr's selected-row **background**, under the theme foreground | far from the **foreground** |
+| **C** | herdr's active-tab **foreground**, on the sage accent | far from the **accent** |
+
+Sweeping every possible luminance in 2000 steps, the best value that satisfies
+all three:
+
+| | best `min(A,B,C)` | verdict |
+|---|---|---|
+| Midori Night | **2.69:1** | impossible |
+| Midori Paper | **2.18:1** | impossible |
+
+Not "hard" — impossible. No index 8 exists, in any palette, that does this. A
+and C pull in opposite directions: A wants index 8 far from a dark background
+(so, light), C wants it far from a mid-light sage accent (so, dark).
+
+Drop role A — relocate the whole subdued tier off index 8 — and herdr alone
+becomes satisfiable: **8.65:1** on night at luminance 0.000, **5.35:1** on paper
+at luminance 1.000. But read what those numbers say index 8 would have to
+become: **near-black on night, near-white on paper**. It stops being a colour
+and becomes a surface.
+
+The cost of that is the whole point:
+
+| | index 8 today | dim-text contrast | as herdr's surface | dim-text contrast |
+|---|---|---|---|---|
+| Night | `#9c958a` | **5.92:1** | ~`#000000` | **1.20:1** |
+| Paper | `#524d46` | **7.41:1** | ~`#ffffff` | **1.13:1** |
+
+Midori's own consumers could be repointed — that's four files. What can't be
+repointed is **every other TUI you will ever run**, because "bright black = dim
+text" is a terminal-wide convention, not a Midori invention. Making index 8 a
+surface fixes one app's chrome by breaking dimmed output everywhere else.
+
+So the vesper workaround stays. The fix belongs upstream, where herdr should be
+reading a surface colour from index 0 (`#22211e` night, `#2a2825` paper — an
+actual surface, already correct in this palette) instead of index 8.
+
 ## What this ships instead
 
 Built-in themes carry their own palette, so they render the index-8 role as a
@@ -239,7 +287,11 @@ Two things here are worth fixing upstream rather than working around forever:
    `bright*` names to the colour parser so `[theme.custom]` can address these
    roles; the better one is deriving the selected-row background from relative
    luminance against the terminal background instead of assuming index 8 is
-   darker. Adding `[theme.custom.dark]` / `[theme.custom.light]` would help
+   darker. Best of all would be reading index 0, which is a surface slot by
+   convention and is already the right colour here. See the proof above for why
+   this cannot be fixed downstream by any palette: the roles herdr assigns to
+   index 8 are mutually unsatisfiable with the one the terminal convention
+   assigns it. Adding `[theme.custom.dark]` / `[theme.custom.light]` would help
    independently — with `auto_switch` on, a single global block can't serve both
    appearances, which makes hex overrides useless to anyone who auto-switches.
 2. **Silent fallback on an unknown theme name** — a warning from `config check`
