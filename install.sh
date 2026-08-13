@@ -168,6 +168,17 @@ else
     || echo "   (vivaldi setup skipped/failed — non-fatal)"
 fi
 
+# --- 10. herdr ----------------------------------------------------------------
+# Optional multiplexer (agent-aware). Skips itself when herdr isn't installed,
+# and never clobbers an existing config — see herdr/README.md.
+if [ -n "$MIDORI_SKIP_HERDR" ]; then
+  echo "-- skipping herdr (MIDORI_SKIP_HERDR set)"
+else
+  echo "-- herdr config -> ~/.config/herdr/config.toml"
+  sh "$REPO/herdr/install-herdr.sh" 2>&1 | sed 's/^/   /' \
+    || echo "   (herdr setup skipped/failed — non-fatal)"
+fi
+
 # --- Done ---------------------------------------------------------------------
 cat <<'EOF'
 
