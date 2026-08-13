@@ -12,9 +12,12 @@ brew install herdr
 `install.sh` at the repo root runs this too, and skips cleanly when herdr isn't
 installed.
 
-> **herdr is the one component here that does not wear the Midori palette.**
-> Its chrome is a built-in theme pair; only the accent and the background stay
-> Midori. This is a workaround with an expiry date — see below.
+> **herdr is the one component here that does not fully wear the Midori
+> palette.** Its surfaces come from a built-in theme pair; everything herdr
+> exposes a key for — background, body text, accent and the four state
+> colours — is named, so it resolves against the Ghostty palette in both
+> appearances. The greys and surfaces that remain have no key at all. This is a
+> workaround with an expiry date — see below.
 
 ## There is no "midori" theme, and you can't add one
 
@@ -92,8 +95,13 @@ dark_name   = "vesper"            # near-black
 light_name  = "solarized-light"   # #eee8d5, closest built-in to midori-paper #f3f1eb
 
 [theme.custom]
-panel_bg = "reset"
-accent   = "green"
+panel_bg = "reset"   # let Ghostty's dot grid + glow show through
+text     = "reset"   # terminal default fg = Midori --foreground, both modes
+accent   = "green"   # named -> ANSI -> resolved by the terminal
+red      = "red"
+green    = "green"
+yellow   = "yellow"
+blue     = "blue"
 ```
 
 | Element | Under `terminal` | Now |
@@ -101,6 +109,51 @@ accent   = "green"
 | Selected row (dark) | `#9c958a` slab | `#101010` bg, white bold — **17.9:1** |
 | Active tab (dark) | sage on sage — **1.22:1** | `#101010` on sage — **~8:1** |
 | Active tab (light) | — | cream on `#5f6f5e` — **~5.4:1** |
+
+### The full `[theme.custom]` surface is seven keys, and all seven are now used
+
+`panel_bg` · `accent` · `red` · `green` · `yellow` · `blue` · `text`
+
+That list is **complete and empirically established**, not read off the docs,
+which only ever show four of them by example. Feed any other key to
+`herdr config check` and it says so:
+
+```
+$ herdr config check          # with magenta = "green" under [theme.custom]
+unknown config key theme.custom.magenta; ignoring key
+```
+
+`magenta`, `cyan`, `white`, `black`, `fg`, `bg`, `foreground`, `background`,
+`border`, `selection`, `surface`, `muted`, `dim`, `warning`, `error`, `info`,
+`success`, `cursor` and `highlight` are all rejected. So the vesper greys and
+surfaces that remain are simply **not addressable** — that's the ceiling, and
+it's why herdr can't be fully Midori rather than a matter of trying harder.
+
+This file previously set only `panel_bg` and `accent`, on the stated grounds
+that the state colours "already resolve to ANSI 1/2/3." That was true under
+`name = "terminal"` and **stopped being true when this config moved to
+vesper** — they were coming from vesper's palette. Naming all of them puts them
+back on the Ghostty palette in both appearances.
+
+`text = "reset"` is the one that needed thought. It means the terminal's
+*default* foreground, which is Midori's `--foreground` in both appearances;
+`text = "white"` would pin ANSI 7, a light warm gray that is right on night and
+far too light on cream — the auto_switch trap this file avoids everywhere else.
+Measured under identical render conditions: `reset` 125 terminal-resolved
+emissions, `white` 122, unset 122, with `reset` also dropping vesper's
+`#ffffff`.
+
+Net effect, measured: vesper hexes in a render drop from **8 to 6**
+(`#99ffe4` and `#ffffff` replaced by terminal-resolved colour), and no `[90m` /
+`[100m` regression. This is a real gain but a modest one — the six that remain
+(`#101010`, `#232323`, `#5c5c5c`, `#7e7e7e`, `#a0a0a0`, `#ffd1a8`) have no key,
+and `#101010` is one we *want*, since it's the dark surface that makes the
+selected row readable in the first place.
+
+Caveat on the evidence: an idle probe render only exercises `green`, so `red`,
+`yellow` and `blue` are unobserved. They go through the identical named-colour
+path that `accent` demonstrably uses (`[42m` in every capture), but they'll only
+show once an agent is actually blocked or failed.
 
 Two overrides survive, and both keep Midori present:
 
@@ -118,9 +171,10 @@ The active tab works in both directions for a related reason: herdr uses the
 theme's *background* as the tab label's foreground, and both the theme
 background and ANSI 2 invert together across the appearance flip.
 
-Agent state colours are not overridden. `red`/`green`/`yellow` land on ANSI
-1/2/3 — wine, sage, ochre — already the mapping the design language wants
-(ochre = needs you, sage = progress, wine = failure).
+Agent state colours land on ANSI 1/2/3/4 — wine, sage, ochre, indigo — already
+the mapping the design language wants (ochre = needs you, sage = progress, wine
+= failure). They are named explicitly rather than left to the base theme; see
+the seven-key section above for why leaving them out stopped working.
 
 ## What else the appearance surface offers (0.8.0, audited Aug 2026)
 

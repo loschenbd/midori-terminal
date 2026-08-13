@@ -70,11 +70,34 @@ panel_bg = "reset"
 # chrome is vesper. A hex here would freeze it and lose that.
 accent = "green"
 
-# Agent state colors are deliberately NOT overridden. Under theme "terminal"
-# herdr's red/green/yellow tokens already resolve to ANSI 1/2/3, which in the
-# Midori palette are wine / sage / ochre — exactly the roles the site assigns:
-# ochre is the "needs you" warm (blocked), sage is progress (working), wine is
-# failure. Restating them here would be a no-op that looks like intent.
+# Every remaining token, named. The reasoning that used to sit here said these
+# were unnecessary because "under theme terminal they already resolve to ANSI
+# 1/2/3" — true, but this file stopped using theme "terminal" when it moved to
+# vesper, so they were coming from VESPER's palette instead. Naming them puts
+# them back on the Ghostty palette in both appearances, same trick as accent.
+#
+# ANSI 1/2/3/4 are wine / sage / ochre / indigo — already the roles the design
+# language assigns: ochre is the "needs you" warm (blocked), sage is progress
+# (working), wine is failure.
+red    = "red"
+green  = "green"
+yellow = "yellow"
+blue   = "blue"
+
+# text = "reset" is the terminal's DEFAULT foreground, which is Midori's
+# --foreground in both appearances (#2a2825 paper, #ebe8e2 night). "white"
+# would pin ANSI 7 — a light warm gray that is right on night and far too
+# light on cream — which is the auto_switch trap this file avoids everywhere
+# else. Measured: reset gives 125 terminal-resolved emissions against 122 for
+# both "white" and leaving it unset, and drops vesper's #ffffff.
+text   = "reset"
+
+# These seven are the COMPLETE [theme.custom] surface in 0.8.0 — panel_bg,
+# accent, red, green, yellow, blue, text. Enumerated by feeding candidate keys
+# to `herdr config check`, which reports "unknown config key theme.custom.<k>"
+# for anything else; magenta, cyan, white, black, fg, bg, border, selection,
+# surface, muted, warning, error and success are all rejected. So the vesper
+# greys and surfaces that remain are simply not addressable.
 
 [ui]
 # Highlights, borders and navigation UI on the same sage accent.
