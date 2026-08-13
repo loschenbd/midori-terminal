@@ -64,8 +64,20 @@ the selected workspace and an active tab number at **1.22:1**.
 Not reachable from config, verified by setting sentinel colours:
 
 - `selection`, `surface`, `muted` — row stays `[100m`
-- `black`, `dim` — not valid `[theme.custom]` keys at all
+- `black`, `dim`, `brightblack` — rejected; not valid colour values
 - `panel_bg = "reset"` — no effect on either element
+
+The binary settles it faster than sentinel probing does. Both codes are literal
+constants, and the colour-name table has no `bright*` entries at all — so index 8
+isn't merely hardcoded here, it is **unnameable from config for any setting**:
+
+```sh
+$ strings -n 4 "$(command -v herdr)" | grep -oE '\[(90|100)m' | sort | uniq -c
+   1 [90m
+   1 [100m
+$ strings "$(command -v herdr)" | grep -oiE '\b(bright)?(black|red|green|yellow|blue|magenta|cyan|white)\b' | sort -u
+black blue cyan green magenta red white yellow
+```
 
 ## What this ships instead
 
@@ -110,6 +122,22 @@ Agent state colours are not overridden. `red`/`green`/`yellow` land on ANSI
 1/2/3 — wine, sage, ochre — already the mapping the design language wants
 (ochre = needs you, sage = progress, wine = failure).
 
+## Upstream
+
+Source is [github.com/herdrdev/herdr](https://github.com/herdrdev/herdr) (the
+site is herdr.dev; the `clap` issue URLs in the binary are clap's, not herdr's).
+Two things here are worth fixing upstream rather than working around forever:
+
+1. **Index 8 hardcoded for a background.** Cheapest fix is adding the eight
+   `bright*` names to the colour parser so `[theme.custom]` can address these
+   roles; the better one is deriving the selected-row background from relative
+   luminance against the terminal background instead of assuming index 8 is
+   darker. Adding `[theme.custom.dark]` / `[theme.custom.light]` would help
+   independently — with `auto_switch` on, a single global block can't serve both
+   appearances, which makes hex overrides useless to anyone who auto-switches.
+2. **Silent fallback on an unknown theme name** — a warning from `config check`
+   would have saved the whole investigation above.
+
 ## Reverting when herdr fixes this
 
 When herdr stops hardcoding index 8 for surfaces, set all three theme names back
@@ -127,12 +155,36 @@ Neither can tell you the theme is right. To check colours, render and read the
 escape sequences:
 
 ```sh
-tmux new-session -d -s hprobe -x 100 -y 30 'herdr'; sleep 3
-tmux capture-pane -p -e -t hprobe: | head -1     # tab row
-tmux kill-session -t hprobe
+tmux -L hprobe -f /dev/null new-session -d -x 100 -y 30 \
+  'env -u HERDR_ENV -u HERDR_SESSION -u HERDR_SESSION_NAME -u HERDR_PANE_ID herdr'
+sleep 6
+tmux -L hprobe capture-pane -p -e | cat -v | grep -oE '\^\[\[[0-9;]*m' | sort | uniq -c | sort -rn
+tmux -L hprobe kill-server
 ```
 
-The probe attaches a second client; it does not disturb an attached session.
+Three details, all load-bearing — the naive version fails in three different
+silent ways:
+
+- **`-L hprobe`** — a separate socket keeps this off your real tmux server.
+- **`-f /dev/null`** — skips `~/.tmux.conf`, so tpm doesn't load tmux-continuum.
+  With `@continuum-restore 'on'`, a plain `tmux new-session` **silently restores
+  your entire saved session layout** as a side effect. On a machine where tmux
+  is kept as a cold fallback, the naive recipe resurrects every saved session.
+- **`env -u HERDR_*`** — herdr refuses to nest. Run from inside a herdr pane (the
+  normal case, since you're theming herdr) those five inherited variables make it
+  **exit immediately**. The symptom is an empty `capture-pane`, which reads as
+  "the theme rendered nothing" rather than "herdr never started". Check
+  `tmux -L hprobe list-panes` before believing an empty capture.
+
+`sleep 3` is not always enough for first paint; 6 is reliable here.
+
+Read the histogram, not the first line — the tab row isn't reliably line 1.
+A healthy render on this config shows **`[32m`** (the named sage accent, resolved
+by the terminal) and **no `[90m` or `[100m`**. Seeing those two is the regression
+this whole file exists to prevent.
+
+The probe attaches a second client to the herdr session; it does not disturb an
+attached one.
 
 ## Not covered here
 
