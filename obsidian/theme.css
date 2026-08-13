@@ -1274,6 +1274,42 @@ body {
   --list-bullet-transform: translateY(-0.26em);
 }
 
+/* The fold chevron has the same disease as the bullet, and no vendor knob.
+
+   `.cm-fold-indicator` is an inline-block whose only content is a ZWSP, so its
+   baseline is that ZWSP's — which with A == D sits at exactly half its height.
+   The box therefore straddles the text baseline symmetrically, and the
+   `.collapse-indicator` inside it (`top: 0; height: 100%`) centres its icon on
+   the baseline. Measured off the running app, hovering an h3: the chevron's ink
+   spans rows 1296-1306 against a baseline at 1301 — its centre is 0.25px BELOW
+   the baseline, 8.25px below the middle of the cap band it belongs to.
+
+   Half the cap height of the line's own face, same as any icon centred against
+   type. The two faces need different numbers, so the header lines are called
+   out separately:
+
+     Spectral   cap 0.660em -> 0.330em   (measured want: 0.344em, and the 0.014
+                                          is the chevron's own offset inside its
+                                          viewBox, not a metric)
+     M PLUS 1p  x    0.520em -> 0.260em   matches --list-bullet-transform, so on
+                                          a list line the chevron and the disc
+                                          share one centre line
+
+   Reading view needs none of this: there the icon is centred with
+   `vertical-align: middle`, which is measured from the x-height — ink, not
+   declared metrics — so the override cannot reach it. Live preview only. */
+.markdown-source-view.mod-cm6 .cm-fold-indicator .collapse-indicator {
+  transform: translateY(-0.26em);
+}
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-1 .cm-fold-indicator .collapse-indicator,
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-2 .cm-fold-indicator .collapse-indicator,
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-3 .cm-fold-indicator .collapse-indicator,
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-4 .cm-fold-indicator .collapse-indicator,
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-5 .cm-fold-indicator .collapse-indicator,
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-6 .cm-fold-indicator .collapse-indicator {
+  transform: translateY(-0.33em);
+}
+
 /* Horizontal rule. The stock margins are not rows and the border adds height
    of its own, so the block came out 10px short of a multiple and every line
    below the rule sat 10px off. Same trick as the table: give the element a
