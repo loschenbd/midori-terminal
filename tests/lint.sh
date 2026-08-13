@@ -46,6 +46,9 @@ fi
 echo "== patcher unit tests =="
 if python3 tests/test_patch_claude_diffs.py; then :; else FAIL=1; fi
 
+echo "== moshi themes are current =="
+if python3 tests/test_moshi_themes.py; then :; else FAIL=1; fi
+
 echo
 [ "$FAIL" -eq 0 ] && echo "LINT: all green" || echo "LINT: failures above"
 exit "$FAIL"
