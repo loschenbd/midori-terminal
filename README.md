@@ -138,6 +138,7 @@ without colliding with anything.
 | `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, file icons recolored from Material Symbols Rounded (Apache-2.0), workbench-chrome product icons built from Phosphor (MIT) — see `midori-theme/CREDITS.md`; `build-icons.py` / `build-product-icons.py` regenerate — plus installer |
 | `antinote/` | Midori Paper/Night Antinote themes (24-key JSON), installer, and a transcription of Antinote's undocumented theme schema |
 | `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret` and `midori-confetti` companion plugins, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
+| `moshi/` | Midori Paper/Night for [Moshi](https://getmoshi.app) (the phone terminal for agents) — **generated** from the Ghostty themes by `build-moshi-themes.py`, which also publishes them to iCloud for the phone |
 | `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
 | `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
 
@@ -706,6 +707,33 @@ nudging sliders.
   so the repo is the only copy. Edit the JSON, re-run
   `./antinote/install-antinote.sh`, hit "Reload Custom Themes"; no restart.
 
+## Moshi notes
+
+[Moshi](https://getmoshi.app) is the phone terminal for driving agents over
+SSH/Mosh, and it restyles its whole UI from the imported scheme — not just the
+terminal grid. `moshi/build-moshi-themes.py` derives both themes from
+`ghostty/themes/midori-*`, emits the JSON, deep links, QR codes and
+`import.html`, and publishes all of it to
+`iCloud Drive/Dev/midori-moshi-theme` so the phone copies can't fall behind the
+repo. Full format notes — the schema is undocumented — are in `moshi/README.md`.
+
+Two things worth carrying to any future port:
+
+- **A sentinel value is not a colour.** Both Ghostty themes set `cursor-color`
+  to the exact background hex on purpose: Ghostty composites the native cursor
+  *after* the custom shader and `cursor-opacity=0` doesn't hide the hollow
+  unfocused cursor, so bg-on-bg is how they kill it and the shader draws the
+  indigo instead. Ported verbatim to a renderer with no shader, that is simply
+  an invisible cursor. The generator detects `cursor == background` and
+  substitutes palette 4 — the indigo the shader was drawing. Before copying a
+  theme value anywhere, check whether it's a colour or a hack exploiting one
+  renderer's quirk.
+- **ANSI 7/15 are reverse-video on a light theme**, so they belong *near* the
+  background and their low contrast is correct, not a defect. Midori Paper
+  lands 8/18 under 4.5:1, the same as Piatto Light, against Atom One Light's 11
+  and Belafonte Day's 14. The generator prints the contrast table on every
+  build so a palette edit that hurts phone legibility is visible immediately.
+
 ## Claude Code notes
 
 - The installer sets `"theme": "custom:midori"` in `~/.claude/settings.json`.
@@ -746,6 +774,23 @@ nudging sliders.
   update mechanisms). Opt out with `MIDORI_SKIP_CC_PATCH`; restore stock by
   copying back the per-version backup under `~/.config/midori/claude-backup/`
   (or `brew reinstall claude-code` if you're on the brew cask).
+- **The self-heal wrapper must use `whence -p`, not `command -v`.** Inside a
+  zsh function *named* `claude`, `command -v claude` resolves the function and
+  returns the bare word `claude`; `readlink` of that is empty, the guard
+  short-circuits, and the patch silently never runs. That bug shipped three
+  unpatched Claude Code updates before anyone noticed, and it was caught by
+  measuring a screenshot's pixels (inline code at hue 233° — Midori's blue is
+  211° and its purple 274°, so it was neither), not by the tooling. If Midori
+  colours ever quietly revert, check this first.
+- **Currently blocked upstream: 2.1.229+ cannot be unpacked.** `tweakcc` 4.3.1
+  and 4.3.2 both fail to extract the embedded JS from 2.1.229 and 2.1.231,
+  while the same tool handles 2.1.226–228 cleanly — the binary packaging
+  changed (it also grew 279 MB → 295 MB). The patch script records the specific
+  binary path in `~/.config/midori/claude-unpatchable` and skips it silently,
+  so the wrapper doesn't retry-and-fail on every launch; a new Claude Code
+  version lifts the block by itself, and a successful patch clears it. Until
+  tweakcc catches up, **inline code and tips render stock blue** — everything
+  else in the theme is unaffected. Delete that file to force a retry.
 
 ## Shell & tmux fragments are additive
 

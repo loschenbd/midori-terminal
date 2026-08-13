@@ -22,6 +22,13 @@ set -e
 AUTO=0
 [ "$1" = "--auto" ] && AUTO=1
 
+# Documented escape hatch. Set MIDORI_SKIP_CC_PATCH=1 to leave the stock binary
+# alone — useful when debugging whether a Claude Code problem is ours.
+if [ -n "$MIDORI_SKIP_CC_PATCH" ]; then
+  [ "$AUTO" = "1" ] || echo "-- MIDORI_SKIP_CC_PATCH set; leaving Claude Code unpatched."
+  exit 0
+fi
+
 # Find the JS patcher next to this script (installed copy in ~/.config/midori)
 # or one level up under tools/ (running straight from the repo).
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
