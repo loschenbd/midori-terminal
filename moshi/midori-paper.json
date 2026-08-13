@@ -1,0 +1,27 @@
+{
+  "v": 1,
+  "name": "Midori Paper",
+  "mode": "light",
+  "colors": {
+    "background": "#f3f1eb",
+    "foreground": "#2a2825",
+    "cursor": "#3a5572",
+    "black": "#2a2825",
+    "red": "#7a4a4a",
+    "green": "#5f6f5e",
+    "yellow": "#b88a3a",
+    "blue": "#3a5572",
+    "magenta": "#653f7f",
+    "cyan": "#548373",
+    "white": "#c9c4b8",
+    "brightBlack": "#524d46",
+    "brightRed": "#9d6161",
+    "brightGreen": "#6c7d52",
+    "brightYellow": "#cc9c42",
+    "brightBlue": "#4d7095",
+    "brightMagenta": "#81569f",
+    "brightCyan": "#6f9c8d",
+    "brightWhite": "#faf9f6",
+    "selectionBackground": "#ced1c8"
+  }
+}

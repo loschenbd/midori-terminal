@@ -1,0 +1,27 @@
+{
+  "v": 1,
+  "name": "Midori Night",
+  "mode": "dark",
+  "colors": {
+    "background": "#1a1917",
+    "foreground": "#ebe8e2",
+    "cursor": "#6c87a4",
+    "black": "#22211e",
+    "red": "#b8868a",
+    "green": "#9aab97",
+    "yellow": "#d8b06a",
+    "blue": "#6c87a4",
+    "magenta": "#a079be",
+    "cyan": "#9ebfb4",
+    "white": "#c5bfb4",
+    "brightBlack": "#9c958a",
+    "brightRed": "#d0a2a6",
+    "brightGreen": "#9eaf85",
+    "brightYellow": "#e6c489",
+    "brightBlue": "#8ba3bd",
+    "brightMagenta": "#b692d2",
+    "brightCyan": "#bad5cb",
+    "brightWhite": "#faf9f6",
+    "selectionBackground": "#40453d"
+  }
+}
