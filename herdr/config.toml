@@ -110,7 +110,13 @@ pane_gaps = true
 
 # The sidebar IS the reason to run herdr — the agent-status rollup. Give it
 # room and keep it expanded.
-sidebar_width = 26
+#
+# 30, not 26. herdr auto-scales this "based on workspace names" — which does not
+# count the AGENT rows, and those are the longest strings in the panel because
+# they carry a `· agent-N` suffix. At 26 the longest one rendered
+# `○ benjaminlo… · agent-2`; at 30 it renders `○ benjaminloschen · agent-2` in
+# full. Captured at 120 columns, both ways, and diffed.
+sidebar_width = 30
 sidebar_start_collapsed = false
 
 # Group agent rows by workspace (project), matching the tmux-session-per-project

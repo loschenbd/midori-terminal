@@ -129,6 +129,42 @@ else:
 EOF
 fi
 
+# --- 7b. dumbzone status line: wrap instead of truncate -----------------------
+# Only touched if dumbzone is actually the configured status line. It writes one
+# long line; Claude Code cuts the status line to the pane and marks it with a
+# single ellipsis, so on a phone-width pane (~50 columns in Moshi) everything
+# past the cut is gone — including the advice text, which only appears once the
+# line is long enough to be truncated. tools/dumbzone-fit.py packs the segments
+# onto as many lines as the pane needs. Measurements are in that file's header.
+if command -v python3 >/dev/null 2>&1; then
+  mkdir -p "$HOME/.config/midori"
+  cp -f "$REPO/tools/dumbzone-fit.py" "$HOME/.config/midori/dumbzone-fit.py"
+  chmod +x "$HOME/.config/midori/dumbzone-fit.py"
+  python3 - <<'EOF'
+import json, os, shutil, time
+p = os.path.expanduser("~/.claude/settings.json")
+fit = os.path.expanduser("~/.config/midori/dumbzone-fit.py")
+try:
+    s = json.load(open(p))
+except (FileNotFoundError, json.JSONDecodeError):
+    s = {}
+sl = s.get("statusLine") or {}
+cmd = (sl.get("command") or "").strip()
+if "dumbzone" not in cmd:
+    print("-- dumbzone: not the configured status line, leaving it alone")
+elif "dumbzone-fit.py" in cmd:
+    print("-- dumbzone: status line already wraps to the pane")
+else:
+    # Keep whatever binary path is already configured — dumbzone need not live
+    # under ~/.local/bin, and the wrapper honours DUMBZONE_BIN.
+    shutil.copy2(p, p + time.strftime(".bak-%Y%m%d-%H%M%S"))
+    sl["command"] = f"DUMBZONE_BIN={cmd} {fit}"
+    s["statusLine"] = sl
+    json.dump(s, open(p, "w"), indent=2)
+    print("-- dumbzone: status line now wraps to the pane (settings.json backed up)")
+EOF
+fi
+
 # --- 8. Claude Code theme-bypass binary patch --------------------------------
 # Three render paths ignore ~/.claude/themes and read hardcoded colours from the
 # compiled binary — diff bands, inline `codespan`, and the `suggestion` token
