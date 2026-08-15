@@ -357,6 +357,14 @@ Residual gotchas:
   Obsidian paints it by default, so it was checking contrast against a colour
   that never appears in this theme. A harness that models the host's chrome has
   to model *this* host's chrome.
+- **`:empty` never matches an element that has children, however little it is
+  showing.** The readout is emptied when it has nothing to say, and Obsidian's
+  own `.status-bar-item:empty { display: none }` was expected to take it out of
+  the bar — it never did, because the item still contains its icon and readout
+  spans. Emptied but present, it is an invisible item still holding a gap
+  between two real ones, which nobody noticed in a status bar and is a hole in
+  a phone header's tight row of touch targets. The plugin now says `is-blank`
+  outright rather than hoping a selector notices.
 - **A software keyboard does not resize the layout viewport**, so no media
   query, no `resize` listener and nothing in CSS knows it is there — the window
   stays serenely centred on a screen half of which is now covered. What the

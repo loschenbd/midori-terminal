@@ -130,9 +130,18 @@
  *    frame, with no state left to dismiss.
  *
  * MOBILE. Obsidian hides the status bar on phones outright
- * (`.is-mobile .status-bar { display: none }` in app.css), so the status-bar
- * display is desktop-only in practice. The caret is not — it is the same caret
- * on a phone, which is the other reason it is the default.
+ * (`.is-mobile .status-bar { display: none }` in app.css) and offers no other
+ * surface a plugin can park a persistent item in. So on a phone the readout
+ * goes into the NOTE'S OWN HEADER, beside the reading-mode and overflow
+ * buttons: existing chrome rather than the writing surface, where a phone puts
+ * everything else of this kind, and it disappears with the header in Zen mode
+ * without being asked to. It is the same 'Show the timer as' setting — only the
+ * wording of the middle option changes — because it is the same decision.
+ * A view header belongs to a leaf, and leaves are rebuilt when the note
+ * changes, so the element is re-homed rather than tracked; see home().
+ *
+ * The caret needs none of this. It is the same caret on a phone, which is the
+ * other reason it is the default.
  *
  * The setting window needs two concessions there, both about the keyboard.
  * It is NOT autofocused, because summoning the keyboard covers the drums and
@@ -524,6 +533,32 @@ const STYLE = `
 .midori-timer.is-paused .midori-timer-time {
   font-style: italic;
 }
+
+/* ---- the phone's readout ---------------------------------------------
+
+   Same element, sitting in the note's header instead of a status bar, because
+   a phone has no status bar to sit in. It goes at the head of the button
+   cluster, so it reads as one of the header's own controls rather than as
+   something parked on top of them, and it takes the header's own type size.
+
+   The empty case matters more here than in a status bar: a header is a tight
+   row of touch targets, so an idle readout that is switched off must take up
+   no width at all rather than leaving a dead gap between two buttons. */
+.midori-timer-header {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.35em;
+  font-size: var(--font-ui-smaller, 0.8em);
+  color: var(--text-muted);
+}
+/* NOT :empty, WHICH NEVER MATCHES HERE. The element always has its icon and
+   readout spans inside it, so it is never childless no matter how little it is
+   showing — and Obsidian's own '.status-bar-item:empty { display: none }'
+   never fired on it either, for exactly the same reason. Emptied but present,
+   it is an invisible item still taking a gap between two real ones, which in a
+   header's tight row of touch targets is a hole. The plugin says so directly
+   instead of hoping a selector notices. */
+.midori-timer.is-blank { display: none; }
 /* ------------------------------------------------------------- the dial
 
    The duration modal. Obsidian's Setting class is deliberately NOT used here:
@@ -1561,7 +1596,7 @@ module.exports = class MidoriTimer extends Plugin {
     document.head.appendChild(style);
     this.register(() => style.remove());
 
-    this.buildStatusBar();
+    this.buildReadout();
     this.addSettingTab(new MidoriTimerSettings(this.app, this));
 
     this.addCommand({
@@ -1782,14 +1817,37 @@ module.exports = class MidoriTimer extends Plugin {
     document.body.style.setProperty('--midori-timer-caret', next.color);
   }
 
-  buildStatusBar() {
-    // On mobile Obsidian hides the status bar entirely, so skip the widget and
-    // leave the commands — see the MOBILE note in the header.
-    if (Platform.isMobile) return;
-
-    this.el = this.addStatusBarItem();
+  /* The readout, wherever this platform will take one.
+   *
+   * ON DESKTOP that is the status bar, which is what a status bar is for. ON A
+   * PHONE there is no status bar — Obsidian hides it outright — and no mobile
+   * surface a plugin can add a persistent item to. The nearest honest place is
+   * the note's own header, beside the reading-mode and overflow buttons: it is
+   * EXISTING CHROME rather than the writing surface, it is where a phone puts
+   * everything else of this kind, and in Zen mode it goes away with the rest of
+   * the header, which is the right behaviour without asking for it.
+   *
+   * IT IS THE SAME SETTING, not a second one. 'Show the timer as' already reads
+   * caret / status bar / both, and on a phone the middle option simply means a
+   * different place; only the wording in the dropdown changes. A second setting
+   * would make the reader choose twice about one thing. */
+  buildReadout() {
+    this.el = Platform.isMobile
+      ? createDiv()                             // homed into the header below
+      : this.addStatusBarItem();
     this.el.addClass('midori-timer');
     this.el.addClass('mod-clickable');
+    if (Platform.isMobile) {
+      this.el.addClass('midori-timer-header');
+      /* A view header belongs to a LEAF, and a leaf is rebuilt whenever the
+       * note changes, so an element parked in one is thrown away without
+       * warning. Rather than track that, the element is re-homed on every
+       * workspace change and on every render — appendChild on the element's
+       * existing parent is a no-op, so re-homing when nothing moved costs a
+       * parent comparison. */
+      this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.home()));
+      this.registerEvent(this.app.workspace.on('layout-change', () => this.home()));
+    }
 
     this.iconEl = this.el.createSpan({ cls: 'midori-timer-icon' });
     setIcon(this.iconEl, 'clock');
@@ -1811,6 +1869,19 @@ module.exports = class MidoriTimer extends Plugin {
       ev.preventDefault();
       this.contextMenu(ev);
     });
+  }
+
+  /** Put the mobile readout back in the active note's header, if it has moved. */
+  home() {
+    if (!this.el || !Platform.isMobile) return;
+    const leaf = this.app.workspace.activeLeaf;
+    const view = leaf && leaf.view && leaf.view.containerEl;
+    if (!view) return;
+    // .view-actions is the button cluster; the header itself is the fallback,
+    // because a view without actions is still a view with somewhere to sit.
+    const host = view.querySelector('.view-actions') || view.querySelector('.view-header');
+    if (!host || this.el.parentElement === host) return;
+    host.prepend(this.el);
   }
 
   contextMenu(ev) {
@@ -1835,6 +1906,7 @@ module.exports = class MidoriTimer extends Plugin {
   render() {
     this.renderCaret();
     if (!this.el) return;
+    this.home();                                // no-op unless the leaf changed
 
     // The status bar item is emptied outright when the caret is the only
     // display, so Obsidian's `.status-bar-item:empty { display: none }` takes
@@ -1842,11 +1914,13 @@ module.exports = class MidoriTimer extends Plugin {
     if (this.settings.display === 'caret') {
       this.el.removeClass('is-running');
       this.el.removeClass('is-paused');
+      this.el.addClass('is-blank');
       this.bar.set('');
       this.iconEl.hide();
       this.el.removeAttribute('aria-label');
       return;
     }
+    this.el.removeClass('is-blank');
     this.bar.still = !this.settings.barFlap;
 
     this.el.removeClass('is-running');
@@ -1883,6 +1957,7 @@ module.exports = class MidoriTimer extends Plugin {
       this.el.setAttr('aria-label', 'Set a timer');
     } else {
       this.iconEl.hide();
+      this.el.addClass('is-blank');             // nothing to show, so no gap
       this.el.removeAttribute('aria-label');
     }
   }
@@ -1920,10 +1995,13 @@ class MidoriTimerSettings extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Show the timer as')
-      .setDesc('The caret drifts from its resting indigo through sage and ochre to wine as the session runs. Nothing is added to the page and nothing appears while you write: the caret is already there, and it is the one thing on screen your eye is resting on.')
+      .setDesc('The caret drifts from its resting indigo through sage and ochre to wine as the session runs. Nothing is added to the page and nothing appears while you write: the caret is already there, and it is the one thing on screen your eye is resting on.'
+        + (Platform.isMobile
+          ? ' A phone has no status bar, so the readout sits in the note\u2019s header instead \u2014 and goes away with the header in Zen mode.'
+          : ''))
       .addDropdown((d) => d
         .addOption('caret', 'Caret only')
-        .addOption('statusbar', 'Status bar only')
+        .addOption('statusbar', Platform.isMobile ? 'Note header only' : 'Status bar only')
         .addOption('both', 'Both')
         .setValue(this.plugin.settings.display)
         .onChange(async (v) => {
@@ -1937,7 +2015,7 @@ class MidoriTimerSettings extends PluginSettingTab {
       .setDesc('Runs a 20-second timer, compressing the whole indigo-to-wine drift into 20 seconds. Over a real session it is deliberately imperceptible; this is the only way to watch the whole ramp.')
       .addButton((b) => b.setButtonText('Run 20s').onClick(() => this.plugin.start(20)));
 
-    containerEl.createEl('h3', { text: 'Status bar' });
+    containerEl.createEl('h3', { text: Platform.isMobile ? 'Readout' : 'Status bar' });
 
     new Setting(containerEl)
       .setName('Flip the digits')
@@ -1952,7 +2030,7 @@ class MidoriTimerSettings extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Show when idle')
-      .setDesc('Keep a clock in the status bar while no timer is running, so there is something to click. Off hides it until a timer starts. Ignored when the caret is the only display.')
+      .setDesc(`Keep a clock in the ${Platform.isMobile ? 'note header' : 'status bar'} while no timer is running, so there is something to click. Off hides it until a timer starts. Ignored when the caret is the only display.`)
       .addToggle((t) => t
         .setValue(this.plugin.settings.showWhenIdle)
         .onChange(async (v) => {
