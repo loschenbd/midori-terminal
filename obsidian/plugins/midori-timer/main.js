@@ -1203,4 +1203,448 @@ class DurationModal extends Modal {
   }
 }
 
+// ------------------------------------------------------------------ plugin
 
+module.exports = class MidoriTimer extends Plugin {
+  async onload() {
+    const data = (await this.loadData()) || {};
+    this.settings = Object.assign({}, DEFAULTS, data);
+    /* Runtime state, kept beside the settings under a reserved key.
+     *   endsAt    epoch ms of the deadline while running   (decision 1)
+     *   pausedAt  seconds left while paused
+     *   total     the duration that was set, for the finish message */
+    this.session = Object.assign({ endsAt: null, pausedAt: null, total: null },
+                                 data.session || {});
+    this.timer = null;
+
+    const style = document.createElement('style');
+    style.id = 'midori-timer-style';
+    style.textContent = STYLE;
+    document.head.appendChild(style);
+    this.register(() => style.remove());
+
+    this.buildStatusBar();
+    this.addSettingTab(new MidoriTimerSettings(this.app, this));
+
+    this.addCommand({
+      id: 'set-duration',
+      name: 'Set duration and start',
+      callback: () => new DurationModal(this.app, this).open(),
+    });
+    this.addCommand({
+      id: 'start-default',
+      name: 'Start timer with the default duration',
+      callback: () => this.start(this.settings.defaultDuration),
+    });
+    this.addCommand({
+      id: 'toggle',
+      name: 'Pause or resume timer',
+      checkCallback: (checking) => {
+        if (!this.isActive()) return false;
+        if (!checking) this.toggle();
+        return true;
+      },
+    });
+    this.addCommand({
+      id: 'stop',
+      name: 'Stop timer',
+      checkCallback: (checking) => {
+        if (!this.isActive()) return false;
+        if (!checking) this.stop();
+        return true;
+      },
+    });
+    this.addCommand({
+      id: 'add-five',
+      name: 'Add five minutes',
+      checkCallback: (checking) => {
+        if (!this.isActive()) return false;
+        if (!checking) this.extend(300);
+        return true;
+      },
+    });
+
+    /* Decision 4. A deadline that passed while Obsidian was shut is announced
+     * once rather than resumed as a negative countdown. Deferred to layout
+     * ready so the notice is not thrown into a half-built workspace. */
+    this.app.workspace.onLayoutReady(() => {
+      if (this.session.endsAt != null && this.remaining() <= 0) {
+        this.finish(true);
+      } else if (this.session.endsAt != null) {
+        this.run();
+      } else {
+        this.render();
+      }
+    });
+  }
+
+  /* The caret is the one piece of state that outlives this plugin if it is not
+   * cleaned up by hand. Everything else the plugin owns is an element it
+   * created, which Obsidian removes with the plugin; the caret belongs to
+   * midori-caret and merely wears a class and a variable set from here. Disable
+   * this plugin mid-session without unsetting them and the caret stays ochre,
+   * with nothing running and nothing left to turn it back. */
+  onunload() {
+    this.clearTick();
+    document.body.classList.remove('midori-timer-running');
+    document.body.style.removeProperty('--midori-timer-caret');
+  }
+
+  async save() {
+    await this.saveData(Object.assign({}, this.settings, { session: this.session }));
+  }
+
+  // ------------------------------------------------------------- lifecycle
+
+  isRunning() { return this.session.endsAt != null; }
+  isPaused()  { return this.session.pausedAt != null; }
+  isActive()  { return this.isRunning() || this.isPaused(); }
+
+  /** Seconds left, always derived from the clock — never accumulated. */
+  remaining() {
+    if (this.session.pausedAt != null) return this.session.pausedAt;
+    if (this.session.endsAt == null) return 0;
+    return (this.session.endsAt - Date.now()) / 1000;
+  }
+
+  start(seconds) {
+    if (!Number.isFinite(seconds) || seconds <= 0) return;
+    this.session = {
+      endsAt: Date.now() + seconds * 1000,
+      pausedAt: null,
+      total: seconds,
+    };
+    this.reserveWidth(seconds);
+    this.run();
+    this.save();
+    new Notice(`Timer set for ${formatHuman(seconds)}.`);
+  }
+
+  toggle() {
+    if (this.isPaused()) {
+      this.session.endsAt = Date.now() + this.session.pausedAt * 1000;
+      this.session.pausedAt = null;
+      this.run();
+    } else if (this.isRunning()) {
+      this.session.pausedAt = Math.max(0, this.remaining());
+      this.session.endsAt = null;
+      this.clearTick();
+      this.render();
+    } else {
+      return;
+    }
+    this.save();
+  }
+
+  extend(seconds) {
+    if (this.isPaused()) this.session.pausedAt += seconds;
+    else if (this.isRunning()) this.session.endsAt += seconds * 1000;
+    else return;
+    if (this.session.total != null) this.session.total += seconds;
+    this.reserveWidth(this.remaining());
+    this.render();
+    this.save();
+    new Notice(`Timer extended to ${formatClock(this.remaining())}.`);
+  }
+
+  stop() {
+    this.clearTick();
+    this.session = { endsAt: null, pausedAt: null, total: null };
+    this.render();
+    this.save();
+  }
+
+  run() {
+    this.clearTick();
+    this.reserveWidth(Math.max(this.remaining(), this.session.total || 0));
+    this.render();
+    // registerInterval so an unload during a run cannot leave it ticking.
+    this.tick = this.registerInterval(
+      window.setInterval(() => this.onTick(), TICK_MS),
+    );
+  }
+
+  clearTick() {
+    if (this.tick != null) {
+      window.clearInterval(this.tick);
+      this.tick = null;
+    }
+  }
+
+  onTick() {
+    if (!this.isRunning()) { this.clearTick(); return; }
+    if (this.remaining() <= 0) { this.finish(false); return; }
+    this.render();
+  }
+
+  /* Finishing RESETS. The session is cleared, the caret returns to indigo and
+   * the status bar returns to its idle clock, all in the same frame — there is no
+   * sticky "finished" state to dismiss. The end of the timer is announced by
+   * things that announce themselves and then stop: a Notice, the chime, and
+   * the optional OS banner. A readout that sits at 0:00 wearing a bell until
+   * you click it is a chore, and it is also a lie the moment you walk away
+   * from the desk and come back to it hours later.
+   *
+   * @param {boolean} late true when the deadline passed while Obsidian was shut. */
+  finish(late) {
+    const total = this.session.total;
+    this.clearTick();
+    this.session = { endsAt: null, pausedAt: null, total: null };
+    this.render();
+    this.save();
+
+    const what = total ? ` (${formatHuman(total)})` : '';
+    const base = this.settings.finishMessage.trim() || `Timer finished${what}`;
+    new Notice(late ? `${base} — while Obsidian was closed.` : base, 8000);
+
+    if (this.settings.chime && !late) chime(this.settings.volume);
+    if (this.settings.systemNotification && !late) this.notifySystem(base);
+  }
+
+  /* An OS banner, for when Obsidian is behind another window and an in-app
+   * Notice would go unseen. Permission is only ever requested as a result of
+   * the user turning the setting on. */
+  notifySystem(body) {
+    try {
+      if (typeof Notification === 'undefined') return;
+      if (Notification.permission === 'granted') {
+        new Notification('Midori Timer', { body });
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then((p) => {
+          if (p === 'granted') new Notification('Midori Timer', { body });
+        });
+      }
+    } catch (e) {
+      /* not available on every platform */
+    }
+  }
+
+  // --------------------------------------------------------------- display
+
+  /* No element to build and no geometry to measure — the caret is already on
+   * screen, drawn by midori-caret, and this only sets a variable it reads. The
+   * designs this replaced each needed a fixed element, a live measurement of
+   * the note's scroller, and a list of floating chrome to dodge. */
+  renderCaret() {
+    const wanted = this.settings.display === 'caret' || this.settings.display === 'both';
+    const on = wanted && this.isActive();
+    document.body.classList.toggle('midori-timer-running', on);
+    if (!on) {
+      document.body.style.removeProperty('--midori-timer-caret');
+      this.caretKey = null;
+      return;
+    }
+
+    const total = this.session.total || 0;
+    const done = total <= 0 ? 0 : 1 - this.remaining() / total;
+    const next = caretColor(done);
+
+    // Write only when the mix actually changes: 100 steps a segment, ~300 in a
+    // session, against 6000 ticks. Recomputing is free; assigning a custom
+    // property invalidates style for the subtree every single time.
+    if (next.key === this.caretKey) return;
+    this.caretKey = next.key;
+    document.body.style.setProperty('--midori-timer-caret', next.color);
+  }
+
+  buildStatusBar() {
+    // On mobile Obsidian hides the status bar entirely, so skip the widget and
+    // leave the commands — see the MOBILE note in the header.
+    if (Platform.isMobile) return;
+
+    this.el = this.addStatusBarItem();
+    this.el.addClass('midori-timer');
+    this.el.addClass('mod-clickable');
+
+    this.iconEl = this.el.createSpan({ cls: 'midori-timer-icon' });
+    setIcon(this.iconEl, 'clock');
+    this.timeEl = this.el.createSpan({ cls: 'midori-timer-time' });
+
+    this.el.addEventListener('click', () => {
+      if (this.isActive()) this.toggle();
+      else new DurationModal(this.app, this).open();
+    });
+    this.el.addEventListener('contextmenu', (ev) => {
+      ev.preventDefault();
+      this.contextMenu(ev);
+    });
+  }
+
+  contextMenu(ev) {
+    const menu = new Menu();
+    menu.addItem((i) => i.setTitle('Set duration…').setIcon('timer')
+      .onClick(() => new DurationModal(this.app, this).open()));
+    if (this.isActive()) {
+      menu.addItem((i) => i
+        .setTitle(this.isPaused() ? 'Resume' : 'Pause')
+        .setIcon(this.isPaused() ? 'play' : 'pause')
+        .onClick(() => this.toggle()));
+      menu.addItem((i) => i.setTitle('Add 5 minutes').setIcon('plus')
+        .onClick(() => this.extend(300)));
+    }
+    if (this.isActive()) {
+      menu.addItem((i) => i.setTitle('Stop').setIcon('square')
+        .onClick(() => this.stop()));
+    }
+    menu.showAtMouseEvent(ev);
+  }
+
+  /* Decision 2. Reserve the width of the widest string this run can produce, so
+   * the item keeps one width from 1:00:00 all the way down to 0:00 instead of
+   * shrinking by a character and dragging its neighbours across. Measured in
+   * `ch` against tabular figures, where one ch is exactly one digit. */
+  reserveWidth(seconds) {
+    if (!this.timeEl) return;
+    this.timeEl.style.minWidth = `${formatClock(Math.max(0, seconds || 0)).length}ch`;
+  }
+
+  render() {
+    this.renderCaret();
+    if (!this.el) return;
+
+    // The status bar item is emptied outright when the caret is the only
+    // display, so Obsidian's `.status-bar-item:empty { display: none }` takes
+    // it out of the bar rather than leaving a dead gap where it used to be.
+    if (this.settings.display === 'caret') {
+      this.el.removeClass('is-running');
+      this.el.removeClass('is-paused');
+      this.timeEl.setText('');
+      this.timeEl.style.minWidth = '';
+      this.iconEl.hide();
+      this.el.removeAttribute('aria-label');
+      return;
+    }
+    this.iconEl.show();
+
+    this.el.removeClass('is-running');
+    this.el.removeClass('is-paused');
+
+    if (this.isActive()) {
+      this.el.addClass(this.isPaused() ? 'is-paused' : 'is-running');
+      this.iconEl.show();
+      setIcon(this.iconEl, this.isPaused() ? 'pause' : 'clock');
+      this.timeEl.setText(formatClock(this.remaining()));
+      this.el.setAttr('aria-label',
+        `${this.isPaused() ? 'Paused' : 'Timer'} — click to ${this.isPaused() ? 'resume' : 'pause'}, right-click for more`);
+      return;
+    }
+
+    // Idle. Emptying the element makes Obsidian's own
+    // `.status-bar-item:empty { display: none }` hide it, which is exactly the
+    // behaviour the "show when idle" setting wants when it is off.
+    this.timeEl.setText('');
+    this.timeEl.style.minWidth = '';
+    if (this.settings.showWhenIdle) {
+      this.iconEl.show();
+      setIcon(this.iconEl, 'clock');
+      this.el.setAttr('aria-label', 'Set a timer');
+    } else {
+      this.iconEl.hide();
+      this.el.removeAttribute('aria-label');
+    }
+  }
+};
+
+// ----------------------------------------------------------------- settings
+
+class MidoriTimerSettings extends PluginSettingTab {
+  constructor(app, plugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+
+    new Setting(containerEl)
+      .setName('Default duration')
+      .setDesc('Pre-filled in the duration window, and used by "Start timer with the default duration". Same formats: 25m, 1h30, 90s, 1:30.')
+      .addText((t) => {
+        t.setPlaceholder('25m')
+          .setValue(formatHuman(this.plugin.settings.defaultDuration))
+          .onChange(async (v) => {
+            const secs = parseDuration(v);
+            // Ignore unparseable input rather than clobbering a good value with
+            // a half-typed one — onChange fires on every keystroke.
+            if (secs == null) return;
+            this.plugin.settings.defaultDuration = secs;
+            await this.plugin.save();
+          });
+      });
+
+    containerEl.createEl('h3', { text: 'Display' });
+
+    new Setting(containerEl)
+      .setName('Show the timer as')
+      .setDesc('The caret drifts from its resting indigo through sage and ochre to wine as the session runs. Nothing is added to the page and nothing appears while you write: the caret is already there, and it is the one thing on screen your eye is resting on.')
+      .addDropdown((d) => d
+        .addOption('caret', 'Caret only')
+        .addOption('statusbar', 'Status bar only')
+        .addOption('both', 'Both')
+        .setValue(this.plugin.settings.display)
+        .onChange(async (v) => {
+          this.plugin.settings.display = v;
+          await this.plugin.save();
+          this.plugin.render();
+        }));
+
+    new Setting(containerEl)
+      .setName('Preview the drift')
+      .setDesc('Runs a 20-second timer, compressing the whole indigo-to-wine drift into 20 seconds. Over a real session it is deliberately imperceptible; this is the only way to watch the whole ramp.')
+      .addButton((b) => b.setButtonText('Run 20s').onClick(() => this.plugin.start(20)));
+
+    containerEl.createEl('h3', { text: 'Status bar' });
+
+    new Setting(containerEl)
+      .setName('Show when idle')
+      .setDesc('Keep a clock in the status bar while no timer is running, so there is something to click. Off hides it until a timer starts. Ignored when the caret is the only display.')
+      .addToggle((t) => t
+        .setValue(this.plugin.settings.showWhenIdle)
+        .onChange(async (v) => {
+          this.plugin.settings.showWhenIdle = v;
+          await this.plugin.save();
+          this.plugin.render();
+        }));
+
+    new Setting(containerEl)
+      .setName('Chime')
+      .setDesc('Play two short tones when the timer finishes.')
+      .addToggle((t) => t
+        .setValue(this.plugin.settings.chime)
+        .onChange(async (v) => { this.plugin.settings.chime = v; await this.plugin.save(); }));
+
+    new Setting(containerEl)
+      .setName('Chime volume')
+      .addSlider((s) => s
+        .setLimits(0.05, 1, 0.05)
+        .setValue(this.plugin.settings.volume)
+        .setDynamicTooltip()
+        .onChange(async (v) => { this.plugin.settings.volume = v; await this.plugin.save(); }));
+
+    new Setting(containerEl)
+      .setName('System notification')
+      .setDesc('Also post an OS banner, so a finished timer is visible when Obsidian is behind another window. Your OS will ask for permission the first time.')
+      .addToggle((t) => t
+        .setValue(this.plugin.settings.systemNotification)
+        .onChange(async (v) => {
+          this.plugin.settings.systemNotification = v;
+          await this.plugin.save();
+          if (v) this.plugin.notifySystem('Notifications are on.');
+        }));
+
+    new Setting(containerEl)
+      .setName('Finish message')
+      .setDesc('Shown when the timer ends. Leave empty for "Timer finished (25m)".')
+      .addText((t) => t
+        .setPlaceholder('(default)')
+        .setValue(this.plugin.settings.finishMessage)
+        .onChange(async (v) => { this.plugin.settings.finishMessage = v; await this.plugin.save(); }));
+
+    new Setting(containerEl)
+      .setName('Hotkey')
+      .setDesc('Bind "Midori Timer: Set duration and start" under Settings → Hotkeys to open the duration window from the keyboard.')
+      .addButton((b) => b.setButtonText('Open duration window')
+        .onClick(() => new DurationModal(this.app, this.plugin).open()));
+  }
+}

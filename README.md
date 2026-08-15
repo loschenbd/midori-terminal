@@ -364,6 +364,18 @@ Residual gotchas:
   two timers are tracked and cleared, rather than trusting `setTimeout` ordering
   to make the last write win: that happens to be true today and is an argument
   rather than a guarantee.
+- **Parsing is not loading, and a truncated plugin parses fine.** An edit that
+  replaced a range of `main.js` swallowed everything after it — the `Plugin`
+  class, the settings tab, `module.exports` — and the file that came out was
+  still perfectly valid JavaScript. `node --check` passed, the stylesheet guard
+  passed, and the browser harness passed too, because the harness lifts the
+  modal out of the file and never asks the file as a whole to be a plugin. The
+  only symptom was Obsidian saying *Failed to load plugin* with no line number.
+  `tests/check_plugin_loads.js` now `require()`s each plugin the way Obsidian
+  does, with `obsidian` and `@codemirror/*` stubbed, and insists the export is
+  a class extending `Plugin` with an `onload`. Every check a repo has can be
+  green on a file that does not work; the fix is to run the thing, not to read
+  it more carefully.
 - **Seven designs, and the first six were the same mistake.** The timer's
   display went through a dotted rail inside the note's edge, the same rail as a
   solid gradient, a warming page-wide glow, a tinted dot grid, a corner bloom,
