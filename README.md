@@ -308,42 +308,39 @@ Residual gotchas:
   figures *and* reserves the width of the longest form the run will produce,
   because a proportional countdown changes its own width twice a second and
   drags every status item to its left along with it. Finishing *resets*: the
-  session clears, the rail goes away and the bar returns to its idle clock in
-  the same frame, because the end is announced by things that announce
-  themselves and then stop — a Notice, the chime, the optional OS banner — and
-  a readout parked at 0:00 wearing a bell until you click it is a chore, and a
-  lie by the time you come back to the desk. The default display is not the
-  status bar but a **rail**: a thin line just inside one edge of the *note*
-  that fills as the time runs. The whole line is sage, then the whole line is
-  ochre, then the whole line is wine — one hue at a time, each drawn as a
-  gradient within itself, because the two jobs are worth keeping apart: the
-  hue carries the time and is read out of the corner of your eye, and the
-  gradient is shape. A single line carrying a continuous three-colour ramp
-  says nothing at a glance, since you have to find the boundary and judge
-  where it sits; a line that is simply yellow says *getting on* in one look.
-  That split also decides how the gradient is drawn — it is sized to the fill
-  and stretches with it, so the visible line always shows the whole faint →
-  full ramp however little of it there is. A multi-hue ramp would have to be
-  painted at full length and revealed with `clip-path` instead, or the leading
-  edge would sit at the same colour the whole way down; with one hue in play
-  the reverse is true, and anchoring it would leave an early fill showing only
-  the dimmest sliver, reading as a faint line rather than a green one.
-- **The rail is measured off the note, and has to dodge everything Obsidian
-  floats over it.** Position and length come from the editor's scroller, not
-  the window, because a window-fixed rail cannot track a text column that
-  moves when a sidebar opens; it is held in off the edge rather than flush to
-  it, and shown only while a timer is going. The trap is that the scroller
-  runs edge to edge *underneath* the floating chrome, so a rail measured off
-  it runs under that chrome too. On desktop that is the status-bar pill at the
-  bottom right — measured at x 1347–1719 on a 1728px window, a fifth of a
-  bottom rail. On mobile there is no status bar at all, and a right-edge rail
-  instead ran from behind the header buttons straight down past the navigation
-  pill and off the bottom of the screen, because the mobile scroller is taller
-  than the viewport. Same bug, different furniture, so the rule is written
-  against a list of floating elements measured live, plus a clamp to the
-  window: only obstructions crossing the rail's own band count, and the rail
-  is trimmed from whichever end is nearer, since a rail with a hole in it
-  reads as two rails.
+  session clears and the bar returns to its idle clock in the same frame,
+  because the end is announced by things that announce themselves and then stop
+  — a Notice, the chime, the optional OS banner — and a readout parked at 0:00
+  wearing a bell until you click it is a chore, and a lie by the time you come
+  back to the desk.
+- **Seven designs, and the first six were the same mistake.** The timer's
+  display went through a dotted rail inside the note's edge, the same rail as a
+  solid gradient, a warming page-wide glow, a tinted dot grid, a corner bloom,
+  and discrete marks at session breakpoints. Every rejection was read as a
+  tuning problem and answered with a better-tuned version of the same idea. The
+  constraint that explains all six only arrived at the end — *nothing may enter
+  the visual field unbidden* — and it leaves exactly two legal moves: change a
+  property of something already on screen, or reveal something that was asked
+  for. All six were new matter on the page. So the display is now the **caret**,
+  which drifts from its resting indigo through sage and ochre to wine: already
+  there, already the theme's, and the only thing in *foveal* vision while
+  writing, which is where colour discrimination is best and where none of the
+  six were. That is why 1.5px of it is enough. It also deleted a fixed element,
+  a live measurement of the note's scroller and a list of floating chrome to
+  dodge — the mobile placement problem was not solved, it stopped existing.
+  Written up in `docs/superpowers/specs/2026-08-15-timer-caret-design.md`.
+- **A rectangular colour space cuts the corner between two hues, and the corner
+  is where the grey is.** The drift interpolates in `oklch`, and the usual
+  argument for it is wrong at this scale: measured off a render of this exact
+  ramp, sRGB and oklab differ by at most ΔE 0.029 — a JND on a big swatch,
+  nothing on a 1.5px caret. The real defect is that indigo and sage sit on
+  opposite sides of neutral, so a straight line between them passes *nearer the
+  achromatic axis than either endpoint*. Chroma measured 0.058 → 0.042 → 0.029
+  → **0.024** → 0.033, bottoming a third of the way in, below sage's own 0.033:
+  the caret would have gone grey mid-session, reading as a caret that lost its
+  colour rather than as time passing. `oklch` interpolates hue angle and chroma
+  separately, rounds the corner, and stays monotonic into sage. A unit test can
+  only assert which space was *asked for*; the rendered check is what caught it.
 - **Notices and tooltips are Obsidian's dark toast, and the text colour is not
   a variable.** `.notice`, `.tooltip`, `.cm-completionInfo` and
   `.cm-tooltip-docstring` all take their background from

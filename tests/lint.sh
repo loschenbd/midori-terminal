@@ -56,6 +56,16 @@ else
   echo "  skip (node not found)"
 fi
 
+# A BACKTICK INSIDE THE INJECTED STYLESHEET ENDS IT. Every plugin here injects
+# its CSS as a template literal, and every one documents the CSS in prose above
+# the rules — where it is natural to quote a selector or a property `like this`,
+# which terminates the string and turns the rest of the file into syntax errors
+# far from the cause. Hit three times in one session before this check existed.
+# node --check does catch it, but only afterwards and pointing at the wrong
+# line; this names the actual mistake.
+echo "== no backticks inside injected stylesheets =="
+if python3 tests/check_style_literals.py; then :; else FAIL=1; fi
+
 echo "== obsidian plugins parse =="
 if command -v node >/dev/null 2>&1; then
   for js in obsidian/plugins/*/main.js; do
