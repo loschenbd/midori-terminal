@@ -357,6 +357,17 @@ Residual gotchas:
   Obsidian paints it by default, so it was checking contrast against a colour
   that never appears in this theme. A harness that models the host's chrome has
   to model *this* host's chrome.
+- **Spacing that must survive belongs on a class the host has never heard of.**
+  Three rounds went into padding the phone readout and each lost differently: a
+  single-class rule is (0,1,0) and Obsidian styles `.view-actions
+  .clickable-icon` at (0,2,0); raising it to three classes won *that* fight and
+  the cards still came out flush, because the moment an element wears a host
+  class it is inside a cascade nobody can enumerate from the outside. The
+  spacing went onto `.midori-timer-flaps` and `.midori-timer-icon` instead —
+  names that exist nowhere but the plugin's own file. No host rule can target
+  them, no future release can start to, and there is no specificity left to
+  lose. Putting it on the tidier element was worth less than putting it
+  somewhere it simply applies.
 - **Wearing the host's classes also opts you into the host's specificity.**
   Adding `.clickable-icon` to the phone readout bought the header's icon
   geometry and press state, and with them everything Obsidian says about that
