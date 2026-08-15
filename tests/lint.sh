@@ -63,6 +63,9 @@ else
   echo "  skip (node not found)"
 fi
 
+echo "== prose typography =="
+if python3 tests/test_prose_typography.py; then :; else FAIL=1; fi
+
 # A BACKTICK INSIDE THE INJECTED STYLESHEET ENDS IT. Every plugin here injects
 # its CSS as a template literal, and every one documents the CSS in prose above
 # the rules — where it is natural to quote a selector or a property `like this`,
