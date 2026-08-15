@@ -63,12 +63,20 @@
  *    during THIS run, so the item does not jump when 1:00:00 becomes 59:59.
  *
  * 3. SET IT BY DRAGGING, OR BY TYPING, AND NEVER ONLY ONE. The window is a
- *    drum you flick — a real scroll container, so the momentum and snapping are
- *    the platform's — reading out through a split-flap clock. But the plugin's
- *    premise is a duration you TYPE, opened by a hotkey, so the field stays
- *    autofocused and Enter still submits the instant the window opens. Each
- *    drives the other. The drum enumerates whole minutes, so 90s, 1:30 and 2h30
- *    are typed rather than scrolled, which is the honest cost of a dial.
+ *    row of drums you flick — real scroll containers, so the momentum and
+ *    snapping are the platform's — reading out through a split-flap clock. But
+ *    the plugin's premise is a duration you TYPE, opened by a hotkey, so the
+ *    field stays autofocused and Enter still submits the instant the window
+ *    opens. Each drives the other, and with hours, minutes and seconds all on
+ *    drums, everything under a day is now reachable either way.
+ *
+ *    AND TWO WAYS TO SAY IT. "For 25 minutes" and "until 1pm" are the two forms
+ *    a session takes in the head, and neither is a special case of the other,
+ *    so both are first-class: a segmented control, two sets of drums, one
+ *    field that parses whichever the mode expects. Until-mode works out the
+ *    exact hours, minutes and seconds to the target and hands that to the same
+ *    machinery — so downstream there is still only a number of seconds, and
+ *    switching modes carries the value across rather than resetting it.
  *
  *    Parsing stays permissive, because a duration box that rejects "25" is a
  *    bad duration box, and the echo says what was understood rather than the
@@ -249,6 +257,79 @@ function caretColor(t) {
     key: `${i}:${pct}`,
     color: `color-mix(in oklch, ${stopColor(b)} ${pct}%, ${stopColor(a)})`,
   };
+}
+
+/* Clock-time entry: "until 1pm" rather than "for 25 minutes".
+ *
+ * NOW IS A PARAMETER, not Date.now() read inside. Every interesting case here
+ * is about the relationship between the target and the current time — the
+ * rollover past midnight, which meridiem is meant, whether 1:00 has already
+ * happened today — and none of them can be tested at all if the function reads
+ * the clock itself. The one caller passes Date.now().
+ */
+const CLOCK_RE = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a|p)?$/i;
+
+/**
+ * "1pm", "13:00", "1:30 pm", "noon" -> the next Date at that wall-clock time.
+ * Returns null if it is not a time. Always strictly in the future.
+ */
+function parseClockTime(raw, now) {
+  const text = String(raw == null ? '' : raw).trim().toLowerCase().replace(/\./g, '');
+  if (!text) return null;
+
+  let hour;
+  let minute = 0;
+  let meridiem = null;
+
+  if (text === 'noon' || text === 'midday') {
+    hour = 12;
+  } else if (text === 'midnight') {
+    hour = 0;
+  } else {
+    const m = CLOCK_RE.exec(text);
+    if (!m) return null;
+    hour = Number(m[1]);
+    minute = m[2] == null ? 0 : Number(m[2]);
+    meridiem = m[3] ? m[3][0] : null;          // "am"/"a" -> "a"
+    if (minute > 59) return null;
+    if (meridiem && (hour < 1 || hour > 12)) return null;
+    if (!meridiem && hour > 23) return null;
+  }
+
+  const base = new Date(now);
+  const at = new Date(now);
+  at.setSeconds(0, 0);
+  at.setMinutes(minute);
+
+  if (meridiem) {
+    at.setHours((hour % 12) + (meridiem === 'p' ? 12 : 0));
+  } else if (hour >= 1 && hour <= 12) {
+    /* A bare "1" could mean either 01:00 or 13:00, and the useful answer is
+     * whichever comes round first — the kitchen-timer reading. Try both and
+     * take the soonest that is still ahead.
+     *
+     * HOUR 0 IS EXCLUDED, and that is not an off-by-one. "0:15" and "midnight"
+     * are 24-hour notation, which is unambiguous: nobody writing 0 means 12.
+     * Letting it into this branch pairs 00:15 against 12:15 and picks the
+     * sooner one, so "midnight" came back as noon. */
+    const candidates = [hour % 12, (hour % 12) + 12].map((h) => {
+      const c = new Date(at);
+      c.setHours(h);
+      if (c <= base) c.setDate(c.getDate() + 1);
+      return c;
+    });
+    return candidates.sort((a, b) => a - b)[0];
+  } else {
+    at.setHours(hour);
+  }
+
+  if (at <= base) at.setDate(at.getDate() + 1);  // already gone today
+  return at;
+}
+
+/** Whole seconds from `now` until `target`, never negative. */
+function secondsUntil(target, now) {
+  return Math.max(0, Math.round((target.getTime() - now) / 1000));
 }
 
 /**
@@ -459,6 +540,35 @@ const STYLE = `
 .midori-timer-echo b { color: var(--text-normal); font-weight: var(--font-semibold, 600); }
 .midori-timer-dial.is-bad .midori-timer-echo { color: var(--color-red); }
 
+/* ---- the mode switch -------------------------------------------------
+
+   Two ways to say the same thing: how long, or until when. Neither is a
+   sub-mode of the other, so this is a segmented control rather than a checkbox
+   tucked under the field. */
+.midori-timer-modes {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--background-modifier-form-field, var(--background-secondary));
+}
+.midori-timer-modes button {
+  flex: 1;
+  padding: 5px 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small, 0.87em);
+  cursor: pointer;
+}
+.midori-timer-modes button.is-on {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
+}
+
 /* ---- the drum --------------------------------------------------------
 
    A REAL SCROLL CONTAINER, which is the whole implementation decision. Native
@@ -469,6 +579,35 @@ const STYLE = `
 
    The padding is what lets the first and last values reach the centre band. It
    has to be (height - item) / 2 exactly, or the ends cannot be selected. */
+/* Several drums sit side by side — hours, minutes, seconds — and each is an
+   independent scroller. They share one band drawn across the whole row rather
+   than one per column, because the row reads as a single instrument that way
+   instead of as three controls that happen to be adjacent. */
+.midori-timer-drums {
+  position: relative;
+  display: flex;
+  gap: 2px;
+}
+.midori-timer-drums.is-hidden { display: none; }
+
+/* Centred on the DRUM, not on the row. The row is taller than the drums by the
+   height of the captions beneath them, so top: 50% would sit the band half a
+   caption low. 85px is the drum's own half-height, stated once. */
+.midori-timer-drums .midori-timer-drum-band {
+  left: 0;
+  right: 0;
+  top: 85px;
+}
+.midori-timer-column {
+  flex: 1;
+  min-width: 0;
+}
+.midori-timer-caption {
+  text-align: center;
+  font-size: var(--font-ui-smaller, 0.75em);
+  color: var(--text-faint, var(--text-muted));
+  margin-top: 2px;
+}
 .midori-timer-drum {
   position: relative;
   height: 170px;
@@ -594,127 +733,115 @@ body.midori-drawn.midori-timer-running .midori-title-caret {
 
 /* The typed-duration window. Opened by command (bind a hotkey to it), by
  * clicking an idle readout, or from the right-click menu. */
-const DRUM_MIN = 1;                 // minutes reachable by dragging
-const DRUM_MAX = 120;
 const DRUM_ITEM = 34;               // px, and must match the stylesheet
 const FLAP_MS = 90;                 // per half-fold; a full flip is twice this
 
-class DurationModal extends Modal {
-  constructor(app, plugin) {
-    super(app);
-    this.plugin = plugin;
-    this.seconds = plugin.settings.defaultDuration;
-    this.flaps = [];                // one cell per character of the clock
-    this.shown = '';                // what those cells currently read
+/* Does this reader's locale put the clock on a 12-hour dial? It decides whether
+ * the "until" drums carry an AM/PM column, and it is asked of Intl rather than
+ * guessed from the language, because the two disagree often enough to matter. */
+function usesTwelveHour() {
+  try {
+    const o = new Intl.DateTimeFormat([], { hour: 'numeric' }).resolvedOptions();
+    return o.hour12 !== false && o.hourCycle !== 'h23' && o.hourCycle !== 'h24';
+  } catch (e) {
+    return true;
   }
+}
 
-  onOpen() {
-    const { contentEl, titleEl } = this;
-    titleEl.setText('Set timer');
-
-    this.root = contentEl.createDiv({ cls: 'midori-timer-dial' });
-    this.flapEl = this.root.createDiv({ cls: 'midori-timer-flaps' });
-    this.echoEl = this.root.createDiv({ cls: 'midori-timer-echo' });
-
-    this.buildDrum();
-
-    this.input = this.root.createEl('input', { cls: 'midori-timer-type', type: 'text' });
-    this.input.placeholder = 'or type 25m, 1h30, 90s, 1:30';
-    this.input.spellcheck = false;
-    this.input.addEventListener('input', () => {
-      const secs = parseDuration(this.input.value);
-      if (secs != null) this.setSeconds(secs, 'type');
-      else this.render();                       // show the error, keep the value
+/**
+ * One column of a picker: a scroll container whose selected value is whatever
+ * sits under the band.
+ *
+ * POSITION AND VALUE ARE PURE ARITHMETIC IN BOTH DIRECTIONS, never measured.
+ * The obvious centring formula reads clientHeight, which INCLUDES PADDING — and
+ * these scrollers are mostly padding, so that the first and last values can
+ * reach the band. Under content-box sizing clientHeight came back 306 rather
+ * than 170, every scroll landed two items short, and because the scroll handler
+ * writes what it finds back into state, the window quietly rewrote its own
+ * default on open. A measurement bug in a control that feeds itself does not
+ * look like a measurement bug; it looks like the setting not sticking.
+ *
+ * So centring row i is scrollTop = 34i exactly, and the inverse is one
+ * division. The only thing they depend on is the stylesheet's padding being
+ * (height - item) / 2, which box-sizing: border-box there keeps true.
+ */
+class Drum {
+  /** @param {{text: string, value: any}[]} rows */
+  constructor(host, rows, caption, onPick, onTouch) {
+    this.rows = rows;
+    this.onPick = onPick;
+    this.onTouch = onTouch || (() => {});
+    this.column = host.createDiv({ cls: 'midori-timer-column' });
+    this.el = this.column.createDiv({ cls: 'midori-timer-drum' });
+    this.scroller = this.el.createDiv({ cls: 'midori-timer-drum-scroll' });
+    this.items = rows.map((row) => {
+      const it = this.scroller.createDiv({ cls: 'midori-timer-drum-item', text: row.text });
+      it.addEventListener('click', () => this.set(row.value));
+      return it;
     });
+    if (caption) this.column.createDiv({ cls: 'midori-timer-caption', text: caption });
+    this.index = 0;
 
-    const ramp = this.root.createDiv({ cls: 'midori-timer-ramp' });
-    ramp.createDiv({ cls: 'midori-timer-ramp-bar' });
-    const legend = ramp.createDiv({ cls: 'midori-timer-ramp-legend' });
-    legend.createSpan({ text: 'your caret now' });
-    legend.createSpan({ text: 'when it ends' });
-
-    const start = this.root.createEl('button', { cls: 'midori-timer-start', text: 'Start' });
-    start.addClass('mod-cta');
-    start.addEventListener('click', () => this.submit());
-
-    // Enter submits from anywhere in the window. Escape is Obsidian's already.
-    this.scope.register([], 'Enter', (ev) => { ev.preventDefault(); this.submit(); return false; });
-
-    this.render(true);
-    this.scrollDrumTo(this.minutes(), 'auto');
-    window.setTimeout(() => { this.input.focus(); }, 0);
-  }
-
-  /** Whole minutes, for the drum. A 90s duration is not on it; see setSeconds. */
-  minutes() { return Math.round(this.seconds / 60); }
-
-  // ------------------------------------------------------------------ drum
-
-  buildDrum() {
-    this.drum = this.root.createDiv({ cls: 'midori-timer-drum' });
-    this.scroller = this.drum.createDiv({ cls: 'midori-timer-drum-scroll' });
-    this.items = [];
-    for (let m = DRUM_MIN; m <= DRUM_MAX; m += 1) {
-      const it = this.scroller.createDiv({ cls: 'midori-timer-drum-item', text: String(m) });
-      it.addEventListener('click', () => this.setSeconds(m * 60, 'tap'));
-      this.items.push(it);
-    }
-    this.drum.createDiv({ cls: 'midori-timer-drum-band' });
-
-    // Read the centre on every scroll, coalesced to one read per frame. A
-    // scroll event can fire many times between paints and each read costs a
-    // layout, so doing this unthrottled makes the drum stutter under a fling.
+    // One read per frame. A scroll event fires many times between paints and
+    // each read would otherwise cost a layout, which makes a fling stutter.
     let queued = false;
     this.scroller.addEventListener('scroll', () => {
       if (queued) return;
       queued = true;
       window.requestAnimationFrame(() => {
         queued = false;
-        const m = this.centreMinute();
-        if (m != null) this.setSeconds(m * 60, 'scroll');
+        const idx = this.centreIndex();
+        if (idx === this.index) return;
+        this.index = idx;
+        this.paint();
+        this.onPick(this.value(), 'scroll');
       });
     }, { passive: true });
 
-    this.dragDrum();
+    /* Announce that a HUMAN moved this drum, before any value has changed. The
+     * owner needs to know the difference between a scroll it caused and a
+     * scroll the reader caused — without it, positioning a drum from typed
+     * text scrolls it, the scroll reads back, and the read-back overwrites the
+     * half-typed text under the cursor. */
+    ['pointerdown', 'wheel', 'touchstart'].forEach((ev) => {
+      this.scroller.addEventListener(ev, () => this.onTouch(), { passive: true });
+    });
+
+    this.drag();
+    this.paint();
   }
 
-  /* Position and value are pure arithmetic in both directions, deliberately.
-   *
-   * The obvious implementation measures: scrollTop = item.offsetTop -
-   * (scroller.clientHeight - item.offsetHeight) / 2. It is also wrong in a way
-   * that hides, because clientHeight INCLUDES PADDING and this scroller is
-   * mostly padding — 68px top and bottom, so that the first and last values can
-   * reach the centre band. Under content-box sizing clientHeight came back 306
-   * rather than 170, every scrollDrumTo landed two items short, and since the
-   * scroll handler writes what it finds back into state, the modal quietly
-   * rewrote its own default from 25m to 23m on open. A measurement bug in a
-   * control that feeds itself does not look like a measurement bug; it looks
-   * like the setting not sticking.
-   *
-   * So neither direction reads layout. Centring item i means scrollTop = 34i,
-   * exactly, and the inverse is one division. The two cannot drift apart, there
-   * is no layout read on a scroll event, and the only thing they depend on is
-   * the padding being (height - item) / 2 — which the stylesheet states, and
-   * box-sizing: border-box there keeps true. */
-  centreMinute() {
-    const idx = Math.round(this.scroller.scrollTop / DRUM_ITEM);
-    return Math.max(DRUM_MIN, Math.min(DRUM_MAX, idx + DRUM_MIN));
+  value() { return this.rows[this.index].value; }
+
+  centreIndex() {
+    const i = Math.round(this.scroller.scrollTop / DRUM_ITEM);
+    return Math.max(0, Math.min(this.rows.length - 1, i));
   }
 
-  scrollDrumTo(minute, behavior) {
-    const m = Math.max(DRUM_MIN, Math.min(DRUM_MAX, minute));
-    this.scroller.scrollTo({
-      top: (m - DRUM_MIN) * DRUM_ITEM,
-      behavior: behavior || 'smooth',
+  set(value, behavior, silent) {
+    const idx = this.rows.findIndex((r) => r.value === value);
+    if (idx < 0) return;
+    const changed = idx !== this.index;
+    this.index = idx;                           // BEFORE the scroll, so the
+    this.paint();                               // resulting event reads as a no-op
+    this.scroller.scrollTo({ top: idx * DRUM_ITEM, behavior: behavior || 'smooth' });
+    if (changed && !silent) this.onPick(this.value(), 'set');
+  }
+
+  paint() {
+    this.items.forEach((it, i) => {
+      const d = Math.abs(i - this.index);
+      it.toggleClass('is-sel', d === 0);
+      it.toggleClass('is-near', d === 1);
     });
   }
 
-  /* Pointer-drag, the one thing native scrolling does not give us. See the
-   * is-dragging rule in the stylesheet for why snapping is switched off. */
-  dragDrum() {
+  /* Pointer-drag, the one thing native scrolling does not provide. Snapping is
+   * switched off for the duration — see the is-dragging rule for why. */
+  drag() {
+    const el = this.scroller;
     let down = false;
     let last = 0;
-    const el = this.scroller;
     el.addEventListener('pointerdown', (ev) => {
       if (ev.button !== 0) return;
       down = true;
@@ -736,46 +863,255 @@ class DurationModal extends Modal {
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
   }
+}
 
-  // ------------------------------------------------------------------ state
+const range = (from, to, pad) => {
+  const rows = [];
+  for (let v = from; v <= to; v += 1) {
+    rows.push({ value: v, text: pad ? String(v).padStart(2, '0') : String(v) });
+  }
+  return rows;
+};
 
-  /**
-   * The single writer. `from` says which control moved, so the others can be
-   * synced without the update bouncing back and fighting the user's finger.
-   */
-  setSeconds(secs, from) {
-    if (secs === this.seconds && from !== 'init') return;
-    this.seconds = secs;
-    if (from !== 'type') this.input.value = formatHuman(secs);
-    if (from !== 'scroll' && from !== 'drag') {
-      const m = this.minutes();
-      if (m >= DRUM_MIN && m <= DRUM_MAX) this.scrollDrumTo(m);
+/* A duration the drums can hold: one second under a full day. Typing more than
+ * that clamps rather than desyncing the drums from the value they feed. */
+const MAX_SECONDS = 24 * 3600 - 1;
+
+const clockLabel = (d) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const sameDay = (a, b) => a.getFullYear() === b.getFullYear()
+  && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+/**
+ * The set-timer window.
+ *
+ * TWO WAYS TO SAY THE SAME THING. "For 25 minutes" and "until 1pm" are the two
+ * ways people actually hold a session in their head, and neither is a special
+ * case of the other, so both are first-class: a segmented control, two sets of
+ * drums, and one typed field that parses whichever the current mode expects.
+ *
+ * ONE VALUE UNDERNEATH THEM BOTH. Everything downstream wants a number of
+ * seconds, so `seconds` is the state and the mode only decides how it is
+ * arrived at and described. Switching modes carries the value across rather
+ * than resetting it — 25 minutes becomes the clock time 25 minutes from now,
+ * and back again — so the switch is a change of framing, not of intent.
+ */
+class DurationModal extends Modal {
+  constructor(app, plugin) {
+    super(app);
+    this.plugin = plugin;
+    this.mode = 'for';
+    this.seconds = plugin.settings.defaultDuration;
+    this.target = null;             // the Date being counted down to, in until
+    this.twelve = usesTwelveHour();
+    this.lastTouched = 'type';      // which control the human moved last
+    this.flaps = [];                // one cell per character of the clock
+    this.shown = '';                // what those cells currently read
+  }
+
+  onOpen() {
+    const { contentEl, titleEl } = this;
+    titleEl.setText('Set timer');
+
+    this.root = contentEl.createDiv({ cls: 'midori-timer-dial' });
+
+    const modes = this.root.createDiv({ cls: 'midori-timer-modes' });
+    this.forBtn = modes.createEl('button', { text: 'For' });
+    this.untilBtn = modes.createEl('button', { text: 'Until' });
+    this.forBtn.addEventListener('click', () => this.setMode('for'));
+    this.untilBtn.addEventListener('click', () => this.setMode('until'));
+
+    this.flapEl = this.root.createDiv({ cls: 'midori-timer-flaps' });
+    this.echoEl = this.root.createDiv({ cls: 'midori-timer-echo' });
+
+    const pick = () => this.fromDrums();
+    const touch = () => { this.lastTouched = 'drum'; };
+
+    this.forDrums = this.root.createDiv({ cls: 'midori-timer-drums' });
+    this.dH = new Drum(this.forDrums, range(0, 23), 'hours', pick, touch);
+    this.dM = new Drum(this.forDrums, range(0, 59, true), 'min', pick, touch);
+    this.dS = new Drum(this.forDrums, range(0, 59, true), 'sec', pick, touch);
+    this.forDrums.createDiv({ cls: 'midori-timer-drum-band' });
+
+    /* The until drums carry no seconds column. A target is stated to the
+     * minute — nobody sets a timer for 1:00:37pm — and the seconds are what
+     * the DURATION picks up, which is the whole point of stating it this way. */
+    this.untilDrums = this.root.createDiv({ cls: 'midori-timer-drums' });
+    this.uH = new Drum(this.untilDrums, this.twelve ? range(1, 12) : range(0, 23),
+      'hour', pick, touch);
+    this.uM = new Drum(this.untilDrums, range(0, 59, true), 'min', pick, touch);
+    this.uAP = this.twelve
+      ? new Drum(this.untilDrums,
+        [{ value: 'am', text: 'AM' }, { value: 'pm', text: 'PM' }], '\u00a0', pick, touch)
+      : null;
+    this.untilDrums.createDiv({ cls: 'midori-timer-drum-band' });
+
+    this.input = this.root.createEl('input', { cls: 'midori-timer-type', type: 'text' });
+    this.input.spellcheck = false;
+    this.input.addEventListener('input', () => {
+      this.lastTouched = 'type';
+      const raw = this.input.value.trim();
+      if (this.mode === 'for') {
+        const secs = parseDuration(raw);
+        if (secs != null) this.seedFor(secs);
+      } else {
+        const at = parseClockTime(raw, Date.now());
+        if (at) this.seedUntil(at);
+      }
+      this.render();                            // show the error, keep the value
+    });
+
+    const ramp = this.root.createDiv({ cls: 'midori-timer-ramp' });
+    ramp.createDiv({ cls: 'midori-timer-ramp-bar' });
+    const legend = ramp.createDiv({ cls: 'midori-timer-ramp-legend' });
+    legend.createSpan({ text: 'your caret now' });
+    legend.createSpan({ text: 'when it ends' });
+
+    const start = this.root.createEl('button', { cls: 'midori-timer-start', text: 'Start' });
+    start.addClass('mod-cta');
+    start.addEventListener('click', () => this.submit());
+
+    // Enter submits from anywhere in the window. Escape is Obsidian's already.
+    this.scope.register([], 'Enter', (ev) => { ev.preventDefault(); this.submit(); return false; });
+
+    this.paintMode();                           // must precede the first seed
+    this.seedFor(this.seconds);
+    this.render(true);
+    window.setTimeout(() => { this.input.focus(); }, 0);
+  }
+
+  // ------------------------------------------------------------------ mode
+
+  setMode(mode) {
+    if (mode === this.mode) return;
+    this.mode = mode;
+    this.lastTouched = 'drum';                  // so the field is re-worded
+    // SEED AFTER UNHIDING. scrollTo on a display:none element is a no-op, so
+    // the drums have to be on screen before they can be positioned.
+    this.paintMode();
+    if (mode === 'until') {
+      const at = new Date(Date.now() + this.seconds * 1000);
+      at.setSeconds(0, 0);                      // the drums only go to minutes
+      if (at.getTime() <= Date.now()) at.setMinutes(at.getMinutes() + 1);
+      this.seedUntil(at);
+    } else {
+      this.seedFor(this.seconds);
     }
+    this.input.value = this.fieldText();
+    this.render();
+    this.input.focus();
+  }
+
+  paintMode() {
+    const isFor = this.mode === 'for';
+    this.forBtn.toggleClass('is-on', isFor);
+    this.untilBtn.toggleClass('is-on', !isFor);
+    this.forDrums.toggleClass('is-hidden', !isFor);
+    this.untilDrums.toggleClass('is-hidden', isFor);
+    this.input.placeholder = isFor
+      ? 'or type 25m, 1h30, 90s, 1:30'
+      : 'or type 1pm, 1:30pm, 13:45, noon';
+  }
+
+  fieldText() {
+    return this.mode === 'for' ? formatHuman(this.seconds)
+      : (this.target ? clockLabel(this.target) : '');
+  }
+
+  // ----------------------------------------------------------------- drums
+
+  /* Seeding writes the drums INSTANTLY, not smoothly, and that is a
+   * correctness choice rather than a taste one. A smooth scroll passes through
+   * every intermediate row, each of which fires a scroll event, and each of
+   * those would be read back as a value the human never chose — overwriting
+   * the field mid-keystroke. Landing on the row in one step means the only
+   * scroll event that arrives already reads the value we just wrote, and the
+   * drum's own idx-unchanged check swallows it. */
+  seedFor(secs) {
+    const s = Math.max(0, Math.min(MAX_SECONDS, Math.round(secs)));
+    this.seconds = s;
+    this.dH.set(Math.floor(s / 3600), 'auto', true);
+    this.dM.set(Math.floor((s % 3600) / 60), 'auto', true);
+    this.dS.set(s % 60, 'auto', true);
+  }
+
+  seedUntil(at) {
+    this.target = at;
+    this.seconds = secondsUntil(at, Date.now());
+    const h = at.getHours();
+    if (this.twelve) {
+      this.uH.set(((h + 11) % 12) + 1, 'auto', true);   // 0 -> 12, 13 -> 1
+      this.uAP.set(h < 12 ? 'am' : 'pm', 'auto', true);
+    } else {
+      this.uH.set(h, 'auto', true);
+    }
+    this.uM.set(at.getMinutes(), 'auto', true);
+  }
+
+  /** The soonest future moment matching the until drums. */
+  targetFromDrums() {
+    let h = this.uH.value();
+    if (this.twelve) h = (h % 12) + (this.uAP.value() === 'pm' ? 12 : 0);
+    const at = new Date();
+    at.setHours(h, this.uM.value(), 0, 0);
+    // Past times mean tomorrow. At 4pm, "9" is tomorrow morning, which is what
+    // anyone setting it means; the alternative is a timer that ends instantly.
+    if (at.getTime() <= Date.now()) at.setDate(at.getDate() + 1);
+    return at;
+  }
+
+  /** A drum moved: recompute the one value from whichever set is on screen. */
+  fromDrums() {
+    if (this.mode === 'for') {
+      this.target = null;
+      this.seconds = this.dH.value() * 3600 + this.dM.value() * 60 + this.dS.value();
+    } else {
+      this.target = this.targetFromDrums();
+      this.seconds = secondsUntil(this.target, Date.now());
+    }
+    // Never clobber text the human is in the middle of typing.
+    if (this.lastTouched !== 'type') this.input.value = this.fieldText();
     this.render();
   }
 
-  render(force) {
-    const raw = this.input ? this.input.value.trim() : '';
-    const parsed = raw === '' ? this.seconds : parseDuration(raw);
-    const bad = raw !== '' && parsed == null;
-    this.root.toggleClass('is-bad', bad);
+  // ----------------------------------------------------------------- render
 
-    if (bad) {
-      this.echoEl.setText('Not a duration — try 25m, 1h30, 90s or 1:30');
+  /** What the field currently says, or null if it does not parse in this mode. */
+  parseField() {
+    const raw = this.input ? this.input.value.trim() : '';
+    if (raw === '') return { ok: true, empty: true };
+    if (this.mode === 'for') {
+      const secs = parseDuration(raw);
+      return { ok: secs != null, seconds: secs };
+    }
+    const at = parseClockTime(raw, Date.now());
+    return { ok: at != null, at };
+  }
+
+  render(force) {
+    const field = this.parseField();
+    this.root.toggleClass('is-bad', !field.ok);
+
+    if (!field.ok) {
+      this.echoEl.setText(this.mode === 'for'
+        ? 'Not a duration — try 25m, 1h30, 90s or 1:30'
+        : 'Not a time — try 1pm, 1:30pm, 13:45 or noon');
     } else {
       this.echoEl.empty();
-      this.echoEl.createEl('b', { text: formatClock(this.seconds) });
-      this.echoEl.createSpan({ text: '  ·  ends ' });
-      this.echoEl.createEl('b', { text: endsAtClock(this.seconds) });
+      this.echoEl.createEl('b', { text: formatHuman(this.seconds) });
+      this.echoEl.createSpan({ text: '  ·  ' });
+      if (this.mode === 'until' && this.target) {
+        this.echoEl.createSpan({ text: 'until ' });
+        this.echoEl.createEl('b', { text: clockLabel(this.target) });
+        if (!sameDay(this.target, new Date())) this.echoEl.createSpan({ text: ' tomorrow' });
+      } else {
+        this.echoEl.createSpan({ text: 'ends ' });
+        this.echoEl.createEl('b', { text: endsAtClock(this.seconds) });
+      }
     }
 
-    const m = this.minutes();
-    this.items.forEach((it, i) => {
-      const d = Math.abs(i + DRUM_MIN - m);
-      it.toggleClass('is-sel', d === 0);
-      it.toggleClass('is-near', d === 1);
-    });
-
+    // The flaps always read the DURATION, in both modes. Spinning a target
+    // time and watching the countdown assemble itself is the answer to the
+    // question that mode is being used to ask.
     this.paintFlaps(formatClock(this.seconds), force);
   }
 
@@ -844,11 +1180,19 @@ class DurationModal extends Modal {
   }
 
   submit() {
-    const raw = this.input.value.trim();
-    const secs = raw === '' ? this.seconds : parseDuration(raw);
-    if (secs == null) {
+    const field = this.parseField();
+    if (!field.ok) {
       this.render();
-      return;                                   // keep the modal open to fix it
+      return;                                   // keep the window open to fix it
+    }
+    // RECOMPUTED AGAINST THE CLOCK AT THE MOMENT OF STARTING. "Until 1pm" means
+    // 1pm, and the seconds spent choosing it are part of what has to come off.
+    const secs = this.mode === 'until' && this.target
+      ? secondsUntil(this.target, Date.now())
+      : this.seconds;
+    if (!(secs > 0)) {
+      this.render();
+      return;                                   // a zero-length session is a no-op
     }
     this.close();
     this.plugin.start(secs);
@@ -859,448 +1203,4 @@ class DurationModal extends Modal {
   }
 }
 
-// ------------------------------------------------------------------ plugin
 
-module.exports = class MidoriTimer extends Plugin {
-  async onload() {
-    const data = (await this.loadData()) || {};
-    this.settings = Object.assign({}, DEFAULTS, data);
-    /* Runtime state, kept beside the settings under a reserved key.
-     *   endsAt    epoch ms of the deadline while running   (decision 1)
-     *   pausedAt  seconds left while paused
-     *   total     the duration that was set, for the finish message */
-    this.session = Object.assign({ endsAt: null, pausedAt: null, total: null },
-                                 data.session || {});
-    this.timer = null;
-
-    const style = document.createElement('style');
-    style.id = 'midori-timer-style';
-    style.textContent = STYLE;
-    document.head.appendChild(style);
-    this.register(() => style.remove());
-
-    this.buildStatusBar();
-    this.addSettingTab(new MidoriTimerSettings(this.app, this));
-
-    this.addCommand({
-      id: 'set-duration',
-      name: 'Set duration and start',
-      callback: () => new DurationModal(this.app, this).open(),
-    });
-    this.addCommand({
-      id: 'start-default',
-      name: 'Start timer with the default duration',
-      callback: () => this.start(this.settings.defaultDuration),
-    });
-    this.addCommand({
-      id: 'toggle',
-      name: 'Pause or resume timer',
-      checkCallback: (checking) => {
-        if (!this.isActive()) return false;
-        if (!checking) this.toggle();
-        return true;
-      },
-    });
-    this.addCommand({
-      id: 'stop',
-      name: 'Stop timer',
-      checkCallback: (checking) => {
-        if (!this.isActive()) return false;
-        if (!checking) this.stop();
-        return true;
-      },
-    });
-    this.addCommand({
-      id: 'add-five',
-      name: 'Add five minutes',
-      checkCallback: (checking) => {
-        if (!this.isActive()) return false;
-        if (!checking) this.extend(300);
-        return true;
-      },
-    });
-
-    /* Decision 4. A deadline that passed while Obsidian was shut is announced
-     * once rather than resumed as a negative countdown. Deferred to layout
-     * ready so the notice is not thrown into a half-built workspace. */
-    this.app.workspace.onLayoutReady(() => {
-      if (this.session.endsAt != null && this.remaining() <= 0) {
-        this.finish(true);
-      } else if (this.session.endsAt != null) {
-        this.run();
-      } else {
-        this.render();
-      }
-    });
-  }
-
-  /* The caret is the one piece of state that outlives this plugin if it is not
-   * cleaned up by hand. Everything else the plugin owns is an element it
-   * created, which Obsidian removes with the plugin; the caret belongs to
-   * midori-caret and merely wears a class and a variable set from here. Disable
-   * this plugin mid-session without unsetting them and the caret stays ochre,
-   * with nothing running and nothing left to turn it back. */
-  onunload() {
-    this.clearTick();
-    document.body.classList.remove('midori-timer-running');
-    document.body.style.removeProperty('--midori-timer-caret');
-  }
-
-  async save() {
-    await this.saveData(Object.assign({}, this.settings, { session: this.session }));
-  }
-
-  // ------------------------------------------------------------- lifecycle
-
-  isRunning() { return this.session.endsAt != null; }
-  isPaused()  { return this.session.pausedAt != null; }
-  isActive()  { return this.isRunning() || this.isPaused(); }
-
-  /** Seconds left, always derived from the clock — never accumulated. */
-  remaining() {
-    if (this.session.pausedAt != null) return this.session.pausedAt;
-    if (this.session.endsAt == null) return 0;
-    return (this.session.endsAt - Date.now()) / 1000;
-  }
-
-  start(seconds) {
-    if (!Number.isFinite(seconds) || seconds <= 0) return;
-    this.session = {
-      endsAt: Date.now() + seconds * 1000,
-      pausedAt: null,
-      total: seconds,
-    };
-    this.reserveWidth(seconds);
-    this.run();
-    this.save();
-    new Notice(`Timer set for ${formatHuman(seconds)}.`);
-  }
-
-  toggle() {
-    if (this.isPaused()) {
-      this.session.endsAt = Date.now() + this.session.pausedAt * 1000;
-      this.session.pausedAt = null;
-      this.run();
-    } else if (this.isRunning()) {
-      this.session.pausedAt = Math.max(0, this.remaining());
-      this.session.endsAt = null;
-      this.clearTick();
-      this.render();
-    } else {
-      return;
-    }
-    this.save();
-  }
-
-  extend(seconds) {
-    if (this.isPaused()) this.session.pausedAt += seconds;
-    else if (this.isRunning()) this.session.endsAt += seconds * 1000;
-    else return;
-    if (this.session.total != null) this.session.total += seconds;
-    this.reserveWidth(this.remaining());
-    this.render();
-    this.save();
-    new Notice(`Timer extended to ${formatClock(this.remaining())}.`);
-  }
-
-  stop() {
-    this.clearTick();
-    this.session = { endsAt: null, pausedAt: null, total: null };
-    this.render();
-    this.save();
-  }
-
-  run() {
-    this.clearTick();
-    this.reserveWidth(Math.max(this.remaining(), this.session.total || 0));
-    this.render();
-    // registerInterval so an unload during a run cannot leave it ticking.
-    this.tick = this.registerInterval(
-      window.setInterval(() => this.onTick(), TICK_MS),
-    );
-  }
-
-  clearTick() {
-    if (this.tick != null) {
-      window.clearInterval(this.tick);
-      this.tick = null;
-    }
-  }
-
-  onTick() {
-    if (!this.isRunning()) { this.clearTick(); return; }
-    if (this.remaining() <= 0) { this.finish(false); return; }
-    this.render();
-  }
-
-  /* Finishing RESETS. The session is cleared, the caret returns to indigo and
-   * the status bar returns to its idle clock, all in the same frame — there is no
-   * sticky "finished" state to dismiss. The end of the timer is announced by
-   * things that announce themselves and then stop: a Notice, the chime, and
-   * the optional OS banner. A readout that sits at 0:00 wearing a bell until
-   * you click it is a chore, and it is also a lie the moment you walk away
-   * from the desk and come back to it hours later.
-   *
-   * @param {boolean} late true when the deadline passed while Obsidian was shut. */
-  finish(late) {
-    const total = this.session.total;
-    this.clearTick();
-    this.session = { endsAt: null, pausedAt: null, total: null };
-    this.render();
-    this.save();
-
-    const what = total ? ` (${formatHuman(total)})` : '';
-    const base = this.settings.finishMessage.trim() || `Timer finished${what}`;
-    new Notice(late ? `${base} — while Obsidian was closed.` : base, 8000);
-
-    if (this.settings.chime && !late) chime(this.settings.volume);
-    if (this.settings.systemNotification && !late) this.notifySystem(base);
-  }
-
-  /* An OS banner, for when Obsidian is behind another window and an in-app
-   * Notice would go unseen. Permission is only ever requested as a result of
-   * the user turning the setting on. */
-  notifySystem(body) {
-    try {
-      if (typeof Notification === 'undefined') return;
-      if (Notification.permission === 'granted') {
-        new Notification('Midori Timer', { body });
-      } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission().then((p) => {
-          if (p === 'granted') new Notification('Midori Timer', { body });
-        });
-      }
-    } catch (e) {
-      /* not available on every platform */
-    }
-  }
-
-  // --------------------------------------------------------------- display
-
-  /* No element to build and no geometry to measure — the caret is already on
-   * screen, drawn by midori-caret, and this only sets a variable it reads. The
-   * designs this replaced each needed a fixed element, a live measurement of
-   * the note's scroller, and a list of floating chrome to dodge. */
-  renderCaret() {
-    const wanted = this.settings.display === 'caret' || this.settings.display === 'both';
-    const on = wanted && this.isActive();
-    document.body.classList.toggle('midori-timer-running', on);
-    if (!on) {
-      document.body.style.removeProperty('--midori-timer-caret');
-      this.caretKey = null;
-      return;
-    }
-
-    const total = this.session.total || 0;
-    const done = total <= 0 ? 0 : 1 - this.remaining() / total;
-    const next = caretColor(done);
-
-    // Write only when the mix actually changes: 100 steps a segment, ~300 in a
-    // session, against 6000 ticks. Recomputing is free; assigning a custom
-    // property invalidates style for the subtree every single time.
-    if (next.key === this.caretKey) return;
-    this.caretKey = next.key;
-    document.body.style.setProperty('--midori-timer-caret', next.color);
-  }
-
-  buildStatusBar() {
-    // On mobile Obsidian hides the status bar entirely, so skip the widget and
-    // leave the commands — see the MOBILE note in the header.
-    if (Platform.isMobile) return;
-
-    this.el = this.addStatusBarItem();
-    this.el.addClass('midori-timer');
-    this.el.addClass('mod-clickable');
-
-    this.iconEl = this.el.createSpan({ cls: 'midori-timer-icon' });
-    setIcon(this.iconEl, 'clock');
-    this.timeEl = this.el.createSpan({ cls: 'midori-timer-time' });
-
-    this.el.addEventListener('click', () => {
-      if (this.isActive()) this.toggle();
-      else new DurationModal(this.app, this).open();
-    });
-    this.el.addEventListener('contextmenu', (ev) => {
-      ev.preventDefault();
-      this.contextMenu(ev);
-    });
-  }
-
-  contextMenu(ev) {
-    const menu = new Menu();
-    menu.addItem((i) => i.setTitle('Set duration…').setIcon('timer')
-      .onClick(() => new DurationModal(this.app, this).open()));
-    if (this.isActive()) {
-      menu.addItem((i) => i
-        .setTitle(this.isPaused() ? 'Resume' : 'Pause')
-        .setIcon(this.isPaused() ? 'play' : 'pause')
-        .onClick(() => this.toggle()));
-      menu.addItem((i) => i.setTitle('Add 5 minutes').setIcon('plus')
-        .onClick(() => this.extend(300)));
-    }
-    if (this.isActive()) {
-      menu.addItem((i) => i.setTitle('Stop').setIcon('square')
-        .onClick(() => this.stop()));
-    }
-    menu.showAtMouseEvent(ev);
-  }
-
-  /* Decision 2. Reserve the width of the widest string this run can produce, so
-   * the item keeps one width from 1:00:00 all the way down to 0:00 instead of
-   * shrinking by a character and dragging its neighbours across. Measured in
-   * `ch` against tabular figures, where one ch is exactly one digit. */
-  reserveWidth(seconds) {
-    if (!this.timeEl) return;
-    this.timeEl.style.minWidth = `${formatClock(Math.max(0, seconds || 0)).length}ch`;
-  }
-
-  render() {
-    this.renderCaret();
-    if (!this.el) return;
-
-    // The status bar item is emptied outright when the caret is the only
-    // display, so Obsidian's `.status-bar-item:empty { display: none }` takes
-    // it out of the bar rather than leaving a dead gap where it used to be.
-    if (this.settings.display === 'caret') {
-      this.el.removeClass('is-running');
-      this.el.removeClass('is-paused');
-      this.timeEl.setText('');
-      this.timeEl.style.minWidth = '';
-      this.iconEl.hide();
-      this.el.removeAttribute('aria-label');
-      return;
-    }
-    this.iconEl.show();
-
-    this.el.removeClass('is-running');
-    this.el.removeClass('is-paused');
-
-    if (this.isActive()) {
-      this.el.addClass(this.isPaused() ? 'is-paused' : 'is-running');
-      this.iconEl.show();
-      setIcon(this.iconEl, this.isPaused() ? 'pause' : 'clock');
-      this.timeEl.setText(formatClock(this.remaining()));
-      this.el.setAttr('aria-label',
-        `${this.isPaused() ? 'Paused' : 'Timer'} — click to ${this.isPaused() ? 'resume' : 'pause'}, right-click for more`);
-      return;
-    }
-
-    // Idle. Emptying the element makes Obsidian's own
-    // `.status-bar-item:empty { display: none }` hide it, which is exactly the
-    // behaviour the "show when idle" setting wants when it is off.
-    this.timeEl.setText('');
-    this.timeEl.style.minWidth = '';
-    if (this.settings.showWhenIdle) {
-      this.iconEl.show();
-      setIcon(this.iconEl, 'clock');
-      this.el.setAttr('aria-label', 'Set a timer');
-    } else {
-      this.iconEl.hide();
-      this.el.removeAttribute('aria-label');
-    }
-  }
-};
-
-// ----------------------------------------------------------------- settings
-
-class MidoriTimerSettings extends PluginSettingTab {
-  constructor(app, plugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
-
-  display() {
-    const { containerEl } = this;
-    containerEl.empty();
-
-    new Setting(containerEl)
-      .setName('Default duration')
-      .setDesc('Pre-filled in the duration window, and used by "Start timer with the default duration". Same formats: 25m, 1h30, 90s, 1:30.')
-      .addText((t) => {
-        t.setPlaceholder('25m')
-          .setValue(formatHuman(this.plugin.settings.defaultDuration))
-          .onChange(async (v) => {
-            const secs = parseDuration(v);
-            // Ignore unparseable input rather than clobbering a good value with
-            // a half-typed one — onChange fires on every keystroke.
-            if (secs == null) return;
-            this.plugin.settings.defaultDuration = secs;
-            await this.plugin.save();
-          });
-      });
-
-    containerEl.createEl('h3', { text: 'Display' });
-
-    new Setting(containerEl)
-      .setName('Show the timer as')
-      .setDesc('The caret drifts from its resting indigo through sage and ochre to wine as the session runs. Nothing is added to the page and nothing appears while you write: the caret is already there, and it is the one thing on screen your eye is resting on.')
-      .addDropdown((d) => d
-        .addOption('caret', 'Caret only')
-        .addOption('statusbar', 'Status bar only')
-        .addOption('both', 'Both')
-        .setValue(this.plugin.settings.display)
-        .onChange(async (v) => {
-          this.plugin.settings.display = v;
-          await this.plugin.save();
-          this.plugin.render();
-        }));
-
-    new Setting(containerEl)
-      .setName('Preview the drift')
-      .setDesc('Runs a 20-second timer, compressing the whole indigo-to-wine drift into 20 seconds. Over a real session it is deliberately imperceptible; this is the only way to watch the whole ramp.')
-      .addButton((b) => b.setButtonText('Run 20s').onClick(() => this.plugin.start(20)));
-
-    containerEl.createEl('h3', { text: 'Status bar' });
-
-    new Setting(containerEl)
-      .setName('Show when idle')
-      .setDesc('Keep a clock in the status bar while no timer is running, so there is something to click. Off hides it until a timer starts. Ignored when the caret is the only display.')
-      .addToggle((t) => t
-        .setValue(this.plugin.settings.showWhenIdle)
-        .onChange(async (v) => {
-          this.plugin.settings.showWhenIdle = v;
-          await this.plugin.save();
-          this.plugin.render();
-        }));
-
-    new Setting(containerEl)
-      .setName('Chime')
-      .setDesc('Play two short tones when the timer finishes.')
-      .addToggle((t) => t
-        .setValue(this.plugin.settings.chime)
-        .onChange(async (v) => { this.plugin.settings.chime = v; await this.plugin.save(); }));
-
-    new Setting(containerEl)
-      .setName('Chime volume')
-      .addSlider((s) => s
-        .setLimits(0.05, 1, 0.05)
-        .setValue(this.plugin.settings.volume)
-        .setDynamicTooltip()
-        .onChange(async (v) => { this.plugin.settings.volume = v; await this.plugin.save(); }));
-
-    new Setting(containerEl)
-      .setName('System notification')
-      .setDesc('Also post an OS banner, so a finished timer is visible when Obsidian is behind another window. Your OS will ask for permission the first time.')
-      .addToggle((t) => t
-        .setValue(this.plugin.settings.systemNotification)
-        .onChange(async (v) => {
-          this.plugin.settings.systemNotification = v;
-          await this.plugin.save();
-          if (v) this.plugin.notifySystem('Notifications are on.');
-        }));
-
-    new Setting(containerEl)
-      .setName('Finish message')
-      .setDesc('Shown when the timer ends. Leave empty for "Timer finished (25m)".')
-      .addText((t) => t
-        .setPlaceholder('(default)')
-        .setValue(this.plugin.settings.finishMessage)
-        .onChange(async (v) => { this.plugin.settings.finishMessage = v; await this.plugin.save(); }));
-
-    new Setting(containerEl)
-      .setName('Hotkey')
-      .setDesc('Bind "Midori Timer: Set duration and start" under Settings → Hotkeys to open the duration window from the keyboard.')
-      .addButton((b) => b.setButtonText('Open duration window')
-        .onClick(() => new DurationModal(this.app, this.plugin).open()));
-  }
-}

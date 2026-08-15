@@ -294,8 +294,9 @@ Residual gotchas:
   Target Word Count *blocks editing* until you hit your number, and the one
   confetti plugin fires on every keystroke.
 - **The timer stores a deadline, not a remaining count** —
-  `obsidian/plugins/midori-timer`, a status-bar countdown you set by typing
-  `25m`, `1h30`, `90s` or `1:30` into a window a hotkey can open. The obvious
+  `obsidian/plugins/midori-timer`, a countdown you set either for a length or
+  until a clock time, on drums or by typing `25m`, `1h30`, `90s`, `1:30` or
+  `1:30pm` into a window a hotkey can open. The obvious
   implementation keeps a `remaining` number and subtracts one per tick, and it
   runs slow by minutes: Chromium — which is what Obsidian is — clamps
   background timers to roughly one wake per minute once a window is hidden, and
@@ -331,6 +332,28 @@ Residual gotchas:
   own default from 25m to 23m on open. A measurement bug in a control that feeds
   itself does not look like a measurement bug — it looks like the setting not
   sticking. Centring item *i* is `scrollTop = 34i`; the inverse is one division.
+- **Two ways to say the same thing, and one value underneath.** A session is
+  held in the head either as *for 25 minutes* or as *until 1pm*, and neither is
+  a special case of the other, so the window offers both: a segmented control,
+  drums for hours/minutes/seconds on one side and hour/minute/meridiem on the
+  other, and one typed field that parses whichever the current mode expects.
+  Only `seconds` is state — until-mode works out the exact remainder and hands
+  that to the same machinery — so switching modes carries the value across
+  rather than resetting it, and everything downstream stayed untouched. The
+  12-hour column is asked of `Intl.DateTimeFormat().resolvedOptions()` rather
+  than guessed from the language, and the deadline is recomputed at the moment
+  Start is pressed, because "until 1pm" means 1pm and the seconds spent
+  choosing it are part of what has to come off.
+- **Seeding a drum from typed text has to be instant, not smooth.** A smooth
+  programmatic scroll passes through every intermediate row, each firing a
+  scroll event, and a control that reads its own scroll position back as a
+  value will read every one of those as a choice the human never made —
+  overwriting the field mid-keystroke. Landing on the row in one step means the
+  only event that arrives already reads the value just written, and the drum's
+  own index check swallows it. The other half of that fix is knowing *who*
+  moved a drum: the drums report `pointerdown`/`wheel`/`touchstart` separately
+  from any value change, so the window can tell a scroll it caused from a
+  scroll the reader caused, and never rewrites text under a live cursor.
 - **A split-flap that only flips what changed, and cancels rather than queues.**
   Scrolling the drum changes the value many times a second. Re-rendering every
   cell flips the unchanged ones too, so the whole board flaps when only the

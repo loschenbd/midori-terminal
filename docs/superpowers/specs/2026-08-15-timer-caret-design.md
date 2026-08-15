@@ -196,6 +196,31 @@ exists to avoid.
 
 - The absolute-deadline timekeeping. Untouched, and still the load-bearing part.
 - The typed-duration modal and every command.
+
+## Addendum, same day: the setting window
+
+The window that *sets* the session was redesigned alongside this, and none of it
+touches the display above — it produces a number of seconds and hands it to the
+same machinery.
+
+- **Drums, not a text field with a dial bolted on.** A row of scroll containers
+  with `scroll-snap-type: y mandatory`, so momentum, rubber-banding, wheel,
+  trackpad inertia and touch flinging are the platform's. Hours, minutes and
+  seconds, which makes everything under a day reachable by dragging.
+- **Split-flap readout**, flipping only the cells whose glyph changed.
+- **Two modes: *for* a length, or *until* a clock time.** Both are how a session
+  is actually held in the head, and neither is a sub-mode of the other, so it is
+  a segmented control with two sets of drums. Until-mode carries hour, minute
+  and — where `Intl` says the locale is 12-hour — a meridiem column; it works
+  out the exact hours, minutes and seconds remaining, and the flaps show that
+  *duration* in both modes, so spinning a target time visibly assembles the
+  countdown. The deadline is recomputed when Start is pressed, not when the
+  target was picked.
+- **One value underneath.** `seconds` is the only state; the mode decides how it
+  is arrived at and described. Switching modes seeds the other set of drums from
+  the current value, so the switch is a change of framing, not a reset.
+- **Typing remains first-class**, and now parses per mode: `parseDuration` for
+  *for*, `parseClockTime` for *until*.
 - The status-bar readout, as the on-demand number.
 - Self-reset on finish, and the Notice, chime and optional system banner.
 

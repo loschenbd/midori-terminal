@@ -31,7 +31,7 @@ function load() {
     'const Plugin=class{},PluginSettingTab=class{},Setting=class{},Modal=class{},'
     + 'Menu=class{},Notice=class{},setIcon=()=>{},Platform={isMobile:false};',
   );
-  src += '\nmodule.exports={parseDuration,formatClock,formatHuman,caretColor,CARET_STOPS};';
+  src += '\nmodule.exports={parseDuration,formatClock,formatHuman,caretColor,CARET_STOPS,parseClockTime,secondsUntil};';
   const mod = { exports: {} };
   const win = { AudioContext: null, setTimeout, setInterval, clearInterval };
   const doc = { head: { appendChild() {} }, createElement: () => ({ remove() {} }) };
@@ -41,7 +41,8 @@ function load() {
   return mod.exports;
 }
 
-const { parseDuration, formatClock, formatHuman, caretColor, CARET_STOPS } = load();
+const { parseDuration, formatClock, formatHuman, caretColor, CARET_STOPS,
+        parseClockTime, secondsUntil } = load();
 
 let fail = 0;
 function eq(got, want, label) {
@@ -148,6 +149,46 @@ const keys = new Set();
 for (let i = 0; i <= 6000; i += 1) keys.add(caretColor(i / 6000).key);
 ok(keys.size <= 303, `6000 ticks collapse to ${keys.size} distinct writes`);
 ok(keys.size >= 300, 'but not so few that the drift becomes visible steps');
+
+console.log('== parseClockTime: "until 1pm" ==');
+
+// A fixed Tuesday 10:32:17 local. Every case below is about the relationship
+// between the target and this instant, which is exactly why `now` is a
+// parameter rather than read inside the function.
+const NOW = new Date(2026, 7, 15, 10, 32, 17).getTime();
+const at = (raw) => {
+  const d = parseClockTime(raw, NOW);
+  return d == null ? null : `${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+};
+
+eq(at('1pm'), '15 13:00:00', '1pm is this afternoon');
+eq(at('1 PM'), '15 13:00:00', 'case and a space are fine');
+eq(at('1:30pm'), '15 13:30:00', 'minutes come along');
+eq(at('13:00'), '15 13:00:00', '24-hour form');
+eq(at('noon'), '15 12:00:00', 'noon');
+eq(at('9am'), '16 09:00:00', '9am has gone — it means tomorrow');
+eq(at('midnight'), '16 00:00:00', 'midnight is always the coming one');
+eq(at('10:32'), '15 22:32:00', 'this very minute has gone; the pm reading is next');
+eq(at('11'), '15 11:00:00', 'a bare hour takes whichever comes first — 11am today');
+eq(at('3'), '15 15:00:00', 'and for 3, that is 3pm rather than 3am tomorrow');
+eq(at('12am'), '16 00:00:00', '12am is midnight, not noon');
+eq(at('12pm'), '15 12:00:00', 'and 12pm is noon');
+eq(at('23:59'), '15 23:59:00', 'last minute of the day');
+eq(at('0:15'), '16 00:15:00', 'after midnight means tomorrow');
+
+// Seconds are always zeroed on the target, so the DURATION carries them.
+// That is what makes "until 1pm" land exactly on the hour.
+const oneP = parseClockTime('1pm', NOW);
+eq(secondsUntil(oneP, NOW), (2 * 3600) + (27 * 60) + 43, 'the gap to 1pm is exact to the second');
+eq(oneP.getSeconds(), 0, 'the target itself sits on the minute');
+
+eq(at('banana'), null, 'not a time');
+eq(at('25:00'), null, 'no such hour');
+eq(at('1:60'), null, 'no such minute');
+eq(at('13pm'), null, 'a meridiem forces a 12-hour reading');
+eq(at(''), null, 'empty');
+eq(at(null), null, 'null');
+eq(secondsUntil(new Date(NOW - 5000), NOW), 0, 'a target in the past is zero, never negative');
 
 console.log(`\nmidori-timer: ${fail ? 'failures above' : 'all green'}`);
 process.exit(fail);
