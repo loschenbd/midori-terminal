@@ -120,14 +120,36 @@ Stops, as fractions of the session elapsed:
 | 0.80 | ochre | `--color-yellow` |
 | 1.00 | wine | `--color-red` |
 
-Interpolated with `color-mix(in oklab, …)` between the two bracketing stops.
+Interpolated with `color-mix(in oklch, …)` between the two bracketing stops.
 
-Two reasons for that choice. **oklab, not sRGB:** interpolating indigo→sage in
-sRGB passes through a muddy desaturated blue-grey, because sRGB interpolation is
-not perceptually uniform — the same reason this project reasons about palette in
-OKLCh rather than HSL. **Theme variables, not hex:** `color-mix` accepts `var()`,
-so the drift resolves per-theme and follows Paper and Night for free, with no
-second table of dark-mode colours to keep in sync.
+**oklch, and not for the usual reason.** The design originally specified oklab on
+the standard argument that sRGB is not perceptually uniform. Measured off a
+render of this exact ramp, that argument does not apply at this scale: sRGB and
+oklab differ by at most ΔE 0.029 across all twelve samples — about a JND on a
+large swatch, nothing on a 1.5px caret.
+
+The defect the render did find is different. Indigo and sage sit on opposite
+sides of neutral in the a–b plane, so a straight line between them — in sRGB or
+oklab alike, both rectangular — passes *nearer the achromatic axis than either
+endpoint*:
+
+| t | 0 | 0.10 | 0.20 | 0.30 | 0.40 |
+|---|---|---|---|---|---|
+| oklab chroma | 0.058 | 0.042 | 0.029 | **0.024** | 0.033 |
+| oklch chroma | 0.054 | 0.049 | 0.043 | 0.036 | 0.032 |
+
+The oklab minimum falls *below* sage's own 0.033. About a third into a session
+the caret would go grey — which reads as the caret losing its colour, not as
+time passing. oklch interpolates hue angle and chroma separately, rounding the
+corner instead of cutting across it, and stays monotonic into sage. Same result
+in Night (min 0.025 → 0.033).
+
+A unit test can only assert which space was *asked for*; the rendered check is
+what caught this.
+
+**Theme variables, not hex:** `color-mix` accepts `var()`, so the drift resolves
+per-theme and follows Paper and Night for free, with no second table of
+dark-mode colours to keep in sync.
 
 ### The CSS hook
 

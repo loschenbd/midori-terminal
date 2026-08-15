@@ -1,20 +1,44 @@
 'use strict';
 
-/* Midori Timer — a countdown you type, shown as a filling rail along an edge.
+/* Midori Timer — a countdown you type, carried by the colour of the caret.
  *
  * WHAT IT IS. Set a duration by typing "25m", "1h30", "90s" or "1:30" into a
  * small input, which a hotkey can open — bind "Midori Timer: Set duration and
- * start". The default display is a RAIL: a thin line just inside one edge of
- * the note that FILLS as the time runs, so an empty channel is a timer just
- * started and a full one is a timer about to end. The whole line is sage,
- * then the whole line is ochre, then the whole line is wine — one hue at a
- * time, each drawn as a gradient within itself. A status-bar readout is
- * available instead of it, or alongside it; that one can be clicked to pause
- * and right-clicked for the rest. Everything is also a command.
+ * start". While it runs, the CARET drifts from its resting indigo through sage
+ * and ochre to wine. That is the entire display. A status-bar readout is
+ * available instead of it, or alongside it, for when you want the number; that
+ * one can be clicked to pause and right-clicked for the rest. Everything is
+ * also a command.
  *
- * SEVEN DECISIONS THAT SHAPE THE CODE. (The rail's own — how it is measured
- * off the note, and why the gradient is clipped rather than stretched — are at
- * the STYLE block, next to the CSS they explain.)
+ * WHY THE CARET, WHICH IS THE SEVENTH ANSWER TO THIS QUESTION. Six painted
+ * indicators were built and rejected: a dotted rail inside the note's edge, the
+ * same rail as a solid gradient, a warming page-wide glow, a tinted dot grid, a
+ * corner bloom, and discrete marks at session breakpoints. Each rejection was
+ * read as a tuning problem and answered with a better-tuned version of the same
+ * idea, which is how you get six of them.
+ *
+ * The constraint that explains all six is that nothing may enter the visual
+ * field unbidden. That leaves two legal moves — change a property of something
+ * ALREADY on screen, or reveal something that was ASKED for — and every one of
+ * the six was new matter on the page. The caret is the first legal one: it is
+ * already there, it is already the theme's, and it is the only thing in FOVEAL
+ * vision while writing, which is where colour discrimination is best and where
+ * none of the six were. That is why 1.5px of it is enough.
+ *
+ * The history and the evidence are in
+ * docs/superpowers/specs/2026-08-15-timer-caret-design.md.
+ *
+ * IT DEPENDS ON midori-caret. The native caret takes its colour from
+ * `caret-color`, which a theme can set on its own, but its GEOMETRY comes from
+ * font metrics, and this theme's symmetric overrides put it in the wrong place
+ * — which is why midori-caret exists and draws a replacement element. This
+ * plugin recolours THAT element. With midori-caret disabled, body.midori-drawn
+ * is never set, the rules here never match, and the caret display is simply
+ * inert: no error, no half-state, and the status-bar readout still works.
+ *
+ * SEVEN DECISIONS THAT SHAPE THE CODE. (The caret's own — why the CSS wins on
+ * specificity rather than order, and why there is no transition — are at the
+ * STYLE block, next to the rules they explain.)
  *
  * 1. A DEADLINE, NOT A COUNTDOWN. The obvious implementation keeps a
  *    `remaining` number and subtracts one per tick. That timer runs slow, and
@@ -31,12 +55,12 @@
  *    next runs, including on the far side of a lid close. The tick rate only
  *    controls how promptly the display refreshes, never accuracy.
  *
- * 2. THE STATUS BAR MUST NOT REFLOW (when it is used at all). A proportional font gives "1" and "8"
- *    different widths, so a plain countdown makes its own item change width
- *    roughly twice a second and shoves every item to its left along with it.
- *    `font-variant-numeric: tabular-nums` fixes the digits, and the readout
- *    also reserves the width of the largest form it will show during THIS run,
- *    so the item does not jump when 1:00:00 becomes 59:59 either.
+ * 2. THE STATUS BAR MUST NOT REFLOW, when it is used at all. A proportional
+ *    font gives "1" and "8" different widths, so a plain countdown makes its
+ *    own item change width roughly twice a second and shoves every item to its
+ *    left along with it. `font-variant-numeric: tabular-nums` fixes the digits,
+ *    and the readout also reserves the width of the largest form it will show
+ *    during THIS run, so the item does not jump when 1:00:00 becomes 59:59.
  *
  * 3. PARSE PERMISSIVELY, THEN ECHO WHAT YOU UNDERSTOOD. A duration box that
  *    rejects "25" is a bad duration box. Bare numbers are minutes, units may
@@ -56,28 +80,27 @@
  *    `manifest.json` into each vault, so anything this plugin needs has to
  *    live in this file. The stylesheet is injected from here, and the chime is
  *    synthesised with WebAudio rather than shipped as a sound file. Colours
- *    come from the theme's own CSS variables, so the readout tracks Midori
- *    Paper and Midori Night — and any other theme — without hardcoding either.
+ *    come from the theme's own CSS variables, so the drift tracks Midori Paper
+ *    and Midori Night — and any other theme — without hardcoding either.
  *
- * 6. THE RAIL SITS ON document.body BUT IS MEASURED OFF THE NOTE. One element
- *    then serves every layout — split panes, sidebars open or shut — and no
- *    workspace rebuild can tear it out; but its geometry is read from the
- *    editor's scroller, so it lands on the page rather than on the window and
- *    tracks the text column when a sidebar opens. It is never flush to an edge
- *    (railInset), it is trimmed clear of whatever Obsidian floats over the
- *    note — the status-bar pill on desktop, the header buttons and navigation
- *    pill on mobile — and it is pointer-events: none throughout, because it is
- *    a readout and not a control.
+ * 6. THE DISPLAY IS A PROPERTY, NOT AN ELEMENT. Nothing is created, positioned
+ *    or measured. The rejected designs needed a fixed element, a live
+ *    measurement of the note's scroller, and a list of Obsidian's floating
+ *    chrome to dodge; deleting them deleted all of that, including every
+ *    mobile-placement special case. The mobile problem was not solved. It
+ *    stopped existing.
  *
- * 7. THE RAIL IS VISIBLE ONLY WHILE A TIMER IS GOING. Running or paused, and
- *    nothing else: idle shows nothing, and the finish is carried by the notice,
- *    the chime and the optional system banner. A rail that lingers is just a
- *    line across the page you have to dismiss.
+ * 7. NOTHING APPEARS, INCLUDING AT THE START. The drift begins at the caret's
+ *    own resting colour, so starting a timer changes nothing visible. The one
+ *    deliberate exception is the FINISH, which breaks through with a Notice,
+ *    the chime and the optional banner — that being the event the timer was
+ *    set for. Finishing then resets: the caret returns to indigo in the same
+ *    frame, with no state left to dismiss.
  *
  * MOBILE. Obsidian hides the status bar on phones outright
  * (`.is-mobile .status-bar { display: none }` in app.css), so the status-bar
- * display is desktop-only in practice. The RAIL is not — it tracks the note's
- * own geometry and works on a phone, which is the other reason it is default.
+ * display is desktop-only in practice. The caret is not — it is the same caret
+ * on a phone, which is the other reason it is the default.
  */
 
 const { Plugin, PluginSettingTab, Setting, Modal, Menu, Notice, setIcon, Platform } = require('obsidian');
@@ -90,29 +113,9 @@ const DEFAULTS = {
   systemNotification: false,  // OS-level banner, for when Obsidian is buried
   finishMessage: '',          // blank -> "Timer finished (25m)"
 
-  display: 'rail',            // 'rail' | 'statusbar' | 'both'
-  railEdge: 'bottom',         // 'bottom' | 'top' | 'left' | 'right'
-  railThickness: 3,           // px of dot diameter
-  railTrack: true,            // draw the unlit remainder of the rail
-  railInset: 10,              // px in from the note's edge — never flush
+  display: 'caret',           // 'caret' | 'statusbar' | 'both'
 };
 
-
-/* Obsidian's furniture that FLOATS OVER the note rather than displacing it,
- * which is exactly the set the rail has to dodge. Desktop contributes the
- * status bar; the rest is mobile, where the header buttons and the navigation
- * pill sit on top of a scroller that runs the full height of the screen. A
- * selector that matches nothing costs nothing, so the list covers both
- * platforms and several Obsidian versions at once. */
-const CHROME = [
-  '.status-bar',
-  '.mobile-navbar',
-  '.mobile-toolbar',
-  '.view-header',
-  '.view-actions',
-  '.workspace-drawer-header',
-].join(', ');
-const CHROME_GAP = 8;             // px of daylight left around each obstruction
 
 /* The display refresh rate, not the timekeeping rate — see decision 1. A whole
  * second here would let the readout sit up to a second behind the true value;
@@ -174,43 +177,70 @@ function formatClock(seconds) {
   return h > 0 ? `${h}:${pad(m)}:${pad(ss)}` : `${m}:${pad(ss)}`;
 }
 
-/* The rail's colour ramp, as a fraction of the duration REMAINING.
+/* The session's colour, as stops along the elapsed fraction.
  *
- * ONE HUE AT A TIME. The whole line is sage, then the whole line is ochre,
- * then the whole line is wine — never a blend of the three at once. The two
- * jobs are kept separate on purpose: the HUE carries the time (three states,
- * read at a glance, out of the corner of your eye), and the gradient WITHIN
- * that hue is shape, not data. A single line carrying a continuous
- * three-colour ramp says nothing legible at a glance, because you have to
- * find the boundary and judge where it is; a line that is simply yellow says
- * "getting on" in one look.
+ * The caret rests at the palette's ink indigo and drifts to sage, to ochre, to
+ * wine, interpolated CONTINUOUSLY between the two bracketing stops. There is no
+ * step, no event, and no moment at which a change is visible happening: the
+ * caret is simply a different colour than when it was last registered.
  *
- * The hues are the theme's own, in the roles they already hold elsewhere in
- * Midori: sage is the accent, ochre is the warning slot (ANSI 3), wine is the
- * error slot (ANSI 1). Ordered most-remaining first; the first match wins. */
-const RAIL_STOPS = [
-  { above: 0.25, varName: '--interactive-accent', fallback: '#5f6f5e' },  // sage
-  { above: 0.10, varName: '--color-yellow',       fallback: '#b88a3a' },  // ochre
-  { above: -1,   varName: '--color-red',          fallback: '#7a4a4a' },  // wine
+ * That is the whole design, and it is the seventh attempt. See
+ * docs/superpowers/specs/2026-08-15-timer-caret-design.md for the six painted
+ * ones rejected first, and for the constraint that explains all six — nothing
+ * may enter the visual field unbidden, which leaves only a property change to
+ * something already on screen, or a reveal that was asked for.
+ *
+ * oklch, AND THE REASON IS NOT THE USUAL ONE. The usual argument is that sRGB
+ * interpolation is not perceptually uniform, so it muddies a ramp. Measured off
+ * a render of this exact ramp, that argument does not apply here: sRGB and
+ * oklab differ by at most deltaE 0.029 in Oklab units across all twelve
+ * samples, which is around a just-noticeable difference on a large swatch and
+ * nothing at all on a 1.5px caret.
+ *
+ * What DOES matter is that indigo and sage sit on opposite sides of neutral in
+ * the a-b plane. A straight line between them — in sRGB or in oklab, both being
+ * rectangular spaces — passes NEARER THE ACHROMATIC AXIS THAN EITHER ENDPOINT.
+ * Measured: chroma runs 0.058 -> 0.042 -> 0.029 -> 0.024 -> 0.033, bottoming at
+ * t = 0.30 BELOW sage's own 0.033. About a third of the way into a session the
+ * caret would go grey, which reads as the caret losing its colour rather than
+ * as time passing.
+ *
+ * oklch interpolates hue ANGLE and chroma separately, so it rounds the corner
+ * instead of cutting across it and never dips below its endpoints: the same
+ * samples give 0.054 -> 0.049 -> 0.043 -> 0.036 -> 0.032, monotonic into sage.
+ * Same numbers in Night. No unit test can see any of this — a unit test can
+ * only assert which space was ASKED for. The rendered check is what caught it.
+ *
+ * THEME VARIABLES, NOT HEX. color-mix accepts var(), so the drift resolves
+ * per-theme and follows Paper and Night for free. Hardcoding the ramp would
+ * mean a second table of dark-mode colours to keep in sync with theme.css. */
+const CARET_STOPS = [
+  { at: 0.00, varName: '--color-blue',         fallback: '#3a5572' },  // indigo
+  { at: 0.40, varName: '--interactive-accent', fallback: '#5f6f5e' },  // sage
+  { at: 0.80, varName: '--color-yellow',       fallback: '#b88a3a' },  // ochre
+  { at: 1.00, varName: '--color-red',          fallback: '#7a4a4a' },  // wine
 ];
 
-/* The current hue as a gradient along `dir`, faint at the rail's origin and
- * full at the leading edge, so the edge is the part that reads.
- *
- * The gradient is sized to the FILL and therefore stretches with it — the
- * opposite of what a multi-hue ramp would want, and right here for the same
- * reason: with only one hue in play the gradient carries no time information,
- * so the visible line should always show the whole of it. Anchoring it to the
- * rail's full length instead would leave an early fill showing only the
- * dimmest sliver, which reads as a faint line rather than as a green one.
- *
- * color-mix rather than an alpha channel because the colour arrives as an
- * opaque theme variable — there is no rgb triplet for the accent, and the
- * theme's --interactive-accent-hsl is known-stale (see theme.css). */
-function railGradient(dir, fraction) {
-  const stop = RAIL_STOPS.find((x) => fraction > x.above) || RAIL_STOPS[RAIL_STOPS.length - 1];
-  const c = `var(${stop.varName}, ${stop.fallback})`;
-  return `linear-gradient(${dir}, color-mix(in srgb, ${c} 30%, transparent) 0%, ${c} 100%)`;
+const stopColor = (stop) => `var(${stop.varName}, ${stop.fallback})`;
+
+/**
+ * The caret colour at elapsed fraction `t`, with a `key` the caller compares to
+ * skip writing an identical value — see renderCaret. Clamped at both ends, so a
+ * session restored past its deadline is wine rather than an extrapolation off
+ * the end of the table.
+ */
+function caretColor(t) {
+  const f = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0));
+  let i = 0;
+  while (i < CARET_STOPS.length - 2 && f >= CARET_STOPS[i + 1].at) i += 1;
+  const a = CARET_STOPS[i];
+  const b = CARET_STOPS[i + 1];
+  const span = b.at - a.at;
+  const pct = Math.round((span <= 0 ? 1 : (f - a.at) / span) * 100);
+  return {
+    key: `${i}:${pct}`,
+    color: `color-mix(in oklch, ${stopColor(b)} ${pct}%, ${stopColor(a)})`,
+  };
 }
 
 /** 1500 -> "25m", 5400 -> "1h 30m", 90 -> "1m 30s". For prose, not the readout. */
@@ -304,77 +334,31 @@ const STYLE = `
   margin-top: 0.9em;
 }
 
-/* ---------------------------------------------------------------- the rail
+/* --------------------------------------------------------------- the caret
 
-   A solid line just inside one edge of the NOTE that FILLS as the timer runs:
-   an empty channel at the start, a full one at the end. Three things make it
-   sit on the page rather than on the window.
+   The session's only display. midori-caret already draws the editor caret and
+   the note-title caret as real elements; this recolours them and adds nothing.
 
-   1. IT IS MEASURED OFF THE SCROLLER, NOT THE WINDOW. Position and length come
-      from the live geometry of the editor's scroll element (see positionRail),
-      because that element is what the page actually is. A window-fixed rail
-      cannot line up with a note that moves when a sidebar opens. Everything
-      here that is not a colour is therefore set from JS.
+   WHY THE SPECIFICITY IS DELIBERATE. theme.css paints the caret with
+   'body.midori-drawn .midori-cursor::before { background: var(--color-blue) }',
+   which is (0,2,2). The rules below are (0,3,2) and so win on specificity
+   rather than on document order — which matters, because Obsidian hot-reloads
+   theme CSS but NOT plugin code, so for one reload cycle the stylesheet is new
+   while main.js is old, and anything relying on load order is a coin flip.
 
-   2. IT IS NEVER FLUSH TO THE EDGE. The railInset setting holds it in off the
-      boundary, and the inset is measured to the rail's OUTER face, so raising
-      the thickness grows the rail inward and does not walk it toward the edge.
+   WHY IT IS GATED ON A CLASS THIS BUILD SETS. Same reason midori-caret gates
+   its own rules that way: a rule hung on a class an OLDER build already sets
+   applies before the code behind it is live. midori-timer-running is new here,
+   so these rules cannot apply until this build is running — and while no timer
+   runs the caret is untouched, byte for byte.
 
-   3. IT STOPS SHORT OF THE STATUS BAR rather than running underneath it, again
-      in positionRail, because that bar is a floating pill over the bottom
-      right and a line crossing behind it reads as debris.
-
-   THE FILL IS SIZED, AND THE GRADIENT STRETCHES WITH IT. The fill element's
-   own length IS the progress, so its background gradient is redrawn across
-   whatever is currently visible: the line always shows the complete faint ->
-   full ramp, however little of it there is. That is only correct because the
-   ramp is ONE hue (see RAIL_STOPS) and therefore carries no time information
-   of its own. A multi-hue ramp would have to be painted at full length and
-   revealed by clip-path instead, or the leading edge would sit at the same
-   colour the whole way down and the ramp would mean nothing. */
-.midori-timer-rail {
-  position: fixed;
-  z-index: var(--layer-popover, 30);
-  pointer-events: none;
-  --rail-track: var(--dotgrid-dot, rgba(158, 191, 180, 0.46));
-  --rail-size: 3px;
-  --rail-progress: 0%;
-  border-radius: var(--rail-size);
-  overflow: hidden;                 /* so the fill's ends are rounded too */
+   THERE IS NO TRANSITION, ON PURPOSE. A CSS transition would animate the change
+   and make it a visible event, which is the one thing this design exists to
+   avoid. The colour is rewritten in small steps from JS instead. */
+body.midori-drawn.midori-timer-running .midori-cursor::before,
+body.midori-drawn.midori-timer-running .midori-title-caret {
+  background: var(--midori-timer-caret, var(--color-blue));
 }
-.midori-timer-rail.is-hidden { display: none; }
-
-.midori-timer-rail-track,
-.midori-timer-rail-fill {
-  position: absolute;
-  inset: 0;
-}
-.midori-timer-rail-track { background: var(--rail-track); opacity: 0.55; }
-
-/* Horizontal edges: fills left to right. */
-.midori-timer-rail.edge-bottom,
-.midori-timer-rail.edge-top { height: var(--rail-size); }
-.midori-timer-rail.edge-bottom .midori-timer-rail-fill,
-.midori-timer-rail.edge-top .midori-timer-rail-fill {
-  background: var(--rail-ramp-x);
-  right: auto;
-  width: var(--rail-progress);
-}
-
-/* Vertical edges: fills top to bottom, so it reads as a level rising. */
-.midori-timer-rail.edge-left,
-.midori-timer-rail.edge-right { width: var(--rail-size); }
-.midori-timer-rail.edge-left .midori-timer-rail-fill,
-.midori-timer-rail.edge-right .midori-timer-rail-fill {
-  background: var(--rail-ramp-y);
-  bottom: auto;
-  height: var(--rail-progress);
-}
-
-.midori-timer-rail.no-track .midori-timer-rail-track { display: none; }
-
-/* Paused reads as arrested: the line holds position and goes quiet. */
-.midori-timer-rail.is-paused { opacity: 0.4; }
 `;
 
 // ------------------------------------------------------------------- modal
@@ -474,7 +458,6 @@ module.exports = class MidoriTimer extends Plugin {
     this.register(() => style.remove());
 
     this.buildStatusBar();
-    this.buildRail();
     this.addSettingTab(new MidoriTimerSettings(this.app, this));
 
     this.addCommand({
@@ -529,8 +512,16 @@ module.exports = class MidoriTimer extends Plugin {
     });
   }
 
+  /* The caret is the one piece of state that outlives this plugin if it is not
+   * cleaned up by hand. Everything else the plugin owns is an element it
+   * created, which Obsidian removes with the plugin; the caret belongs to
+   * midori-caret and merely wears a class and a variable set from here. Disable
+   * this plugin mid-session without unsetting them and the caret stays ochre,
+   * with nothing running and nothing left to turn it back. */
   onunload() {
     this.clearTick();
+    document.body.classList.remove('midori-timer-running');
+    document.body.style.removeProperty('--midori-timer-caret');
   }
 
   async save() {
@@ -620,8 +611,8 @@ module.exports = class MidoriTimer extends Plugin {
     this.render();
   }
 
-  /* Finishing RESETS. The session is cleared, the rail goes away and the
-   * status bar returns to its idle clock, all in the same frame — there is no
+  /* Finishing RESETS. The session is cleared, the caret returns to indigo and
+   * the status bar returns to its idle clock, all in the same frame — there is no
    * sticky "finished" state to dismiss. The end of the timer is announced by
    * things that announce themselves and then stop: a Notice, the chime, and
    * the optional OS banner. A readout that sits at 0:00 wearing a bell until
@@ -664,162 +655,30 @@ module.exports = class MidoriTimer extends Plugin {
 
   // --------------------------------------------------------------- display
 
-  /* The rail lives on document.body rather than inside the workspace so one
-   * element serves every layout — split panes, sidebars open or shut — and no
-   * workspace rebuild can tear it out. Its position is measured from the
-   * editor's scroller each time it is shown (positionRail). */
-  buildRail() {
-    this.rail = document.createElement('div');
-    this.rail.className = 'midori-timer-rail is-hidden';
-    this.railTrackEl = this.rail.appendChild(document.createElement('div'));
-    this.railTrackEl.className = 'midori-timer-rail-track';
-    this.railFillEl = this.rail.appendChild(document.createElement('div'));
-    this.railFillEl.className = 'midori-timer-rail-fill';
-    document.body.appendChild(this.rail);
-    this.register(() => this.rail.remove());
-
-    // Anything that can move or resize the note moves the rail with it.
-    const reposition = () => { if (this.isActive()) this.positionRail(); };
-    this.registerDomEvent(window, 'resize', reposition);
-    this.registerEvent(this.app.workspace.on('resize', reposition));
-    this.registerEvent(this.app.workspace.on('layout-change', reposition));
-    this.registerEvent(this.app.workspace.on('active-leaf-change', reposition));
-  }
-
-  /* The element that actually carries the dot grid. Reading its geometry is
-   * what lets the rail sit on the note rather than on the window — and the two
-   * differ by the whole width of a sidebar. */
-  scrollerEl() {
-    // Scope to the focused leaf first, so a split shows the rail under the
-    // pane you are typing in rather than under whichever one happens to be
-    // first in the DOM. Fall back outward until something exists: a leaf with
-    // no scroller (a graph view, say) still gets a rail, on the root split.
-    const active = document.querySelector('.workspace-leaf.mod-active');
-    for (const root of [active, document]) {
-      if (!root) continue;
-      const el = root.querySelector('.cm-scroller')
-        || root.querySelector('.markdown-preview-view');
-      if (el) return el;
-    }
-    return document.querySelector('.workspace-split.mod-root') || document.body;
-  }
-
-  /* Trim [a0, a1] along the rail's own axis so it clears any of Obsidian's
-   * floating chrome that crosses it, and return the shortened span.
-   *
-   * This is a hard requirement rather than a nicety, and it is why the rule is
-   * written against a LIST of elements measured live rather than against the
-   * status bar alone. The scroller runs edge to edge underneath everything
-   * that floats over it, so a rail measured off the scroller runs under it
-   * too. On desktop that is the status-bar pill at the bottom right — measured
-   * at x 1347..1719 on a 1728px window, a fifth of a bottom rail. On MOBILE
-   * there is no status bar at all (app.css hides it), and instead a right-edge
-   * rail ran from behind the header buttons at the top straight down past the
-   * navigation pill and off the bottom of the screen. Same bug, different
-   * furniture: the fix has to be the furniture, not the status bar.
-   *
-   * Only obstructions that actually cross the rail's band count, so a top rail
-   * is not shortened by something sitting at the bottom. The rail is trimmed
-   * from whichever END the obstruction is nearer, so it shortens rather than
-   * being cut in half — a rail with a hole in it reads as two rails. */
-  clipToChrome(a0, a1, vertical, pos, thick) {
-    const band = thick + 6;
-    for (const el of document.querySelectorAll(CHROME)) {
-      const b = el.getBoundingClientRect();
-      if (b.width <= 0 || b.height <= 0) continue;
-      const crosses = vertical
-        ? b.right > pos - band && b.left < pos + band
-        : b.bottom > pos - band && b.top < pos + band;
-      if (!crosses) continue;
-      const s0 = vertical ? b.top : b.left;
-      const s1 = vertical ? b.bottom : b.right;
-      if (s1 <= a0 || s0 >= a1) continue;
-      if ((s0 + s1) / 2 > (a0 + a1) / 2) a1 = Math.min(a1, s0 - CHROME_GAP);
-      else a0 = Math.max(a0, s1 + CHROME_GAP);
-    }
-    return [a0, a1];
-  }
-
-  /* Everything geometric about the rail, in one place, from live
-   * measurements. */
-  positionRail() {
-    if (!this.rail) return;
-    const el = this.scrollerEl();
-    const r = el.getBoundingClientRect();
-    const cs = window.getComputedStyle(el);
-    const padL = parseFloat(cs.paddingLeft) || 0;
-    const padR = parseFloat(cs.paddingRight) || 0;
-    const padT = parseFloat(cs.paddingTop) || 0;
-    const padB = parseFloat(cs.paddingBottom) || 0;
-
-    // The content box: the page's own text column, padding excluded, and then
-    // clamped to the window. On mobile the scroller is taller than the visible
-    // viewport, so an unclamped vertical rail runs off the bottom of the
-    // screen — which is what it did.
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const left = Math.max(0, r.left + padL);
-    const right = Math.min(vw, r.right - padR);
-    const top = Math.max(0, r.top + padT);
-    const bottom = Math.min(vh, r.bottom - padB);
-
-    const inset = Math.max(0, this.settings.railInset);
-    const edge = this.settings.railEdge;
-    const st = this.rail.style;
-    st.left = st.right = st.top = st.bottom = st.width = st.height = '';
-
-    if (edge === 'bottom' || edge === 'top') {
-      let x0 = left;
-      let x1 = right;
-      // Inset to the OUTER face, so thickness grows the rail inward.
-      const thick = this.settings.railThickness;
-      const y = edge === 'bottom' ? bottom - inset - thick : top + inset;
-      [x0, x1] = this.clipToChrome(x0, x1, false, y + thick / 2, thick);
-      st.left = `${x0}px`;
-      st.width = `${Math.max(0, x1 - x0)}px`;
-      st.top = `${y}px`;
-    } else {
-      const thick = this.settings.railThickness;
-      const x = edge === 'left' ? left + inset : right - inset - thick;
-      let [y0, y1] = this.clipToChrome(top, bottom, true, x + thick / 2, thick);
-      st.left = `${x}px`;
-      st.top = `${y0}px`;
-      st.height = `${Math.max(0, y1 - y0)}px`;
-    }
-  }
-
-  renderRail() {
-    if (!this.rail) return;
-    const wanted = this.settings.display === 'rail' || this.settings.display === 'both';
-    // Running or paused only. A finished or idle timer shows nothing: the rail
-    // is for a timer that is GOING, and the finish is carried by the notice,
-    // the chime and the optional system banner.
-    const active = this.isActive();
-
-    if (!wanted || !active) {
-      this.rail.addClass('is-hidden');
+  /* No element to build and no geometry to measure — the caret is already on
+   * screen, drawn by midori-caret, and this only sets a variable it reads. The
+   * designs this replaced each needed a fixed element, a live measurement of
+   * the note's scroller, and a list of floating chrome to dodge. */
+  renderCaret() {
+    const wanted = this.settings.display === 'caret' || this.settings.display === 'both';
+    const on = wanted && this.isActive();
+    document.body.classList.toggle('midori-timer-running', on);
+    if (!on) {
+      document.body.style.removeProperty('--midori-timer-caret');
+      this.caretKey = null;
       return;
     }
 
-    // ELAPSED, not remaining: the line fills as the time goes rather than
-    // draining away from you, so a full rail is a finished timer.
     const total = this.session.total || 0;
-    const done = total <= 0 ? 0 : 1 - Math.max(0, Math.min(1, this.remaining() / total));
+    const done = total <= 0 ? 0 : 1 - this.remaining() / total;
+    const next = caretColor(done);
 
-    this.rail.className = [
-      'midori-timer-rail',
-      `edge-${this.settings.railEdge}`,
-      this.settings.railTrack ? '' : 'no-track',
-      this.isPaused() ? 'is-paused' : '',
-    ].filter(Boolean).join(' ');
-
-    this.rail.style.setProperty('--rail-progress', `${(done * 100).toFixed(3)}%`);
-    this.rail.style.setProperty('--rail-size', `${this.settings.railThickness}px`);
-    // The hue is chosen by what is LEFT, not by what is done.
-    const left = 1 - done;
-    this.rail.style.setProperty('--rail-ramp-x', railGradient('to right', left));
-    this.rail.style.setProperty('--rail-ramp-y', railGradient('to bottom', left));
-    this.positionRail();
+    // Write only when the mix actually changes: 100 steps a segment, ~300 in a
+    // session, against 6000 ticks. Recomputing is free; assigning a custom
+    // property invalidates style for the subtree every single time.
+    if (next.key === this.caretKey) return;
+    this.caretKey = next.key;
+    document.body.style.setProperty('--midori-timer-caret', next.color);
   }
 
   buildStatusBar() {
@@ -874,13 +733,13 @@ module.exports = class MidoriTimer extends Plugin {
   }
 
   render() {
-    this.renderRail();
+    this.renderCaret();
     if (!this.el) return;
 
-    // The status bar item is emptied outright when the rail is the only
+    // The status bar item is emptied outright when the caret is the only
     // display, so Obsidian's `.status-bar-item:empty { display: none }` takes
     // it out of the bar rather than leaving a dead gap where it used to be.
-    if (this.settings.display === 'rail') {
+    if (this.settings.display === 'caret') {
       this.el.removeClass('is-running');
       this.el.removeClass('is-paused');
       this.timeEl.setText('');
@@ -952,9 +811,9 @@ class MidoriTimerSettings extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Show the timer as')
-      .setDesc('The rail is a dotted line along one edge of the window that drains as the timer runs. It uses the page dot grid\'s own colour and 24px pitch, so it reads as the grid lighting up rather than as a new bar.')
+      .setDesc('The caret drifts from its resting indigo through sage and ochre to wine as the session runs. Nothing is added to the page and nothing appears while you write: the caret is already there, and it is the one thing on screen your eye is resting on.')
       .addDropdown((d) => d
-        .addOption('rail', 'Rail only')
+        .addOption('caret', 'Caret only')
         .addOption('statusbar', 'Status bar only')
         .addOption('both', 'Both')
         .setValue(this.plugin.settings.display)
@@ -965,66 +824,15 @@ class MidoriTimerSettings extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Rail edge')
-      .addDropdown((d) => d
-        .addOption('bottom', 'Bottom')
-        .addOption('top', 'Top')
-        .addOption('left', 'Left')
-        .addOption('right', 'Right')
-        .setValue(this.plugin.settings.railEdge)
-        .onChange(async (v) => {
-          this.plugin.settings.railEdge = v;
-          await this.plugin.save();
-          this.plugin.render();
-        }));
-
-    new Setting(containerEl)
-      .setName('Rail thickness')
-      .setDesc('Dot diameter, in pixels.')
-      .addSlider((s) => s
-        .setLimits(2, 10, 1)
-        .setValue(this.plugin.settings.railThickness)
-        .setDynamicTooltip()
-        .onChange(async (v) => {
-          this.plugin.settings.railThickness = v;
-          await this.plugin.save();
-          this.plugin.render();
-        }));
-
-    new Setting(containerEl)
-      .setName('Rail inset')
-      .setDesc('How far in from the note\'s edge the rail sits, in pixels. 0 puts it flush against the edge; the default holds it in the way the dot grid\'s own outer dots are held in.')
-      .addSlider((s) => s
-        .setLimits(0, 40, 1)
-        .setValue(this.plugin.settings.railInset)
-        .setDynamicTooltip()
-        .onChange(async (v) => {
-          this.plugin.settings.railInset = v;
-          await this.plugin.save();
-          this.plugin.render();
-        }));
-
-    new Setting(containerEl)
-      .setName('Show the unlit track')
-      .setDesc('Off leaves only the lit dots, so the rail shortens into empty space instead of draining along a visible line.')
-      .addToggle((t) => t
-        .setValue(this.plugin.settings.railTrack)
-        .onChange(async (v) => {
-          this.plugin.settings.railTrack = v;
-          await this.plugin.save();
-          this.plugin.render();
-        }));
-
-    new Setting(containerEl)
-      .setName('Preview the rail')
-      .setDesc('Runs a 20-second timer so you can see the edge, thickness and colours without waiting.')
+      .setName('Preview the drift')
+      .setDesc('Runs a 20-second timer, compressing the whole indigo-to-wine drift into 20 seconds. Over a real session it is deliberately imperceptible; this is the only way to watch the whole ramp.')
       .addButton((b) => b.setButtonText('Run 20s').onClick(() => this.plugin.start(20)));
 
     containerEl.createEl('h3', { text: 'Status bar' });
 
     new Setting(containerEl)
       .setName('Show when idle')
-      .setDesc('Keep a clock in the status bar while no timer is running, so there is something to click. Off hides it until a timer starts. Ignored when the rail is the only display.')
+      .setDesc('Keep a clock in the status bar while no timer is running, so there is something to click. Off hides it until a timer starts. Ignored when the caret is the only display.')
       .addToggle((t) => t
         .setValue(this.plugin.settings.showWhenIdle)
         .onChange(async (v) => {
