@@ -26,8 +26,9 @@ only for re-deriving font constants, never at test time.
 - **Evidence source of truth:** `docs/superpowers/specs/2026-08-15-prose-typography-evidence.md`. Do not introduce a number this plan does not trace to it.
 - **Nothing enters the writing surface unbidden.** No new element, no new mark, no animation on the page. Every change here is a property of something already on screen.
 - **Font constants, measured from `fonts/*.ttf` with a `BoundsPen`, not `OS/2`:** M PLUS 1p x-height `0.520`em, cap `0.730`em, average prose advance `0.4818`em. Spectral x-height `0.450`em, cap `0.660`em, average advance `0.4352`em. Re-derive with `obsidian/.fontenv/bin/python3 tests/measure_prose_type.py`.
-- **Characters per line = `width_in_em ÷ 0.4818`** for the body face. This is the only conversion between a stylesheet number and the research's unit.
-- **Target band: 55–75 cpl**, preference side of the speed/preference split. 66 cpl = `32em`, 70 cpl = `34em`, 75 cpl = `36em`.
+- **Characters per line = `N ÷ 0.4818`** where the measure is `calc(var(--font-text-size) * N)`. This is the only conversion between a stylesheet number and the research's unit.
+- **Target band: 55–75 cpl**, preference side of the speed/preference split. 66 cpl = `N 32`, 70 cpl = `N 34`, 75 cpl = `N 36`.
+- **Never express `--file-line-width` in `em`.** app.css consumes it on `.cm-line`, which is also the heading element; see "The schema this plan works with".
 - **Leading floor: CSS 1.2** (measured harm floor). **Policy floor: 1.5** (WCAG 1.4.8, not an experimental result). Aim ≥ 1.5.
 - **A backtick inside an injected stylesheet template literal ends it** — not applicable to `theme.css`, but `tests/lint.sh` must stay green including `tests/check_style_literals.py`.
 - **Every change must be installed and re-verified** with `sh obsidian/install-obsidian.sh`, which fans out to all three vaults.
@@ -35,12 +36,59 @@ only for re-deriving font constants, never at test time.
 
 ---
 
+## The schema this plan works with
+
+Read out of Obsidian's own `app.css`, extracted from the installed app with
+`python3 obsidian/dump-app-css.py <outdir>`. Not from documentation, and not
+from a blog post. Re-run it after an Obsidian update before trusting any of the
+below.
+
+**The variables, with their real defaults:**
+
+| variable | default | notes |
+|---|---|---|
+| `--font-text-size` | `16px` | Set **inline on `body`** by the app from `baseFontSize`, **clamped to 10–30**. The same code also sets `font-size` on `documentElement`, so `rem` tracks it too. |
+| `--file-line-width` | `700px` | Consumed on **four** elements — see the trap below. |
+| `--h1-size` … `--h6-size` | `1.618em`, `1.462`, `1.318`, `1.188`, `1.076`, `1em` | **Not** the ladder this plan originally assumed. |
+| `--h1-font` … `--h6-font` | `inherit` | Exists. The theme currently reaches past it with element selectors. |
+| `--h1-weight`, `--hN-style`, `--hN-variant`, `--hN-color` | various | 36 heading variables in total; the theme sets 6 of them. |
+| `--inline-title-size` / `-font` / `-weight` | `var(--h1-*)` | The title **follows h1 for free** if h1 is set through its variables. |
+
+**The units trap, which is real and would have shipped as a bug.** app.css
+consumes `--file-line-width` as `max-width` on `.cm-sizer`, `.cm-content` **and
+`.cm-line`**, all gated behind `.is-readable-line-width`:
+
+```css
+.markdown-source-view.mod-cm6.is-readable-line-width .cm-line { max-width: var(--file-line-width); }
+```
+
+`.cm-line` is also where headings live — `.HyperMD-header-1` sets
+`font-size: var(--h1-size)` on the *same element*. A `max-width` in `em`
+resolves against the element's **own** font-size, so an em measure makes
+heading lines wider than body lines. Measured in a browser, at a 34em measure:
+
+| | body line | h1 line | h4 line |
+|---|---|---|---|
+| `34em` | 544px | **880px** | **646px** |
+| `calc(var(--font-text-size) * 34)` | 544px | 544px | 544px |
+
+So the measure must be **`calc(var(--font-text-size) * N)`**, which resolves
+numerically before it reaches the consuming element. `rem` would also work
+today, but only because the app happens to set `documentElement`'s font-size —
+an implementation detail found by reading minified JS, not a documented
+contract. `--font-text-size` is documented; prefer it.
+
+**Two consequences beyond the measure.** The `.is-readable-line-width` gate
+means everything here is inert for a reader who has turned readable line length
+off — correct, and not something to fight. And app.css uses the same variable
+for `.document-search`, so the find bar stays aligned to the column for free.
+
 ## File Structure
 
 | File | Responsibility |
 |---|---|
 | `obsidian/theme.css` (modify) | All CSS changes. Measure at ~line 32 in the root variable block; `--midori-row` beside it; dot grid at 402; line-height rules at 583, 1118, 1147–1149, 1173–1179, 1357–1458; heading sizes in a new block beside the existing heading colours at 1603. |
-| `tests/test_prose_typography.py` (create) | Static guardrails. Parses `theme.css`, converts to cpl and leading ratios across base sizes 14–20, asserts the bands. Stdlib only so it runs in `lint.sh` and CI. |
+| `tests/test_prose_typography.py` (create) | Static guardrails. Parses `theme.css`, converts to cpl and leading ratios across the app's whole 10–30px base range, asserts the bands. Stdlib only so it runs in `lint.sh` and CI. |
 | `tests/prose_harness.py` (create) | Generates an HTML page from the *real* `theme.css` for rendered checks. Not run by lint; invoked by hand in verification steps. |
 | `tests/lint.sh` (modify) | Wire in the new test beside the existing `midori-timer unit tests` block. |
 | `tests/measure_prose_type.py` (existing) | Already committed. Re-derives the font constants. Unchanged. |
@@ -53,9 +101,10 @@ only for re-deriving font constants, never at test time.
 ### Task 1: The measure
 
 The one setting currently outside every band anyone has proposed: Obsidian's
-default 700px column with M PLUS 1p is ~91 cpl at a 16px base. Expressed in
-`em` rather than px it stays inside the band when the reader changes their text
-size, which a px constant does not.
+default 700px column with M PLUS 1p is ~91 cpl at a 16px base. Expressed as a
+multiple of `--font-text-size` it stays inside the band when the reader changes
+their text size, which a px constant does not — and unlike an `em`, it is not
+re-resolved against the font-size of whatever element consumes it.
 
 **Files:**
 - Create: `tests/test_prose_typography.py`
@@ -63,7 +112,7 @@ size, which a px constant does not.
 - Modify: `tests/lint.sh` (beside the `midori-timer unit tests` block, ~line 58)
 
 **Interfaces:**
-- Produces: `--file-line-width` set in `em`; the helper `theme_var(name)` and constant `AVG_ADVANCE_EM = 0.4818` in `tests/test_prose_typography.py`, both consumed by Tasks 2 and 3.
+- Produces: `--file-line-width` as `calc(var(--font-text-size) * N)`; the helper `theme_var(name)` and constant `AVG_ADVANCE_EM = 0.4818` in `tests/test_prose_typography.py`, both consumed by Tasks 2 and 3.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -96,7 +145,9 @@ AVG_ADVANCE_EM = 0.4818     # M PLUS 1p, averaged over a prose sample
 X_MPLUS = 0.520             # x-height, em
 X_SPECTRAL = 0.450
 
-BASES = (14, 15, 16, 17, 18, 19, 20)   # the range of Obsidian's text-size slider we support
+# app.js clamps baseFontSize to 10..30 (Math.clamp(e, 10, 30)), so this is the
+# whole reachable range, not a range we chose.
+BASES = tuple(range(10, 31))
 
 FAIL = []
 
@@ -111,8 +162,15 @@ def bad(msg):
 
 
 def theme_var(name):
-    """Last declared value of a custom property, as a string."""
-    hits = re.findall(rf"^\s*{re.escape(name)}\s*:\s*([^;]+);", THEME, re.M)
+    """Last declared value of a custom property, as a string.
+
+    NOT anchored to the start of a line: an earlier draft was, and it silently
+    reported "not set" for every declaration that shared a line with another
+    one — which reads as a missing variable rather than as a regex that cannot
+    see it. A `var(--x)` USE cannot match here, because a use has no colon
+    after the name.
+    """
+    hits = re.findall(rf"{re.escape(name)}\s*:\s*([^;]+);", THEME)
     return hits[-1].strip() if hits else None
 
 
@@ -122,16 +180,30 @@ def em_value(raw):
 
 
 def test_measure():
+    """The measure, in characters, and in a unit that survives its consumers.
+
+    app.css applies --file-line-width as max-width on .cm-line, and .cm-line is
+    also the heading element (.HyperMD-header-1 sets font-size: var(--h1-size)
+    on it). An em there resolves against the element's OWN font-size, so an em
+    measure gives heading lines a wider column than body lines: measured, 34em
+    is 544px on a body line and 880px on an h1. calc(var(--font-text-size) * N)
+    resolves numerically before it reaches any consumer.
+    """
     raw = theme_var("--file-line-width")
     if raw is None:
         bad("--file-line-width is not set; Obsidian's 700px default is ~91 cpl at 16px")
         return
-    em = em_value(raw)
-    if em is None:
-        bad(f"--file-line-width is {raw!r}, not an em value — a px measure "
-            "changes meaning when the reader changes their text size")
+    if em_value(raw) is not None:
+        bad(f"--file-line-width is {raw!r}: an em measure is resolved against the "
+            "font-size of .cm-line, which is 1.618em on a heading line")
         return
-    cpl = em / AVG_ADVANCE_EM
+    m = re.fullmatch(r"calc\(\s*var\(--font-text-size\)\s*\*\s*([0-9.]+)\s*\)", raw)
+    if not m:
+        bad(f"--file-line-width is {raw!r}: expected "
+            "calc(var(--font-text-size) * N), which both tracks the reader's "
+            "text size and is immune to the consuming element's font-size")
+        return
+    cpl = float(m.group(1)) / AVG_ADVANCE_EM
     if 55.0 <= cpl <= 75.0:
         ok(f"measure {raw} = {cpl:.1f} characters per line, inside 55-75")
     else:
@@ -183,7 +255,10 @@ than reading does is, as far as the literature goes, an open question.</p>
 panel it lands on. An angle is not a length, and a length is not a size until
 something says how far away the reader is sitting.</p>"""
 
-WIDTHS = ("32em", "34em", "36em", "700px")
+WIDTHS = ("calc(var(--font-text-size) * 32)",   # 66 cpl
+          "calc(var(--font-text-size) * 34)",   # 70 cpl
+          "calc(var(--font-text-size) * 36)",   # 75 cpl
+          "700px")                             # today, ~91 cpl
 
 def main():
     out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "prose.html")
@@ -221,8 +296,9 @@ python3 -m http.server 8777 --directory /tmp/claude-501
 **This step ends in a decision, and it is Ben's, not the implementer's.** The
 evidence supports the *band*, not a point inside it: reading speed favours the
 long measure, preference favours the moderate one, and a writing surface takes
-the preference side. `34em` (70 cpl) is the default recommendation because it
-is the smallest change from today's ~91 that lands inside the band. Record the
+the preference side. `calc(var(--font-text-size) * 34)` (70 cpl) is the default
+recommendation because it is the smallest change from today's ~91 that lands
+inside the band. Record the
 chosen value before continuing.
 
 - [ ] **Step 4: Set the measure**
@@ -246,16 +322,24 @@ In `obsidian/theme.css`, in the root variable block that already holds
      In em because characters-per-line depends on BOTH width and size: a px
      constant silently becomes a different measure the moment the reader moves
      Settings -> Appearance -> Font size, and this theme now ships to people
-     whose slider is not where mine is. 34em / 0.4818em average advance = 70
+     whose slider is not where mine is (the app clamps it to 10-30px).
+
+     NOT em, which is the version of this that looks right and is not. app.css
+     applies this variable as max-width on .cm-line -- and .cm-line is also the
+     heading element, carrying font-size: var(--h1-size). An em resolves
+     against the element's OWN font-size, so an em measure hands heading lines
+     a wider column than body lines: measured, 34em is 544px on a body line and
+     880px on an h1. A calc against --font-text-size resolves numerically
+     before it ever reaches a consumer. 34 / 0.4818 average advance = 70
      characters, at any base size. See
      docs/superpowers/specs/2026-08-15-prose-typography-evidence.md */
-  --file-line-width: 34em;
+  --file-line-width: calc(var(--font-text-size) * 34);
 ```
 
 - [ ] **Step 5: Run the test to verify it passes**
 
 Run: `python3 tests/test_prose_typography.py`
-Expected: PASS — `ok measure 34em = 70.6 characters per line, inside 55-75`, exit 0.
+Expected: PASS — `ok measure calc(var(--font-text-size) * 34) = 70.6 characters per line, inside 55-75`, exit 0.
 
 - [ ] **Step 6: Wire it into lint**
 
@@ -485,7 +569,7 @@ Replace the `--midori-row` declaration from Task 2 with:
 ```
 
 `max()` keeps small bases on the historical 24px row — at 14px, 1.5x would be
-21px, which is a tighter page than this theme has ever been and is not what
+21px and at the 10px floor it would be 15px, which is a tighter page than this theme has ever been and is not what
 someone reducing their text size is asking for. `round(up, ..., 1px)` keeps the
 dot lattice on whole pixels.
 
@@ -498,7 +582,7 @@ what confirms Obsidian's own engine agrees.
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `python3 tests/test_prose_typography.py`
-Expected: PASS — `ok leading >= 1.5 across 14-20px (worst 1.50 at 16px)`, and
+Expected: PASS — `ok leading >= 1.5 across 10-30px (worst 1.50 at 16px)`, and
 `ok every row is a whole number of pixels`.
 
 - [ ] **Step 5: Re-derive the dot-grid offset, and MEASURE it rather than trusting it**
@@ -584,8 +668,9 @@ dot phase measured at 15, 16, 17, 18 and 20px."
 ### Task 4: The heading ladder, optically
 
 Headings are Spectral; body is M PLUS 1p; Spectral's x-height is `0.450` against
-`0.520`. Obsidian's default h4 of `1.266em` therefore renders only ~10% visually
-larger than body text, and the em ladder the app intends is not the ladder the
+`0.520`. Obsidian's real h4 of `1.188em` (read from app.css, not assumed)
+therefore renders **1.03x body text to the eye** — an h4 is, optically, body
+copy in a different colour. The em ladder the app intends is not the ladder the
 eye receives.
 
 **Files:**
@@ -601,7 +686,7 @@ Append and register:
 
 ```python
 # Obsidian's defaults, in em of the base size.
-OBSIDIAN_H = {1: 1.802, 2: 1.602, 3: 1.424, 4: 1.266}
+OBSIDIAN_H = {1: 1.618, 2: 1.462, 3: 1.318, 4: 1.188}
 
 
 def test_heading_ladder_is_optical():
@@ -630,7 +715,7 @@ def test_heading_ladder_is_optical():
 
 Run: `python3 tests/test_prose_typography.py`
 Expected: four failures, the first being
-`--h1-size is None; at Obsidian's default 1.802em the visual step is 1.56x body, not 1.80x`.
+`--h1-size is None; at Obsidian's default 1.618em the visual step is 1.40x body, not 1.62x`.
 
 - [ ] **Step 3: Set the compensated sizes**
 
@@ -644,7 +729,7 @@ the existing heading rules (~line 1603):
    "Midori Text" (M PLUS 1p, 0.520em). Apparent size follows x-height, not em
    — which is why every print-size result in the vision literature is stated in
    x-height rather than points. Set at Obsidian's default em ladder, an h4
-   lands 1.10x body to the eye instead of the 1.27x it claims, and the bottom
+   lands 1.03x body to the eye instead of the 1.19x it claims, and the bottom
    of the hierarchy stops reading as hierarchy.
 
    x 1.1556 = 0.520 / 0.450 restores the intended ladder optically. The em
@@ -653,21 +738,21 @@ the existing heading rules (~line 1603):
    Only h1-h4 — h5/h6 are Midori Text and already correct, and are uppercase,
    where cap-height rather than x-height carries the size.
 
-   The 2-row line box absorbs this: h1 at 2.083em is 33.3px at a 16px base
+   The 2-row line box absorbs this: h1 at 1.870em is 29.9px at a 16px base
    against a 48px box, and the box is now calc(var(--midori-row) * 2), so the
    headroom scales with the reader's text size rather than being spent by it. */
 body {
-  --h1-size: 2.083em;
-  --h2-size: 1.851em;
-  --h3-size: 1.646em;
-  --h4-size: 1.463em;
+  --h1-size: 1.870em;   /* app.css 1.618 x 1.1556 */
+  --h2-size: 1.690em;   /* app.css 1.462 */
+  --h3-size: 1.523em;   /* app.css 1.318 */
+  --h4-size: 1.373em;   /* app.css 1.188 */
 }
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `python3 tests/test_prose_typography.py`
-Expected: PASS — e.g. `ok h1 2.083em reads 1.80x body (intended 1.80x)`.
+Expected: PASS — e.g. `ok h1 1.870em reads 1.62x body (intended 1.62x)`.
 
 - [ ] **Step 5: Prove the line boxes still land on the grid**
 
@@ -704,10 +789,109 @@ git commit -m "theme: compensate heading sizes for Spectral's x-height
 
 Apparent size follows x-height, not em — which is why the vision
 literature states print size that way. Spectral carries 0.450 per em
-against Midori Text's 0.520, so at Obsidian's default ladder an h4
-rendered 1.10x body to the eye while claiming 1.27x, and the bottom of
-the hierarchy stopped reading as hierarchy. x1.1556 restores the ladder
+against Midori Text's 0.520, so at Obsidian's real ladder (1.618 down to
+1.188, read out of app.css) an h4 rendered 1.03x body to the eye while
+claiming 1.19x, and the bottom of the hierarchy stopped reading as
+hierarchy at all. x1.1556 restores the ladder
 optically; line boxes re-measured against the grid at 16 and 20px."
+```
+
+---
+
+### Task 4b: Move heading typography onto the variables Obsidian already has
+
+Not a visual change — a **contract** change, and the reason the schema was
+researched. app.css has 36 heading variables and consumes every one of them
+(`font-family: var(--h1-font)`, `font-weight: var(--h1-weight)`,
+`letter-spacing: var(--h1-letter-spacing)`). The theme currently sets six of
+them — the colours — and reaches past the rest with element selectors, which is
+why it needs *two* rules per level (`.markdown-preview-view h1` for Reading
+view and `.HyperMD-header-1` for Live Preview), a separate `--inline-title-font`
+declaration, and an `!important` on `.inline-title`.
+
+**Files:**
+- Modify: `obsidian/theme.css` (~1603–1690: the heading font rules, the `--inline-title-font` block, the `.inline-title` rule)
+
+**Interfaces:**
+- Consumes: `--h1-size`…`--h4-size` from Task 4.
+- Produces: `--hN-font`, `--hN-weight`, `--hN-letter-spacing` set on `body`.
+
+- [ ] **Step 1: Confirm the variables are consumed, in this Obsidian version**
+
+```bash
+python3 obsidian/dump-app-css.py /tmp/midori-appcss
+grep -o -- "--h[1-4]-\(font\|weight\|letter-spacing\|size\)" /tmp/midori-appcss/app.css | sort | uniq -c
+```
+
+Expected: each name appears at least twice — once declared, once consumed. If
+`--hN-letter-spacing` appears only as a consumer with no default, that is
+normal and it still works.
+
+- [ ] **Step 2: Replace the element rules with variable declarations**
+
+Delete the `.markdown-preview-view h1, .HyperMD-header-1 { … }` pairs for h1–h4
+and the `body { --inline-title-font: … }` block, and declare instead:
+
+```css
+/* HEADINGS THROUGH OBSIDIAN'S OWN VARIABLES, NOT AROUND THEM.
+
+   app.css already reads --hN-font, --hN-weight and --hN-letter-spacing on
+   every heading, in BOTH panes: .HyperMD-header-N in Live Preview and h1-h6 in
+   Reading view are the same declaration block. Setting the variables therefore
+   replaces two rules per level with one, and it is the supported path rather
+   than a specificity fight that has to be re-won every time app.css changes.
+
+   The inline title comes free: app.css defaults --inline-title-font,
+   --inline-title-size and --inline-title-weight to their --h1-* counterparts,
+   so the title follows h1 without a rule of its own. */
+body {
+  --h1-font: "Midori Display", ui-serif, Georgia, serif;
+  --h2-font: "Midori Display", ui-serif, Georgia, serif;
+  --h3-font: "Midori Display", ui-serif, Georgia, serif;
+  --h4-font: "Midori Display", ui-serif, Georgia, serif;
+  --h1-weight: 600;
+  --h2-weight: 600;
+  --h3-weight: 500;
+  --h4-weight: 500;
+  --h1-letter-spacing: -0.01em;
+  --h2-letter-spacing: -0.01em;
+}
+```
+
+- [ ] **Step 3: Try removing the `!important` on the inline title**
+
+The existing `.inline-title { font-family: var(--inline-title-font) !important }`
+was added because a per-vault Font override in Settings → Appearance drives the
+title off `--font-text` and a plain rule lost. With `--h1-font` set, the title
+takes its face from the variable chain instead. Remove the `!important`, then
+**verify with a vault font override actually set** — Settings → Appearance →
+Font → pick any face. If the title reverts to that face, restore the
+`!important` and leave the existing comment explaining why.
+
+- [ ] **Step 4: Verify both panes and the title**
+
+```bash
+sh tests/lint.sh && sh obsidian/install-obsidian.sh
+```
+
+Open a note with h1–h4 in Live Preview, switch to Reading view, and check the
+inline title. All three must be Spectral at the compensated sizes. This is the
+step that catches a variable name typo, because a wrong name fails silently to
+`inherit` rather than erroring.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add obsidian/theme.css
+git commit -m "theme: set headings through Obsidian's own --hN-* variables
+
+app.css consumes 36 heading variables and the theme was setting six of
+them, reaching past the rest with element selectors -- which is why it
+carried two rules per level, one for .HyperMD-header-N and one for h1-h6,
+plus a separate --inline-title-font and an !important. The variables are
+read in both panes from a single app.css declaration block, so setting
+them replaces the pairs with one block and the inline title follows h1
+for free."
 ```
 
 ---
