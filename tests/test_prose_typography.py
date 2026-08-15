@@ -89,8 +89,31 @@ def test_measure():
         bad(f"measure {raw} = {cpl:.1f} characters per line, outside 55-75")
 
 
+def test_row_is_one_number():
+    raw = theme_var("--midori-row")
+    if raw is None:
+        bad("--midori-row is not defined; the grid is still a literal in every rule")
+        return
+    ok(f"--midori-row = {raw}")
+
+    # The refactor is only real if the literals are gone. Comments are stripped
+    # first: the file explains the grid in prose and those mentions are fine.
+    body = re.sub(r"/\*.*?\*/", "", THEME, flags=re.S)
+    stray = re.findall(r"line-height:\s*24px", body)
+    if stray:
+        bad(f"{len(stray)} rules still hardcode line-height: 24px")
+    else:
+        ok("no rule hardcodes line-height: 24px")
+
+    if re.search(r"background-size:\s*24px\s+24px", body):
+        bad("the dot grid still hardcodes 24px 24px")
+    else:
+        ok("the dot grid is expressed in --midori-row")
+
+
 if __name__ == "__main__":
     print("== prose typography ==")
     test_measure()
+    test_row_is_one_number()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)
