@@ -10,13 +10,19 @@ FAIL=0
 ok()   { printf '  ok   %s\n' "$*"; }
 bad()  { printf '  FAIL %s\n' "$*"; FAIL=1; }
 
+# DOT-DIRECTORIES ARE PRUNED, not just .git. obsidian/.fontenv is a virtualenv
+# with ~2000 .py files in site-packages, and py_compiling third-party code we
+# did not write turned a two-second lint into a several-minute one. Anything
+# hidden is either vendored or machinery; neither is ours to check.
+FILES() { find . -name '.*' -prune -o -name "$1" -print; }
+
 echo "== python compiles =="
-for py in $(find . -name '*.py' -not -path './.git/*'); do
+for py in $(FILES '*.py'); do
   if python3 -m py_compile "$py" 2>/dev/null; then ok "py_compile $py"; else bad "py_compile $py"; fi
 done
 
 echo "== shell scripts =="
-for sh in $(find . -name '*.sh' -not -path './.git/*'); do
+for sh in $(FILES '*.sh'); do
   if command -v shellcheck >/dev/null 2>&1; then
     # -S error: fail only on real errors, not style nits in these hand-written scripts.
     if shellcheck -S error "$sh" >/dev/null 2>&1; then ok "shellcheck $sh"; else bad "shellcheck $sh"; fi
