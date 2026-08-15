@@ -81,6 +81,18 @@ else
   echo "  skip (node not found)"
 fi
 
+# PARSING IS NOT LOADING. A main.js truncated at a top-level boundary — by an
+# edit that replaced a range and swallowed the rest of the file — is still
+# valid JavaScript. It parses, the stylesheet check passes, and the only
+# symptom is Obsidian saying "Failed to load plugin" with no line number.
+# Happened once; this requires each plugin the way Obsidian does instead.
+echo "== obsidian plugins load and export a Plugin =="
+if command -v node >/dev/null 2>&1; then
+  if node tests/check_plugin_loads.js; then :; else FAIL=1; fi
+else
+  echo "  skip (node not found)"
+fi
+
 echo
 [ "$FAIL" -eq 0 ] && echo "LINT: all green" || echo "LINT: failures above"
 exit "$FAIL"
