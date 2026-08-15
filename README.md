@@ -332,6 +332,26 @@ Residual gotchas:
   own default from 25m to 23m on open. A measurement bug in a control that feeds
   itself does not look like a measurement bug — it looks like the setting not
   sticking. Centring item *i* is `scrollTop = 34i`; the inverse is one division.
+- **A surface colour that must differ from a ground has to be *derived* from
+  it, not named.** The bar's flip cards took three attempts. First
+  `--background-modifier-form-field`, which the setting window's cards use —
+  invisible, because a status bar is `--background-secondary` and the two sit a
+  hair apart, so all that survived was the seam: a hairline through the middle
+  of every digit, reading as a strikethrough. Then `--background-primary`,
+  which fixed the harness and not the app, because this theme sets
+  `.status-bar { background-color: transparent }` and the bar therefore shows
+  the *page* ground — exactly `--background-primary`. Same bug, other colour.
+  There is no named surface that is reliably distinct from a ground a theme is
+  free to redefine, so the card is `color-mix(in oklab, var(--text-normal) 8%,
+  var(--background-primary))`: the ground nudged toward the ink, which steps
+  darker on paper and lighter at night without a second table, and cannot
+  collide with the thing it contrasts against because it is defined as an
+  offset from it. Measured: 17 points darker in Paper, 13 lighter in Night,
+  ~1.16:1 — a card, not a panel. **The second attempt is the interesting one:**
+  the harness stubbed the status bar as `--background-secondary`, the way
+  Obsidian paints it by default, so it was checking contrast against a colour
+  that never appears in this theme. A harness that models the host's chrome has
+  to model *this* host's chrome.
 - **A mouse gets no momentum for free, and the throw has to outlive the drag.**
   A trackpad and a finger both hand the platform a release velocity and get
   inertia from it; a mouse button hands it nothing, so a flicked drum stopped
@@ -377,15 +397,7 @@ Residual gotchas:
   has covered it, so with nothing covering it the top of the glyph shows the
   new digit and the bottom shows the old one for 90ms. A torn character, once a
   second. The suppression has to set both halves in the same frame, which is
-  JS. Two things about the card, both learned by rendering it: every half has
-  to stay *opaque*, because a fold works by covering and transparent halves
-  superimpose into a double exposure rather than a card turning; and the card
-  takes `--background-primary` rather than the window's
-  `--background-modifier-form-field`, because a status bar is already
-  `--background-secondary` and the form-field ground sits a hair off it — cards
-  painted that way are invisible against the bar, and the only thing that
-  survives is the seam, a hairline through the middle of every digit that reads
-  as a strikethrough.
+  JS.
 - **A split-flap that only flips what changed, and cancels rather than queues.**
   Scrolling the drum changes the value many times a second. Re-rendering every
   cell flips the unchanged ones too, so the whole board flaps when only the

@@ -446,17 +446,26 @@ const STYLE = `
   width: 0.24em;                    /* FLAP_BAR.sep */
 }
 
-/* THE CARD TAKES THE NOTE'S GROUND, NOT THE FORM-FIELD GROUND the window's
-   cards use, and the difference is the whole reason this reads as an object.
-   A status bar is already --background-secondary, and --background-modifier-
-   form-field sits a hair off it — so cards painted that way are invisible
-   against the bar, and all that survives is the seam: a hairline straight
-   through the middle of every digit, which reads as a strikethrough rather
-   than as a card. --background-primary is the one ground guaranteed to differ
-   from the bar in both Paper and Night, because it is what the bar is
-   contrasted AGAINST by design. */
+/* THE CARD IS MIXED, NOT NAMED, and that took three tries to get right.
+
+   Naming a surface variable was wrong twice. --background-modifier-form-field,
+   which the window's cards use, sits a hair off --background-secondary — and a
+   status bar is --background-secondary, so those cards were invisible against
+   it and all that survived was the seam: a hairline straight through the
+   middle of every digit, reading as a strikethrough. Switching to
+   --background-primary fixed the harness and not the app, because THIS theme
+   sets '.status-bar { background-color: transparent }' — the bar shows the
+   PAGE ground, which is exactly --background-primary. Same bug, other colour.
+
+   There is no surface variable that is reliably distinct from a ground a theme
+   is free to define, so the card is derived from the ground instead: primary
+   nudged 8% toward the ink. That is a step in whichever direction the theme
+   goes — darker on paper, lighter at night — and it cannot collide with the
+   thing it is meant to contrast with, because it is defined as an offset from
+   it. It also stays fully OPAQUE, which a translucent tint would not: the fold
+   has to cover the glyph beneath it, not filter it. */
 .midori-timer-flaps.is-bar .midori-timer-flap-half {
-  background: var(--background-primary);
+  background: color-mix(in oklab, var(--text-normal) 8%, var(--background-primary));
 }
 /* The colon is not a card. Stated at (0,4,0) rather than left to the tie it
    would otherwise have with the rule above, which document order happens to
