@@ -88,9 +88,16 @@ PY
   #                    it on the baseline. This draws a caret the theme can style.
   #   midori-confetti  throws confetti when a note crosses a word target, in the
   #                    theme's own accent colours.
+  #   midori-timer     a status-bar countdown whose duration you type. Desktop
+  #                    only in practice — Obsidian hides the status bar on
+  #                    phones — but its commands work everywhere.
   #
-  # Both are enabled below but neither is required by the theme; delete the
+  # All are enabled below but none is required by the theme; delete the
   # directory and re-run to drop one.
+  #
+  # Only manifest.json and main.js are copied, so a plugin here must be a single
+  # self-contained file: no styles.css, no assets. Both companions inject their
+  # own CSS from JS for exactly this reason.
   for plugin in "$REPO_DIR"/plugins/*/; do
     [ -f "$plugin/manifest.json" ] || continue
     id="$(basename "$plugin")"

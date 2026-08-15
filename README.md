@@ -137,7 +137,7 @@ without colliding with anything.
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |
 | `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, file icons recolored from Material Symbols Rounded (Apache-2.0), workbench-chrome product icons built from Phosphor (MIT) — see `midori-theme/CREDITS.md`; `build-icons.py` / `build-product-icons.py` regenerate — plus installer |
 | `antinote/` | Midori Paper/Night Antinote themes (24-key JSON), installer, and a transcription of Antinote's undocumented theme schema |
-| `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret` and `midori-confetti` companion plugins, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
+| `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret`, `midori-confetti` and `midori-timer` companion plugins, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
 | `moshi/` | Midori Paper/Night for [Moshi](https://getmoshi.app) (the phone terminal for agents) — **generated** from the Ghostty themes by `build-moshi-themes.py`, which also publishes them to iCloud for the phone |
 | `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
 | `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
@@ -293,6 +293,21 @@ Residual gotchas:
   did this — of 6,478 plugins, Writing Goals draws a progress bar and stops,
   Target Word Count *blocks editing* until you hit your number, and the one
   confetti plugin fires on every keystroke.
+- **The timer stores a deadline, not a remaining count** —
+  `obsidian/plugins/midori-timer`, a status-bar countdown you set by typing
+  `25m`, `1h30`, `90s` or `1:30` into a window a hotkey can open. The obvious
+  implementation keeps a `remaining` number and subtracts one per tick, and it
+  runs slow by minutes: Chromium — which is what Obsidian is — clamps
+  background timers to roughly one wake per minute once a window is hidden, and
+  suspends them while the machine sleeps. The bug hides while you watch it,
+  because watching it is what keeps the window in front. So the only stored
+  quantity is an absolute `endsAt`, and every tick recomputes `endsAt -
+  Date.now()`; ticks are then free to be late, coalesced or skipped, including
+  across a lid close, and persisting that value is also what lets a restart
+  resume the same countdown instead of losing it. The readout uses tabular
+  figures *and* reserves the width of the longest form the run will produce,
+  because a proportional countdown changes its own width twice a second and
+  drags every status item to its left along with it.
 - **Notices and tooltips are Obsidian's dark toast, and the text colour is not
   a variable.** `.notice`, `.tooltip`, `.cm-completionInfo` and
   `.cm-tooltip-docstring` all take their background from
