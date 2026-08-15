@@ -1,9 +1,9 @@
 {
   "id": "midori-timer",
   "name": "Midori Timer",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "minAppVersion": "1.4.0",
-  "description": "Set a session two ways: for a length, on drums for hours, minutes and seconds, or until a clock time like 1pm \u2014 which works out the exact hours, minutes and seconds for you. Typing still works too: 25m, 1h30, 90s, 1:30, or 1:30pm. A hotkey opens the window with the field already focused. The duration reads out on a split-flap clock, and the status-bar countdown turns over on the same board and the echo tells you when the session ends in wall-clock time. While it runs, the caret drifts from its resting indigo through sage and ochre to wine; that is the whole display, and nothing is added to the page. Needs Midori Caret, which draws the caret this recolours. A status-bar readout is available too. Counts against an absolute deadline rather than decrementing, so it stays accurate in the background or across sleep, survives a restart, and resets itself when the time is up.",
+  "description": "Set a session two ways: for a length, on drums for hours, minutes and seconds, or until a clock time like 1pm \u2014 which works out the exact hours, minutes and seconds for you. Typing still works too: 25m, 1h30, 90s, 1:30, or 1:30pm. A hotkey opens the window with the field already focused. The duration reads out on a split-flap clock, and the status-bar countdown is the same board of cards, one seventh the size and the echo tells you when the session ends in wall-clock time. While it runs, the caret drifts from its resting indigo through sage and ochre to wine; that is the whole display, and nothing is added to the page. Needs Midori Caret, which draws the caret this recolours. A status-bar readout is available too. Counts against an absolute deadline rather than decrementing, so it stays accurate in the background or across sleep, survives a restart, and resets itself when the time is up.",
   "author": "Benjamin Loschen",
   "authorUrl": "https://www.benjaminloschen.com",
   "isDesktopOnly": false

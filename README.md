@@ -332,6 +332,21 @@ Residual gotchas:
   own default from 25m to 23m on open. A measurement bug in a control that feeds
   itself does not look like a measurement bug — it looks like the setting not
   sticking. Centring item *i* is `scrollTop = 34i`; the inverse is one division.
+- **A mouse gets no momentum for free, and the throw has to outlive the drag.**
+  A trackpad and a finger both hand the platform a release velocity and get
+  inertia from it; a mouse button hands it nothing, so a flicked drum stopped
+  dead the instant the button came up — which is what makes a dial feel like a
+  list of rows rather than a wheel. Three things make the hand-written version
+  behave. Velocity is an *exponential average* over the moves, not the last
+  move's distance, or the same gesture flies or dies depending on whether the
+  final event happened to carry 14px or 1px. Snap-off has to persist through
+  the whole glide, not just the drag, or the first frame of coasting is hauled
+  back to the nearest row. And the glide can afford a long tail — 0.96 a frame,
+  about twelve rows from a firm flick — precisely because a press anywhere in
+  the window kills it, so overshooting costs a tap rather than a second gesture
+  in the opposite direction. That press is captured at the window, before the
+  drum's own handler, and each drum it actually stops is marked so the same
+  press does not also select the row it was passing.
 - **Two ways to say the same thing, and one value underneath.** A session is
   held in the head either as *for 25 minutes* or as *until 1pm*, and neither is
   a special case of the other, so the window offers both: a segmented control,
@@ -362,11 +377,15 @@ Residual gotchas:
   has covered it, so with nothing covering it the top of the glyph shows the
   new digit and the bottom shows the old one for 90ms. A torn character, once a
   second. The suppression has to set both halves in the same frame, which is
-  JS. The bar variant also drops the card, the seam and the radius — at 13px a
-  card reads as a button — but the two *moving* halves keep an opaque
-  background in the bar's own colour, because a fold works by covering:
-  transparent, the two digits superimpose and it reads as a double exposure
-  rather than as a card turning.
+  JS. Two things about the card, both learned by rendering it: every half has
+  to stay *opaque*, because a fold works by covering and transparent halves
+  superimpose into a double exposure rather than a card turning; and the card
+  takes `--background-primary` rather than the window's
+  `--background-modifier-form-field`, because a status bar is already
+  `--background-secondary` and the form-field ground sits a hair off it — cards
+  painted that way are invisible against the bar, and the only thing that
+  survives is the seam, a hairline through the middle of every digit that reads
+  as a strikethrough.
 - **A split-flap that only flips what changed, and cancels rather than queues.**
   Scrolling the drum changes the value many times a second. Re-rendering every
   cell flips the unchanged ones too, so the whole board flaps when only the
