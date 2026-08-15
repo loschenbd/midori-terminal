@@ -28,13 +28,17 @@
  * The history and the evidence are in
  * docs/superpowers/specs/2026-08-15-timer-caret-design.md.
  *
- * IT DEPENDS ON midori-caret. The native caret takes its colour from
- * `caret-color`, which a theme can set on its own, but its GEOMETRY comes from
- * font metrics, and this theme's symmetric overrides put it in the wrong place
- * — which is why midori-caret exists and draws a replacement element. This
- * plugin recolours THAT element. With midori-caret disabled, body.midori-drawn
- * is never set, the rules here never match, and the caret display is simply
- * inert: no error, no half-state, and the status-bar readout still works.
+ * IT PREFERS midori-caret AND DOES NOT REQUIRE IT. midori-caret exists because
+ * the native caret's GEOMETRY comes from font metrics, and this theme's
+ * symmetric overrides put it in the wrong place; it draws a replacement element
+ * instead, and where that element is present this plugin recolours it. Colour,
+ * unlike geometry, is portable: the native caret has always taken its colour
+ * from a CSS property. So under any other theme, or with midori-caret disabled,
+ * the same drift is written to the native caret and nothing is lost but the
+ * geometry — which was never this plugin's to fix. The two paths are mutually
+ * exclusive and both are gated on a timer actually running; see the STYLE
+ * block. (This was originally a hard dependency, and the caret display was
+ * inert without it. That was a misreading of what the gate was for.)
  *
  * SEVEN DECISIONS THAT SHAPE THE CODE. (The caret's own — why the CSS wins on
  * specificity rather than order, and why there is no transition — are at the
@@ -898,6 +902,31 @@ const STYLE = `
 body.midori-drawn.midori-timer-running .midori-cursor::before,
 body.midori-drawn.midori-timer-running .midori-title-caret {
   background: var(--midori-timer-caret, var(--color-blue));
+}
+
+/* AND THE SAME DISPLAY WITHOUT midori-caret, OR WITHOUT THE THEME.
+
+   midori-caret gates itself on the Midori stylesheet because it replaces the
+   caret's GEOMETRY, and the numbers it uses to do that are the theme's. That
+   gate is right for geometry and wrong for colour: colour is portable, because
+   the native caret has taken caret-color since forever. So the drift does not
+   actually need either the plugin or the theme — only a rule that paints the
+   caret the browser is already drawing.
+
+   THE TWO BRANCHES ARE MUTUALLY EXCLUSIVE ON PURPOSE. Where midori-drawn IS
+   set, theme.css paints the native caret transparent so the drawn one is not
+   doubled; a caret-color there would be setting the colour of something that
+   has been made invisible, which is harmless but misleading to read. :not()
+   keeps exactly one branch live at a time and costs nothing at runtime.
+
+   SPECIFICITY, AGAIN. Obsidian's own rule is (0,3,0) and a theme's is usually
+   no more; these are (0,4,1) and (0,3,1), so they win without relying on order.
+   A theme that sets caret-color with heavier specificity still wins over this,
+   which is the correct outcome — a theme that has an opinion about the caret
+   should keep it. Same gating as above: no timer running, nothing applies. */
+body:not(.midori-drawn).midori-timer-running .markdown-source-view .cm-content,
+body:not(.midori-drawn).midori-timer-running .inline-title {
+  caret-color: var(--midori-timer-caret, var(--caret-color));
 }
 `;
 
