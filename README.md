@@ -307,7 +307,18 @@ Residual gotchas:
   resume the same countdown instead of losing it. The readout uses tabular
   figures *and* reserves the width of the longest form the run will produce,
   because a proportional countdown changes its own width twice a second and
-  drags every status item to its left along with it.
+  drags every status item to its left along with it. The default display is not
+  the status bar but a **rail**: a dotted line along one edge of the window
+  that drains as the time runs down, borrowing `--dotgrid-dot` and the grid's
+  24px pitch so it reads as the page's own dots lighting up, and stepping sage
+  → ochre → wine as it empties. Two things there are easy to get wrong and were
+  both wrong first: a bare `radial-gradient(circle, …)` takes its radius from
+  the tile's farthest corner, so in a 24×3 tile it draws a 24px dot clipped to
+  3px and the rail renders as *dashes* — `closest-side` is what makes thickness
+  mean thickness; and `background-position: center` on the lit layer looks
+  right but slides its dots out of step with the track's as the fill shrinks,
+  giving a ragged interleave at the boundary instead of a clean edge. Both
+  layers anchor to the edge the fill grows from.
 - **Notices and tooltips are Obsidian's dark toast, and the text colour is not
   a variable.** `.notice`, `.tooltip`, `.cm-completionInfo` and
   `.cm-tooltip-docstring` all take their background from
