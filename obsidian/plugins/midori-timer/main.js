@@ -133,6 +133,14 @@
  * (`.is-mobile .status-bar { display: none }` in app.css), so the status-bar
  * display is desktop-only in practice. The caret is not — it is the same caret
  * on a phone, which is the other reason it is the default.
+ *
+ * The setting window needs two concessions there, both about the keyboard.
+ * It is NOT autofocused, because summoning the keyboard covers the drums and
+ * the flaps — the control you came for, hidden by one you did not ask for. And
+ * when the keyboard is opened deliberately, the window is lifted by exactly the
+ * overlap, measured off visualViewport: a software keyboard does not resize the
+ * layout viewport, so no media query and no CSS knows it is there. The drums
+ * are also shorter on a phone, which is one number — see --drum-h.
  */
 
 const { Plugin, PluginSettingTab, Setting, Modal, Menu, Notice, setIcon, Platform } = require('obsidian');
@@ -535,7 +543,20 @@ const STYLE = `
   gap: 0.55em;
   max-width: 340px;
   margin: 0 auto;
+
+  /* THE DRUM'S HEIGHT, STATED ONCE. Four rules depend on it — the drum, the
+     scroller's padding, the shared band and the colons — and they were four
+     separate literals that had to be edited together or the band would sit off
+     the selected row and the end values would stop being reachable. The item
+     height stays a literal because it is DRUM_ITEM in the JS, which does the
+     scroll arithmetic and cannot read a CSS variable. */
+  --drum-h: 170px;
+  --drum-item: 34px;                /* = DRUM_ITEM */
 }
+
+/* Phones are shorter and the keyboard takes half of what is left, so the drums
+   give back what they can spare. One number, because of the block above. */
+.is-mobile .midori-timer-dial { --drum-h: 136px; }
 
 /* ---- the split-flap readout ------------------------------------------
 
@@ -692,7 +713,7 @@ const STYLE = `
 .midori-timer-drums .midori-timer-drum-band {
   left: 0;
   right: 0;
-  top: 85px;
+  top: calc(var(--drum-h) / 2);
 }
 .midori-timer-column {
   flex: 1;
@@ -716,7 +737,7 @@ const STYLE = `
    band rather than on the row — the row is taller by the captions' height. */
 .midori-timer-drum-colon {
   flex: 0 0 auto;
-  height: 170px;
+  height: var(--drum-h);
   display: flex;
   align-items: center;
   padding: 0 1px;
@@ -726,7 +747,7 @@ const STYLE = `
 }
 .midori-timer-drum {
   position: relative;
-  height: 170px;
+  height: var(--drum-h);
   overflow: hidden;
   -webkit-mask-image: linear-gradient(transparent, #000 26%, #000 74%, transparent);
   mask-image: linear-gradient(transparent, #000 26%, #000 74%, transparent);
@@ -739,13 +760,13 @@ const STYLE = `
   touch-action: pan-y;
   cursor: grab;
 
-  /* (170 - 34) / 2, so the first and last values can reach the centre band.
-     box-sizing matters here and is not decoration: under content-box, height
-     100% plus this padding makes clientHeight 306 rather than 170, and anything
-     measuring the scroller to centre an item lands two items out. The JS avoids
-     measuring at all (see scrollDrumTo), and this keeps the two agreeing. */
+  /* (height - item) / 2, so the first and last values can reach the centre
+     band. box-sizing matters here and is not decoration: under content-box,
+     height 100% plus this padding makes clientHeight 306 rather than 170, and
+     anything measuring the scroller to centre an item lands two items out. The
+     JS avoids measuring at all (see Drum.set), and this keeps the two agreeing. */
   box-sizing: border-box;
-  padding: 68px 0;
+  padding: calc((var(--drum-h) - var(--drum-item)) / 2) 0;
 }
 .midori-timer-drum-scroll::-webkit-scrollbar { display: none; }
 
@@ -758,7 +779,7 @@ const STYLE = `
   scroll-snap-type: none;
 }
 .midori-timer-drum-item {
-  height: 34px;
+  height: var(--drum-item);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -779,7 +800,7 @@ const STYLE = `
   left: 0;
   right: 0;
   top: 50%;
-  height: 34px;
+  height: var(--drum-item);
   transform: translateY(-50%);
   pointer-events: none;
   border-top: 1px solid var(--background-modifier-border);
@@ -1298,7 +1319,53 @@ class DurationModal extends Modal {
     this.paintMode();                           // must precede the first seed
     this.seedFor(this.seconds);
     this.render(true);
-    window.setTimeout(() => { this.input.focus(); }, 0);
+    this.watchKeyboard();
+
+    /* NOT ON A PHONE. On desktop the premise is a duration you type, opened by
+     * a hotkey, so the field is focused before you can reach for it. On a phone
+     * the same line summons the software keyboard, which covers the drums, the
+     * flaps and half the window — the control you actually came to use, hidden
+     * by the one you did not ask for. Tapping the field still opens it. */
+    if (!Platform.isMobile) window.setTimeout(() => { this.input.focus(); }, 0);
+  }
+
+  /* Keep the field above the keyboard when it does open.
+   *
+   * A software keyboard does not resize the LAYOUT viewport, so nothing in CSS
+   * knows it is there and the window stays centred on a screen half of which is
+   * now covered. What it does resize is the VISUAL viewport, which is why this
+   * is visualViewport rather than a resize listener or a media query.
+   *
+   * The window is lifted by exactly the overlap, and no further: enough to put
+   * the field in the clear, so as much of the drums and the flaps stays on
+   * screen as the keyboard leaves room for. The lift is also clamped to the
+   * distance to the top of the screen, because a window pushed off the top is
+   * not an improvement on one pushed off the bottom. */
+  watchKeyboard() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const lift = () => {
+      const el = this.modalEl;
+      if (!el) return;
+      el.style.transform = '';                  // measure where it truly sits
+      if (document.activeElement !== this.input) return;
+      const field = this.input.getBoundingClientRect();
+      const over = field.bottom + 10 - (vv.offsetTop + vv.height);
+      if (over <= 0) return;
+      const room = Math.max(0, el.getBoundingClientRect().top - 8);
+      el.style.transform = `translateY(${-Math.min(over, room)}px)`;
+    };
+
+    // The keyboard animates in, so the first measurement has to wait for it.
+    this.input.addEventListener('focus', () => window.setTimeout(lift, 260));
+    this.input.addEventListener('blur', lift);
+    vv.addEventListener('resize', lift);
+    vv.addEventListener('scroll', lift);
+    this.unwatchKeyboard = () => {
+      vv.removeEventListener('resize', lift);
+      vv.removeEventListener('scroll', lift);
+    };
   }
 
   /** Every drum in the window, both modes, so callers need not know the shape. */
@@ -1468,6 +1535,8 @@ class DurationModal extends Modal {
   }
 
   onClose() {
+    if (this.unwatchKeyboard) this.unwatchKeyboard();
+    this.drums().forEach((d) => d.stop());      // no rAF outliving the window
     this.contentEl.empty();
   }
 }

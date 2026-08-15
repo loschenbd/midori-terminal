@@ -357,6 +357,17 @@ Residual gotchas:
   Obsidian paints it by default, so it was checking contrast against a colour
   that never appears in this theme. A harness that models the host's chrome has
   to model *this* host's chrome.
+- **A software keyboard does not resize the layout viewport**, so no media
+  query, no `resize` listener and nothing in CSS knows it is there — the window
+  stays serenely centred on a screen half of which is now covered. What the
+  keyboard *does* resize is the **visual** viewport, so the fix is
+  `visualViewport` and its `resize`/`scroll` events, lifting the window by
+  exactly the overlap and no further, clamped to the distance to the top of the
+  screen (a window pushed off the top is not an improvement on one pushed off
+  the bottom). The other half of the fix is not summoning it at all: the
+  duration field is autofocused on desktop, where the premise is a duration you
+  type into a window a hotkey opened, and *not* on a phone, where the same line
+  hides the drums behind a keyboard nobody asked for.
 - **A width reserve that was invisible in text is a visible hole beside
   objects.** The status-bar readout reserved the widest form the run would
   produce, so the item would not shrink from `1:00:00` to `59:59` and drag its
