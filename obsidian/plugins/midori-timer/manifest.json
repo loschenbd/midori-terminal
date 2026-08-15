@@ -1,9 +1,9 @@
 {
   "id": "midori-timer",
   "name": "Midori Timer",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "minAppVersion": "1.4.0",
-  "description": "A timer whose duration you type: 25m, 1h30, 90s or 1:30, in a small window a hotkey can open. Shows as a thin line just inside an edge of the note that fills as the time runs, through a sage to ochre to wine gradient, so an empty channel is a timer just started and a full one is a timer about to end. It appears only while a timer is going, clears the status bar rather than running under it, and resets itself when the time is up. A status-bar readout is available instead of it or alongside it. Counts against an absolute deadline rather than decrementing a number, so it stays accurate while the window is in the background or the machine sleeps, and survives a restart.",
+  "description": "A timer whose duration you type: 25m, 1h30, 90s or 1:30, in a small window a hotkey can open. Shows as a thin line just inside an edge of the note that fills as the time runs: the whole line is sage, then the whole line is ochre, then the whole line is wine, so how long is left reads at a glance. It appears only while a timer is going, is trimmed clear of the status bar on desktop and of the header and navigation pills on mobile, and resets itself when the time is up. A status-bar readout is available instead of it or alongside it. Counts against an absolute deadline rather than decrementing a number, so it stays accurate while the window is in the background or the machine sleeps, and survives a restart.",
   "author": "Benjamin Loschen",
   "authorUrl": "https://www.benjaminloschen.com",
   "isDesktopOnly": false
