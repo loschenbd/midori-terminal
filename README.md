@@ -342,16 +342,32 @@ Residual gotchas:
   `.status-bar { background-color: transparent }` and the bar therefore shows
   the *page* ground — exactly `--background-primary`. Same bug, other colour.
   There is no named surface that is reliably distinct from a ground a theme is
-  free to redefine, so the card is `color-mix(in oklab, var(--text-normal) 8%,
-  var(--background-primary))`: the ground nudged toward the ink, which steps
-  darker on paper and lighter at night without a second table, and cannot
-  collide with the thing it contrasts against because it is defined as an
-  offset from it. Measured: 17 points darker in Paper, 13 lighter in Night,
-  ~1.16:1 — a card, not a panel. **The second attempt is the interesting one:**
+  free to redefine, so the card is derived from the ground — lifted off it, the
+  way a card sits on the desk it is lying on. That needs *two amounts and one
+  direction*, and the second table is unavoidable rather than lazy: "lighter"
+  is a single instruction, but the room to obey it is not symmetric. Paper's
+  `#f3f1eb` has twelve points of headroom below white; Night's `#1a1917` has
+  almost the whole range. One percentage toward white is either invisible on
+  paper or a floodlight at night. Measured after: `#f3f1eb → #fdfdfc` and
+  `#1a1917 → #282724`, ~1.1:1 either way — a card, not a panel. It is stated as
+  a custom property rather than as two background rules, so the theme branch
+  and the `is-sep` exception cannot end up tied on specificity and settled by
+  document order. **The middle attempt is the interesting one:**
   the harness stubbed the status bar as `--background-secondary`, the way
   Obsidian paints it by default, so it was checking contrast against a colour
   that never appears in this theme. A harness that models the host's chrome has
   to model *this* host's chrome.
+- **A width reserve that was invisible in text is a visible hole beside
+  objects.** The status-bar readout reserved the widest form the run would
+  produce, so the item would not shrink from `1:00:00` to `59:59` and drag its
+  neighbours across. That was right for a proportional countdown, which changes
+  width twice a second. It stopped being right the moment the digits became
+  fixed-width cards: the board's width now changes only when a *cell* is
+  dropped — twice in a whole session — and the reserved emptiness that nobody
+  could see in a run of text is perfectly obvious as a gap beside a row of
+  cards. Two rare one-cell shifts is the cheaper of the two. Removing a
+  mechanism is the same kind of decision as adding one, and it is worth
+  checking whether the condition that justified it still holds.
 - **A mouse gets no momentum for free, and the throw has to outlive the drag.**
   A trackpad and a finger both hand the platform a release velocity and get
   inertia from it; a mouse button hands it nothing, so a flicked drum stopped
