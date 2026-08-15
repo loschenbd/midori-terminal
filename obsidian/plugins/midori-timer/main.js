@@ -580,25 +580,38 @@ const STYLE = `
   font-size: var(--font-ui-medium, 15px);
 }
 
-/* THE PADDING IS WRITTEN AT (0,3,0), AND THAT IS THE ENTIRE POINT OF THIS RULE.
-   Wearing .clickable-icon buys the header's icon geometry and its press state,
-   and it also opts into everything Obsidian says about that class — including
-   '.view-actions .clickable-icon { padding: ... }', a DESCENDANT selector at
-   (0,2,0). A plugin's own single-class rule is (0,1,0) and loses to it in
-   silence: the padding never applied at all, and the readout sat flush against
-   the pill's edge while every neighbour sat inside its own box. Twice.
+/* THE INSET IS PUT ON OUR OWN ELEMENTS, WHICH IS THE ONLY PLACE IT IS SAFE.
+   Three rounds went into padding the readout itself, and each lost to the host
+   in a different way: a single-class rule is (0,1,0) and Obsidian styles
+   '.view-actions .clickable-icon' at (0,2,0); raising it to three classes won
+   that fight and still left the cards flush, because the moment an element
+   wears a host class it is inside a cascade nobody here can enumerate.
 
-   Three classes on the element itself beat any two-class rule from the host
-   without depending on load order — which matters, because Obsidian hot-reloads
-   its own CSS and a plugin's stylesheet is injected whenever the plugin loads.
+   .midori-timer-flaps and .midori-timer-icon are names that exist nowhere but
+   this file. No host rule can target them, no future Obsidian release can
+   start doing so, and there is no specificity to lose — the margin simply
+   applies. That is worth more than putting it on the tidier element.
 
-   Symmetric on both sides and on the ELEMENT rather than on its contents, so
-   the clock and the cards are inset from the pill identically and neither
-   state has to be reasoned about separately. */
+   Equal on both sides of whichever one is showing, so the clock and the
+   countdown are inset from the pill identically without either state being
+   reasoned about on its own. */
+.midori-timer-header .midori-timer-flaps,
+.midori-timer-header .midori-timer-icon {
+  margin: 0 var(--size-4-2, 8px);
+}
 .midori-timer.midori-timer-header.clickable-icon {
-  padding: 0 var(--size-4-2, 8px);
+  padding: 0;
   margin: 0;
 }
+
+/* NO PAUSE ICON ON A PHONE, and it costs nothing to lose. It is there on
+   desktop because a stopped countdown could be a finished one — except that it
+   could not: finishing RESETS, so the readout returns to the idle clock, and a
+   number that is sitting still can only be a paused number. The italic and the
+   dimming already say so. What it does cost is width, in the one place there is
+   none: the header's pill grows with its contents only so far, and the icon
+   plus a four-card countdown pushed the readout out past the pill's own edge. */
+.midori-timer-header.is-paused .midori-timer-icon { display: none; }
 
 /* THE ICON HAS TO MATCH ITS NEIGHBOURS, NOT ITS OLD HOME. A status bar icon is
    --icon-xs at 14px beside 12px labels, which is right there and spindly here:
