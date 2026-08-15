@@ -5,11 +5,12 @@
  * WHAT IT IS. Set a duration by typing "25m", "1h30", "90s" or "1:30" into a
  * small input, which a hotkey can open — bind "Midori Timer: Set duration and
  * start". The default display is a RAIL: a thin line just inside one edge of
- * the note that FILLS as the time runs, through a sage -> ochre -> wine
- * gradient, so an empty channel is a timer just started and a full one is a
- * timer about to end. A status-bar readout is available instead of it, or
- * alongside it; that one can be clicked to pause and right-clicked for the
- * rest. Everything is also a command.
+ * the note that FILLS as the time runs, so an empty channel is a timer just
+ * started and a full one is a timer about to end. The whole line is sage,
+ * then the whole line is ochre, then the whole line is wine — one hue at a
+ * time, each drawn as a gradient within itself. A status-bar readout is
+ * available instead of it, or alongside it; that one can be clicked to pause
+ * and right-clicked for the rest. Everything is also a command.
  *
  * SEVEN DECISIONS THAT SHAPE THE CODE. (The rail's own — how it is measured
  * off the note, and why the gradient is clipped rather than stretched — are at
@@ -63,9 +64,10 @@
  *    workspace rebuild can tear it out; but its geometry is read from the
  *    editor's scroller, so it lands on the page rather than on the window and
  *    tracks the text column when a sidebar opens. It is never flush to an edge
- *    (railInset), it stops short of the status-bar pill rather than running
- *    underneath it, and it is pointer-events: none throughout — it is a
- *    readout, not a control.
+ *    (railInset), it is trimmed clear of whatever Obsidian floats over the
+ *    note — the status-bar pill on desktop, the header buttons and navigation
+ *    pill on mobile — and it is pointer-events: none throughout, because it is
+ *    a readout and not a control.
  *
  * 7. THE RAIL IS VISIBLE ONLY WHILE A TIMER IS GOING. Running or paused, and
  *    nothing else: idle shows nothing, and the finish is carried by the notice,
@@ -95,6 +97,22 @@ const DEFAULTS = {
   railInset: 10,              // px in from the note's edge — never flush
 };
 
+
+/* Obsidian's furniture that FLOATS OVER the note rather than displacing it,
+ * which is exactly the set the rail has to dodge. Desktop contributes the
+ * status bar; the rest is mobile, where the header buttons and the navigation
+ * pill sit on top of a scroller that runs the full height of the screen. A
+ * selector that matches nothing costs nothing, so the list covers both
+ * platforms and several Obsidian versions at once. */
+const CHROME = [
+  '.status-bar',
+  '.mobile-navbar',
+  '.mobile-toolbar',
+  '.view-header',
+  '.view-actions',
+  '.workspace-drawer-header',
+].join(', ');
+const CHROME_GAP = 8;             // px of daylight left around each obstruction
 
 /* The display refresh rate, not the timekeeping rate — see decision 1. A whole
  * second here would let the readout sit up to a second behind the true value;
@@ -158,30 +176,41 @@ function formatClock(seconds) {
 
 /* The rail's colour ramp, as a fraction of the duration REMAINING.
  *
+ * ONE HUE AT A TIME. The whole line is sage, then the whole line is ochre,
+ * then the whole line is wine — never a blend of the three at once. The two
+ * jobs are kept separate on purpose: the HUE carries the time (three states,
+ * read at a glance, out of the corner of your eye), and the gradient WITHIN
+ * that hue is shape, not data. A single line carrying a continuous
+ * three-colour ramp says nothing legible at a glance, because you have to
+ * find the boundary and judge where it is; a line that is simply yellow says
+ * "getting on" in one look.
+ *
  * The hues are the theme's own, in the roles they already hold elsewhere in
  * Midori: sage is the accent, ochre is the warning slot (ANSI 3), wine is the
- * error slot (ANSI 1).
- *
- * These are positions along the WHOLE rail, not thresholds tested against the
- * current time. The gradient is painted once, at full length, and revealed by
- * the fill — so the colour under any point of the line is a property of that
- * point rather than of the moment, and the leading edge picks up its colour by
- * arriving somewhere rather than by anything recomputing it. Sage holds for
- * the first three quarters, so the shift toward wine reads as the end
- * approaching instead of as a wash that has been happening all along. */
-const RAIL_RAMP = [
-  { at: 0,    varName: '--interactive-accent', fallback: '#5f6f5e' },  // sage
-  { at: 0.75, varName: '--interactive-accent', fallback: '#5f6f5e' },  // sage, held
-  { at: 0.90, varName: '--color-yellow',       fallback: '#b88a3a' },  // ochre
-  { at: 1,    varName: '--color-red',          fallback: '#7a4a4a' },  // wine
+ * error slot (ANSI 1). Ordered most-remaining first; the first match wins. */
+const RAIL_STOPS = [
+  { above: 0.25, varName: '--interactive-accent', fallback: '#5f6f5e' },  // sage
+  { above: 0.10, varName: '--color-yellow',       fallback: '#b88a3a' },  // ochre
+  { above: -1,   varName: '--color-red',          fallback: '#7a4a4a' },  // wine
 ];
 
-/** The ramp as one CSS gradient, along `dir`. */
-function railGradient(dir) {
-  const stops = RAIL_RAMP
-    .map((s) => `var(${s.varName}, ${s.fallback}) ${(s.at * 100).toFixed(0)}%`)
-    .join(', ');
-  return `linear-gradient(${dir}, ${stops})`;
+/* The current hue as a gradient along `dir`, faint at the rail's origin and
+ * full at the leading edge, so the edge is the part that reads.
+ *
+ * The gradient is sized to the FILL and therefore stretches with it — the
+ * opposite of what a multi-hue ramp would want, and right here for the same
+ * reason: with only one hue in play the gradient carries no time information,
+ * so the visible line should always show the whole of it. Anchoring it to the
+ * rail's full length instead would leave an early fill showing only the
+ * dimmest sliver, which reads as a faint line rather than as a green one.
+ *
+ * color-mix rather than an alpha channel because the colour arrives as an
+ * opaque theme variable — there is no rgb triplet for the accent, and the
+ * theme's --interactive-accent-hsl is known-stale (see theme.css). */
+function railGradient(dir, fraction) {
+  const stop = RAIL_STOPS.find((x) => fraction > x.above) || RAIL_STOPS[RAIL_STOPS.length - 1];
+  const c = `var(${stop.varName}, ${stop.fallback})`;
+  return `linear-gradient(${dir}, color-mix(in srgb, ${c} 30%, transparent) 0%, ${c} 100%)`;
 }
 
 /** 1500 -> "25m", 5400 -> "1h 30m", 90 -> "1m 30s". For prose, not the readout. */
@@ -295,13 +324,14 @@ const STYLE = `
       in positionRail, because that bar is a floating pill over the bottom
       right and a line crossing behind it reads as debris.
 
-   THE GRADIENT IS PAINTED AT FULL LENGTH AND REVEALED, NOT STRETCHED. The fill
-   layer always carries the whole sage -> ochre -> wine ramp across the rail's
-   entire length; progress is applied with clip-path, which changes what is
-   VISIBLE without changing what is PAINTED. Animating 'width' instead would
-   rescale the gradient every tick, so the leading edge would sit at the same
-   colour the whole way down and the ramp would mean nothing. Under clip-path
-   each point of the line has a fixed colour and the edge moves through it. */
+   THE FILL IS SIZED, AND THE GRADIENT STRETCHES WITH IT. The fill element's
+   own length IS the progress, so its background gradient is redrawn across
+   whatever is currently visible: the line always shows the complete faint ->
+   full ramp, however little of it there is. That is only correct because the
+   ramp is ONE hue (see RAIL_STOPS) and therefore carries no time information
+   of its own. A multi-hue ramp would have to be painted at full length and
+   revealed by clip-path instead, or the leading edge would sit at the same
+   colour the whole way down and the ramp would mean nothing. */
 .midori-timer-rail {
   position: fixed;
   z-index: var(--layer-popover, 30);
@@ -327,7 +357,8 @@ const STYLE = `
 .midori-timer-rail.edge-bottom .midori-timer-rail-fill,
 .midori-timer-rail.edge-top .midori-timer-rail-fill {
   background: var(--rail-ramp-x);
-  clip-path: inset(0 calc(100% - var(--rail-progress)) 0 0);
+  right: auto;
+  width: var(--rail-progress);
 }
 
 /* Vertical edges: fills top to bottom, so it reads as a level rising. */
@@ -336,7 +367,8 @@ const STYLE = `
 .midori-timer-rail.edge-left .midori-timer-rail-fill,
 .midori-timer-rail.edge-right .midori-timer-rail-fill {
   background: var(--rail-ramp-y);
-  clip-path: inset(0 0 calc(100% - var(--rail-progress)) 0);
+  bottom: auto;
+  height: var(--rail-progress);
 }
 
 .midori-timer-rail.no-track .midori-timer-rail-track { display: none; }
@@ -672,14 +704,44 @@ module.exports = class MidoriTimer extends Plugin {
     return document.querySelector('.workspace-split.mod-root') || document.body;
   }
 
-  /* Everything geometric about the rail, in one place, from live measurements.
+  /* Trim [a0, a1] along the rail's own axis so it clears any of Obsidian's
+   * floating chrome that crosses it, and return the shortened span.
    *
-   * Clearing the status bar is a hard requirement rather than a nicety: it is a
-   * floating pill at the bottom right, so a full-width bottom rail runs
-   * straight underneath it and the dots read as debris behind the word count.
-   * Measured on a 1728px window, it occupied x 1347..1719 — a fifth of the
-   * rail. The rail is shortened to stop before it, but only when the two
-   * actually overlap vertically, so a top or left rail keeps its full length. */
+   * This is a hard requirement rather than a nicety, and it is why the rule is
+   * written against a LIST of elements measured live rather than against the
+   * status bar alone. The scroller runs edge to edge underneath everything
+   * that floats over it, so a rail measured off the scroller runs under it
+   * too. On desktop that is the status-bar pill at the bottom right — measured
+   * at x 1347..1719 on a 1728px window, a fifth of a bottom rail. On MOBILE
+   * there is no status bar at all (app.css hides it), and instead a right-edge
+   * rail ran from behind the header buttons at the top straight down past the
+   * navigation pill and off the bottom of the screen. Same bug, different
+   * furniture: the fix has to be the furniture, not the status bar.
+   *
+   * Only obstructions that actually cross the rail's band count, so a top rail
+   * is not shortened by something sitting at the bottom. The rail is trimmed
+   * from whichever END the obstruction is nearer, so it shortens rather than
+   * being cut in half — a rail with a hole in it reads as two rails. */
+  clipToChrome(a0, a1, vertical, pos, thick) {
+    const band = thick + 6;
+    for (const el of document.querySelectorAll(CHROME)) {
+      const b = el.getBoundingClientRect();
+      if (b.width <= 0 || b.height <= 0) continue;
+      const crosses = vertical
+        ? b.right > pos - band && b.left < pos + band
+        : b.bottom > pos - band && b.top < pos + band;
+      if (!crosses) continue;
+      const s0 = vertical ? b.top : b.left;
+      const s1 = vertical ? b.bottom : b.right;
+      if (s1 <= a0 || s0 >= a1) continue;
+      if ((s0 + s1) / 2 > (a0 + a1) / 2) a1 = Math.min(a1, s0 - CHROME_GAP);
+      else a0 = Math.max(a0, s1 + CHROME_GAP);
+    }
+    return [a0, a1];
+  }
+
+  /* Everything geometric about the rail, in one place, from live
+   * measurements. */
   positionRail() {
     if (!this.rail) return;
     const el = this.scrollerEl();
@@ -690,11 +752,16 @@ module.exports = class MidoriTimer extends Plugin {
     const padT = parseFloat(cs.paddingTop) || 0;
     const padB = parseFloat(cs.paddingBottom) || 0;
 
-    // The content box: the page's own text column, padding excluded.
-    const left = r.left + padL;
-    const right = r.right - padR;
-    const top = r.top + padT;
-    const bottom = r.bottom - padB;
+    // The content box: the page's own text column, padding excluded, and then
+    // clamped to the window. On mobile the scroller is taller than the visible
+    // viewport, so an unclamped vertical rail runs off the bottom of the
+    // screen — which is what it did.
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const left = Math.max(0, r.left + padL);
+    const right = Math.min(vw, r.right - padR);
+    const top = Math.max(0, r.top + padT);
+    const bottom = Math.min(vh, r.bottom - padB);
 
     const inset = Math.max(0, this.settings.railInset);
     const edge = this.settings.railEdge;
@@ -707,23 +774,17 @@ module.exports = class MidoriTimer extends Plugin {
       // Inset to the OUTER face, so thickness grows the rail inward.
       const thick = this.settings.railThickness;
       const y = edge === 'bottom' ? bottom - inset - thick : top + inset;
-      const bar = document.querySelector('.status-bar');
-      if (bar) {
-        const b = bar.getBoundingClientRect();
-        const band = thick + 6;                            // the rail's own band
-        if (b.width > 0 && b.bottom > y - band && b.top < y + band) {
-          if (b.left > x0 + 40) x1 = Math.min(x1, b.left - 8);   // pill on the right
-          else x0 = Math.max(x0, b.right + 8);                   // or on the left
-        }
-      }
+      [x0, x1] = this.clipToChrome(x0, x1, false, y + thick / 2, thick);
       st.left = `${x0}px`;
       st.width = `${Math.max(0, x1 - x0)}px`;
       st.top = `${y}px`;
     } else {
-      const x = edge === 'left' ? left + inset : right - inset - this.settings.railThickness;
+      const thick = this.settings.railThickness;
+      const x = edge === 'left' ? left + inset : right - inset - thick;
+      let [y0, y1] = this.clipToChrome(top, bottom, true, x + thick / 2, thick);
       st.left = `${x}px`;
-      st.top = `${top}px`;
-      st.height = `${Math.max(0, bottom - top)}px`;
+      st.top = `${y0}px`;
+      st.height = `${Math.max(0, y1 - y0)}px`;
     }
   }
 
@@ -754,8 +815,10 @@ module.exports = class MidoriTimer extends Plugin {
 
     this.rail.style.setProperty('--rail-progress', `${(done * 100).toFixed(3)}%`);
     this.rail.style.setProperty('--rail-size', `${this.settings.railThickness}px`);
-    this.rail.style.setProperty('--rail-ramp-x', railGradient('to right'));
-    this.rail.style.setProperty('--rail-ramp-y', railGradient('to bottom'));
+    // The hue is chosen by what is LEFT, not by what is done.
+    const left = 1 - done;
+    this.rail.style.setProperty('--rail-ramp-x', railGradient('to right', left));
+    this.rail.style.setProperty('--rail-ramp-y', railGradient('to bottom', left));
     this.positionRail();
   }
 

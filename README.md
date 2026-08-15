@@ -314,21 +314,36 @@ Residual gotchas:
   a readout parked at 0:00 wearing a bell until you click it is a chore, and a
   lie by the time you come back to the desk. The default display is not the
   status bar but a **rail**: a thin line just inside one edge of the *note*
-  that fills as the time runs, through a sage → ochre → wine gradient, so an
-  empty channel is a timer just started and a full one is a timer about to
-  end. It is measured off the editor's scroller rather than the window — a
-  window-fixed rail cannot track a text column that moves when a sidebar opens
-  — held in off the edge rather than flush to it, stopped short of the
-  status-bar pill instead of running underneath it, and shown only while a
-  timer is actually going. The one thing that has to be right is that the
-  gradient is *revealed*, not stretched: the fill layer carries the whole ramp
-  across the rail's full length and progress is applied with `clip-path`, which
-  changes what is visible without changing what is painted. Animating `width`
-  instead rescales the gradient every tick, so the leading edge sits at the
-  same colour the whole way down and the ramp means nothing. Under `clip-path`
-  each point of the line has a fixed colour and the edge travels through it,
-  which is what makes the warm tip in the last tenth read as *nearly done*
-  rather than as decoration.
+  that fills as the time runs. The whole line is sage, then the whole line is
+  ochre, then the whole line is wine — one hue at a time, each drawn as a
+  gradient within itself, because the two jobs are worth keeping apart: the
+  hue carries the time and is read out of the corner of your eye, and the
+  gradient is shape. A single line carrying a continuous three-colour ramp
+  says nothing at a glance, since you have to find the boundary and judge
+  where it sits; a line that is simply yellow says *getting on* in one look.
+  That split also decides how the gradient is drawn — it is sized to the fill
+  and stretches with it, so the visible line always shows the whole faint →
+  full ramp however little of it there is. A multi-hue ramp would have to be
+  painted at full length and revealed with `clip-path` instead, or the leading
+  edge would sit at the same colour the whole way down; with one hue in play
+  the reverse is true, and anchoring it would leave an early fill showing only
+  the dimmest sliver, reading as a faint line rather than a green one.
+- **The rail is measured off the note, and has to dodge everything Obsidian
+  floats over it.** Position and length come from the editor's scroller, not
+  the window, because a window-fixed rail cannot track a text column that
+  moves when a sidebar opens; it is held in off the edge rather than flush to
+  it, and shown only while a timer is going. The trap is that the scroller
+  runs edge to edge *underneath* the floating chrome, so a rail measured off
+  it runs under that chrome too. On desktop that is the status-bar pill at the
+  bottom right — measured at x 1347–1719 on a 1728px window, a fifth of a
+  bottom rail. On mobile there is no status bar at all, and a right-edge rail
+  instead ran from behind the header buttons straight down past the navigation
+  pill and off the bottom of the screen, because the mobile scroller is taller
+  than the viewport. Same bug, different furniture, so the rule is written
+  against a list of floating elements measured live, plus a clamp to the
+  window: only obstructions crossing the rail's own band count, and the rail
+  is trimmed from whichever end is nearer, since a rail with a hole in it
+  reads as two rails.
 - **Notices and tooltips are Obsidian's dark toast, and the text colour is not
   a variable.** `.notice`, `.tooltip`, `.cm-completionInfo` and
   `.cm-tooltip-docstring` all take their background from
