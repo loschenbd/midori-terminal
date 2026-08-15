@@ -1,7 +1,7 @@
 {
   "id": "midori-timer",
   "name": "Midori Timer",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "minAppVersion": "1.4.0",
   "description": "Set a session two ways: for a length, on drums for hours, minutes and seconds, or until a clock time like 1pm — which works out the exact hours, minutes and seconds for you. Typing still works too: 25m, 1h30, 90s, 1:30, or 1:30pm. A hotkey opens the window with the field already focused. The duration reads out on a split-flap clock, and the status-bar countdown is the same board of cards, one seventh the size and the echo tells you when the session ends in wall-clock time. While it runs, the caret drifts from its resting indigo through sage and ochre to wine; that is the whole display, and nothing is added to the page. Midori Caret draws a caret with the right geometry and this recolours that; without it, or under another theme, the native caret is recoloured instead. A status-bar readout is available too. A phone has no status bar, so the caret is the whole display there. Counts against an absolute deadline rather than decrementing, so it stays accurate in the background or across sleep, survives a restart, and resets itself when the time is up.",
   "author": "Benjamin Loschen",

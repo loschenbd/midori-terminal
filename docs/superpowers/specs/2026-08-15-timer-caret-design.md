@@ -193,7 +193,27 @@ because `theme.css` paints the native caret transparent wherever the drawn one
 is present. Specificity is (0,4,1) and (0,3,1) against Obsidian's own (0,3,0);
 a theme with a heavier opinion about the caret still wins, which is correct.
 The plugin already writes `--midori-timer-caret` to `body` unconditionally, so
-nothing in the JavaScript changes.
+nothing in the CSS's own terms changes.
+
+**But the native caret is repainted only while typing.** Recolouring the drawn
+caret is free — it is an element, and its blink is a CSS animation, which a
+background change does not restart. The native caret's blink belongs to the
+browser, and it does not survive having its colour changed underneath it: the
+caret snaps back to visible and the cycle starts again. At the cadence above
+that is ~300 times a session, on a clock with no relation to the blink's, and
+the result was reported from use as the blinking going "weird" — a far louder
+signal than the colour it was delivering. Suppressing the blink instead is not
+available: it is the platform's, and a caret that stops blinking mid-session is
+itself a change nobody asked for.
+
+So the native branch stashes the colour and writes it on the next `keydown` or
+`input`. Chromium holds the caret solid while typing, so the change lands where
+there is no blink to disturb; and even if it did not, a keystroke resets the
+blink anyway, so the write rides a reset that was already happening. The fix
+does not depend on which is true. The cost is a colour that is stale while the
+writer is idle and catches up in one step when they resume — which is consistent
+with a display that is only ever read as "different from last time I noticed",
+and with a session that is measured in writing.
 
 ### Update cadence
 

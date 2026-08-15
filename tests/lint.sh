@@ -58,6 +58,7 @@ if python3 tests/test_moshi_themes.py; then :; else FAIL=1; fi
 echo "== midori-timer unit tests =="
 if command -v node >/dev/null 2>&1; then
   if node tests/test_midori_timer.js; then :; else FAIL=1; fi
+  if node tests/test_caret_writes.js; then :; else FAIL=1; fi
 else
   echo "  skip (node not found)"
 fi
