@@ -34,6 +34,35 @@ body {
   --font-monospace-theme: "Midori Mono", ui-monospace, SFMono-Regular, monospace;
   --bold-weight: 600;
 
+  /* THE MEASURE FOLLOWS THE READER'S TEXT SIZE, WHICH IS THE WHOLE POINT.
+
+     Obsidian's default is 700px, which with "Midori Text" is ~91 characters
+     per line at a 16px base and ~97 at 15px — outside every band anyone has
+     proposed. The band itself has no experiment behind it (Spencer 1968
+     asserts ~70; Rayner & Pollatsek deduce 52 from Tinker's PRINT data; no
+     screen study produced the range), so this is not a correction toward a
+     finding. It is the preference side of the one result that IS solid: longer
+     lines are read faster, moderate lines are preferred, and subjective
+     ratings do not track performance. A writing surface is chosen, sat at for
+     hours, and not a speed-reading task.
+
+     Proportional to the text size because characters-per-line depends on
+     BOTH width and size: a px constant silently becomes a different measure
+     the moment the reader moves Settings -> Appearance -> Font size, and
+     this theme now ships to people whose slider is not where mine is
+     (the app clamps it to 10-30px).
+
+     NOT em, which is the version of this that looks right and is not. app.css
+     applies this variable as max-width on .cm-line -- and .cm-line is also the
+     heading element, carrying font-size: var(--h1-size). An em resolves
+     against the element's OWN font-size, so an em measure hands heading lines
+     a wider column than body lines: measured, 34em is 544px on a body line and
+     880px on an h1. A calc against --font-text-size resolves numerically
+     before it ever reaches a consumer. 34 / 0.4818 average advance = 70
+     characters, at any base size. See
+     docs/superpowers/specs/2026-08-15-prose-typography-evidence.md */
+  --file-line-width: calc(var(--font-text-size) * 34);
+
   /* Vertical nudge that lands the dot row on the text baseline.
 
      ONE value for every platform. That is only possible because the grid uses
