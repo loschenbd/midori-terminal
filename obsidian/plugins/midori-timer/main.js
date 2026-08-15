@@ -62,13 +62,21 @@
  *    and the readout also reserves the width of the largest form it will show
  *    during THIS run, so the item does not jump when 1:00:00 becomes 59:59.
  *
- * 3. PARSE PERMISSIVELY, THEN ECHO WHAT YOU UNDERSTOOD. A duration box that
- *    rejects "25" is a bad duration box. Bare numbers are minutes, units may
- *    be spelled out or abbreviated, and clock forms work — but since the rules
- *    cannot all be guessed, the modal shows the interpretation under the field
- *    as you type ("25m -> 25:00"). Ambiguity is resolved by stopwatch
- *    convention and stated in the UI rather than in a manual you will not read:
- *    ONE colon is minutes:seconds, TWO is hours:minutes:seconds.
+ * 3. SET IT BY DRAGGING, OR BY TYPING, AND NEVER ONLY ONE. The window is a
+ *    drum you flick — a real scroll container, so the momentum and snapping are
+ *    the platform's — reading out through a split-flap clock. But the plugin's
+ *    premise is a duration you TYPE, opened by a hotkey, so the field stays
+ *    autofocused and Enter still submits the instant the window opens. Each
+ *    drives the other. The drum enumerates whole minutes, so 90s, 1:30 and 2h30
+ *    are typed rather than scrolled, which is the honest cost of a dial.
+ *
+ *    Parsing stays permissive, because a duration box that rejects "25" is a
+ *    bad duration box, and the echo says what was understood rather than the
+ *    manual saying what the rules are. Ambiguity follows stopwatch convention
+ *    and is stated in the UI: ONE colon is minutes:seconds, TWO is
+ *    hours:minutes:seconds. The echo also answers the question actually being
+ *    asked — not just how long, but WHEN IT ENDS in wall-clock time, which is
+ *    what tells you whether the session collides with the thing at 11:15.
  *
  * 4. SURVIVE A RELOAD. The deadline is persisted, so quitting Obsidian
  *    mid-timer and coming back resumes the same countdown rather than losing
@@ -243,6 +251,19 @@ function caretColor(t) {
   };
 }
 
+/**
+ * When a duration started now would end, in the reader's own locale and clock.
+ *
+ * This is the question the modal is actually asked. "25:00" tells you how long
+ * the session is; "ends 11:07" tells you whether it collides with the thing at
+ * 11:15, which is the decision you are making when you set it. Locale-formatted
+ * rather than hand-built, so 12- and 24-hour readers both get their own.
+ */
+function endsAtClock(seconds) {
+  const at = new Date(Date.now() + Math.max(0, seconds) * 1000);
+  return at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
 /** 1500 -> "25m", 5400 -> "1h 30m", 90 -> "1m 30s". For prose, not the readout. */
 function formatHuman(seconds) {
   const s = Math.max(0, Math.round(seconds));
@@ -321,18 +342,226 @@ const STYLE = `
 .midori-timer.is-paused .midori-timer-time {
   font-style: italic;
 }
-.midori-timer-hint {
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller, 0.8em);
-  min-height: 1.6em;
-  margin-top: 0.5em;
-}
-.midori-timer-presets {
+/* ------------------------------------------------------------- the dial
+
+   The duration modal. Obsidian's Setting class is deliberately NOT used here:
+   it lays out a settings-LIST row, name flush left and control flush right,
+   which is correct for a column of twenty rows and absurd for one field. It is
+   what used to put 350px between "Duration" and its box and strand Start in the
+   bottom corner. A one-field window owns its own DOM.
+
+   The modal is also the only place this design gets to explain itself, now that
+   the running timer is a colour drift on the caret and says nothing. Hence the
+   ramp at the bottom: setting a duration is the one moment you are looking
+   here, so it is where you learn to read the caret. */
+.midori-timer-dial {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5em;
-  margin-top: 0.9em;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55em;
+  max-width: 340px;
+  margin: 0 auto;
 }
+
+/* ---- the split-flap readout ------------------------------------------
+
+   Each digit is a card split across the middle. Four layers per cell: the
+   static top showing the NEW glyph, the static bottom still showing the OLD
+   one, and two animated halves — the old top folding down over the seam, then
+   the new bottom unfolding from behind it. Only the second half of the fold
+   reveals the new lower glyph, which is what sells it as one physical card.
+
+   ONLY CHANGED CELLS ANIMATE. Scrolling the drum changes the value many times a
+   second; re-rendering every cell would flip the unchanged ones too, and a
+   whole board flapping when only the minutes moved reads as noise rather than
+   as a mechanism. A cell whose glyph is unchanged is left completely alone.
+
+   A NEW FLIP CANCELS THE ONE IN FLIGHT rather than queueing behind it. Queued
+   flips fall behind a fast scroll and keep flapping after the drum has stopped,
+   which looks broken. Restarting is also what produces the cascade while you
+   scroll, which is the whole charm of the thing. */
+.midori-timer-flaps {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  perspective: 320px;
+  margin: 0.15em 0 0.1em;
+}
+.midori-timer-flap {
+  position: relative;
+  width: 0.68em;
+  height: 1.15em;
+  font-size: 2.6em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  color: var(--text-normal);
+}
+.midori-timer-flap.is-sep {
+  width: 0.3em;
+  color: var(--text-faint, var(--text-muted));
+}
+.midori-timer-flap.is-sep .midori-timer-flap-half { background: none; }
+
+.midori-timer-flap-half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  background: var(--background-modifier-form-field, var(--background-secondary));
+  backface-visibility: hidden;
+}
+.midori-timer-flap-half > span {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 200%;                     /* the full glyph; each half clips it */
+  line-height: 1.15em;
+  text-align: center;
+}
+.midori-timer-flap-top    { top: 0;    border-radius: 4px 4px 0 0; }
+.midori-timer-flap-top > span    { top: 0; }
+.midori-timer-flap-bottom { bottom: 0; border-radius: 0 0 4px 4px; }
+.midori-timer-flap-bottom > span { bottom: 0; }
+
+/* The seam. A hairline, not a gap: a gap makes two cards, and this is one. */
+.midori-timer-flap-top { box-shadow: inset 0 -1px 0 var(--background-modifier-border); }
+
+.midori-timer-flap-fold,
+.midori-timer-flap-unfold { z-index: 2; }
+.midori-timer-flap-fold {
+  transform-origin: bottom center;
+  animation: midori-flap-fold var(--flap-ms, 90ms) ease-in forwards;
+}
+.midori-timer-flap-unfold {
+  transform-origin: top center;
+  transform: rotateX(90deg);
+  animation: midori-flap-unfold var(--flap-ms, 90ms) ease-out var(--flap-ms, 90ms) forwards;
+}
+@keyframes midori-flap-fold   { to   { transform: rotateX(-90deg); } }
+@keyframes midori-flap-unfold { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
+
+/* Reduced motion keeps the card and drops the mechanism: the glyph simply is
+   the new one. The layout must not change, or the readout jumps. */
+@media (prefers-reduced-motion: reduce) {
+  .midori-timer-flap-fold,
+  .midori-timer-flap-unfold { display: none; }
+}
+
+.midori-timer-echo {
+  text-align: center;
+  font-size: var(--font-ui-smaller, 0.8em);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  min-height: 1.5em;
+}
+.midori-timer-echo b { color: var(--text-normal); font-weight: var(--font-semibold, 600); }
+.midori-timer-dial.is-bad .midori-timer-echo { color: var(--color-red); }
+
+/* ---- the drum --------------------------------------------------------
+
+   A REAL SCROLL CONTAINER, which is the whole implementation decision. Native
+   overflow plus scroll-snap gives momentum, rubber-banding, wheel support,
+   trackpad inertia and touch flinging for free, and every one of those is
+   miserable to hand-write and never quite right when you do. The only custom
+   code is pointer-drag, because a mouse press does not scroll a div.
+
+   The padding is what lets the first and last values reach the centre band. It
+   has to be (height - item) / 2 exactly, or the ends cannot be selected. */
+.midori-timer-drum {
+  position: relative;
+  height: 170px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(transparent, #000 26%, #000 74%, transparent);
+  mask-image: linear-gradient(transparent, #000 26%, #000 74%, transparent);
+}
+.midori-timer-drum-scroll {
+  height: 100%;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  touch-action: pan-y;
+  cursor: grab;
+
+  /* (170 - 34) / 2, so the first and last values can reach the centre band.
+     box-sizing matters here and is not decoration: under content-box, height
+     100% plus this padding makes clientHeight 306 rather than 170, and anything
+     measuring the scroller to centre an item lands two items out. The JS avoids
+     measuring at all (see scrollDrumTo), and this keeps the two agreeing. */
+  box-sizing: border-box;
+  padding: 68px 0;
+}
+.midori-timer-drum-scroll::-webkit-scrollbar { display: none; }
+
+/* DRAGGING TURNS SNAPPING OFF, and this is the line that makes the mouse feel
+   like the trackpad. With scroll-snap-type live, every scrollTop set during a
+   drag is yanked back to the nearest snap point, and the drum judders. It is
+   restored on release, which is also what settles the drum onto a value. */
+.midori-timer-drum-scroll.is-dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+}
+.midori-timer-drum-item {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  opacity: 0.45;
+  cursor: pointer;
+}
+.midori-timer-drum-item.is-near { opacity: 0.75; }
+.midori-timer-drum-item.is-sel {
+  opacity: 1;
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
+}
+.midori-timer-drum-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 34px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  border-top: 1px solid var(--background-modifier-border);
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--dotgrid-accent-wash, rgba(127, 127, 127, 0.06));
+}
+
+/* ---- typing, which is still first-class ------------------------------
+
+   The plugin's premise is a duration you TYPE, opened by a hotkey, so the field
+   stays autofocused and Enter still submits from the moment the window opens.
+   The drum drives it and it drives the drum. It also carries the forms the drum
+   cannot reach: the drum enumerates whole minutes, so 90s, 1:30 and 2h30 are
+   typed rather than scrolled. */
+.midori-timer-type {
+  width: 100%;
+  text-align: center;
+  font-size: var(--font-ui-small, 0.87em);
+}
+.midori-timer-dial.is-bad .midori-timer-type { border-color: var(--color-red); }
+
+.midori-timer-ramp { margin-top: 0.2em; }
+.midori-timer-ramp-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right in oklch,
+    var(--color-blue) 0%, var(--interactive-accent) 40%, var(--color-yellow) 80%, var(--color-red) 100%);
+}
+.midori-timer-ramp-legend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: var(--font-ui-smaller, 0.75em);
+  color: var(--text-faint, var(--text-muted));
+}
+.midori-timer-start { width: 100%; margin-top: 0.3em; }
 
 /* --------------------------------------------------------------- the caret
 
@@ -365,67 +594,260 @@ body.midori-drawn.midori-timer-running .midori-title-caret {
 
 /* The typed-duration window. Opened by command (bind a hotkey to it), by
  * clicking an idle readout, or from the right-click menu. */
+const DRUM_MIN = 1;                 // minutes reachable by dragging
+const DRUM_MAX = 120;
+const DRUM_ITEM = 34;               // px, and must match the stylesheet
+const FLAP_MS = 90;                 // per half-fold; a full flip is twice this
+
 class DurationModal extends Modal {
   constructor(app, plugin) {
     super(app);
     this.plugin = plugin;
+    this.seconds = plugin.settings.defaultDuration;
+    this.flaps = [];                // one cell per character of the clock
+    this.shown = '';                // what those cells currently read
   }
 
   onOpen() {
     const { contentEl, titleEl } = this;
     titleEl.setText('Set timer');
 
-    const initial = formatHuman(this.plugin.settings.defaultDuration);
+    this.root = contentEl.createDiv({ cls: 'midori-timer-dial' });
+    this.flapEl = this.root.createDiv({ cls: 'midori-timer-flaps' });
+    this.echoEl = this.root.createDiv({ cls: 'midori-timer-echo' });
 
-    new Setting(contentEl)
-      .setName('Duration')
-      .addText((text) => {
-        this.input = text.inputEl;
-        this.input.style.width = '12em';
-        text.setPlaceholder('25m, 1h30, 90s, 1:30').setValue(initial);
-        text.onChange(() => this.preview());
-        // Enter submits. Obsidian's Modal already maps Escape to close.
-        this.input.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter') {
-            ev.preventDefault();
-            this.submit();
-          }
-        });
-      });
+    this.buildDrum();
 
-    // Decision 3: echo the interpretation rather than documenting the rules.
-    this.hint = contentEl.createDiv({ cls: 'midori-timer-hint' });
+    this.input = this.root.createEl('input', { cls: 'midori-timer-type', type: 'text' });
+    this.input.placeholder = 'or type 25m, 1h30, 90s, 1:30';
+    this.input.spellcheck = false;
+    this.input.addEventListener('input', () => {
+      const secs = parseDuration(this.input.value);
+      if (secs != null) this.setSeconds(secs, 'type');
+      else this.render();                       // show the error, keep the value
+    });
 
-    const presets = contentEl.createDiv({ cls: 'midori-timer-presets' });
-    for (const mins of [5, 10, 15, 25, 45, 60]) {
-      const b = presets.createEl('button', { text: `${mins}m` });
-      b.addEventListener('click', () => {
-        this.input.value = `${mins}m`;
-        this.submit();
-      });
-    }
+    const ramp = this.root.createDiv({ cls: 'midori-timer-ramp' });
+    ramp.createDiv({ cls: 'midori-timer-ramp-bar' });
+    const legend = ramp.createDiv({ cls: 'midori-timer-ramp-legend' });
+    legend.createSpan({ text: 'your caret now' });
+    legend.createSpan({ text: 'when it ends' });
 
-    new Setting(contentEl).addButton((b) =>
-      b.setButtonText('Start').setCta().onClick(() => this.submit()));
+    const start = this.root.createEl('button', { cls: 'midori-timer-start', text: 'Start' });
+    start.addClass('mod-cta');
+    start.addEventListener('click', () => this.submit());
 
-    this.preview();
-    // Focus and select, so typing replaces the prefill instead of appending.
-    window.setTimeout(() => { this.input.focus(); this.input.select(); }, 0);
+    // Enter submits from anywhere in the window. Escape is Obsidian's already.
+    this.scope.register([], 'Enter', (ev) => { ev.preventDefault(); this.submit(); return false; });
+
+    this.render(true);
+    this.scrollDrumTo(this.minutes(), 'auto');
+    window.setTimeout(() => { this.input.focus(); }, 0);
   }
 
-  preview() {
-    const secs = parseDuration(this.input.value);
-    this.hint.setText(
-      secs == null
-        ? (this.input.value.trim() ? "Didn't understand that — try 25m, 1h30, 90s or 1:30" : '')
-        : `${formatHuman(secs)}  ->  ${formatClock(secs)}`,
-    );
+  /** Whole minutes, for the drum. A 90s duration is not on it; see setSeconds. */
+  minutes() { return Math.round(this.seconds / 60); }
+
+  // ------------------------------------------------------------------ drum
+
+  buildDrum() {
+    this.drum = this.root.createDiv({ cls: 'midori-timer-drum' });
+    this.scroller = this.drum.createDiv({ cls: 'midori-timer-drum-scroll' });
+    this.items = [];
+    for (let m = DRUM_MIN; m <= DRUM_MAX; m += 1) {
+      const it = this.scroller.createDiv({ cls: 'midori-timer-drum-item', text: String(m) });
+      it.addEventListener('click', () => this.setSeconds(m * 60, 'tap'));
+      this.items.push(it);
+    }
+    this.drum.createDiv({ cls: 'midori-timer-drum-band' });
+
+    // Read the centre on every scroll, coalesced to one read per frame. A
+    // scroll event can fire many times between paints and each read costs a
+    // layout, so doing this unthrottled makes the drum stutter under a fling.
+    let queued = false;
+    this.scroller.addEventListener('scroll', () => {
+      if (queued) return;
+      queued = true;
+      window.requestAnimationFrame(() => {
+        queued = false;
+        const m = this.centreMinute();
+        if (m != null) this.setSeconds(m * 60, 'scroll');
+      });
+    }, { passive: true });
+
+    this.dragDrum();
+  }
+
+  /* Position and value are pure arithmetic in both directions, deliberately.
+   *
+   * The obvious implementation measures: scrollTop = item.offsetTop -
+   * (scroller.clientHeight - item.offsetHeight) / 2. It is also wrong in a way
+   * that hides, because clientHeight INCLUDES PADDING and this scroller is
+   * mostly padding — 68px top and bottom, so that the first and last values can
+   * reach the centre band. Under content-box sizing clientHeight came back 306
+   * rather than 170, every scrollDrumTo landed two items short, and since the
+   * scroll handler writes what it finds back into state, the modal quietly
+   * rewrote its own default from 25m to 23m on open. A measurement bug in a
+   * control that feeds itself does not look like a measurement bug; it looks
+   * like the setting not sticking.
+   *
+   * So neither direction reads layout. Centring item i means scrollTop = 34i,
+   * exactly, and the inverse is one division. The two cannot drift apart, there
+   * is no layout read on a scroll event, and the only thing they depend on is
+   * the padding being (height - item) / 2 — which the stylesheet states, and
+   * box-sizing: border-box there keeps true. */
+  centreMinute() {
+    const idx = Math.round(this.scroller.scrollTop / DRUM_ITEM);
+    return Math.max(DRUM_MIN, Math.min(DRUM_MAX, idx + DRUM_MIN));
+  }
+
+  scrollDrumTo(minute, behavior) {
+    const m = Math.max(DRUM_MIN, Math.min(DRUM_MAX, minute));
+    this.scroller.scrollTo({
+      top: (m - DRUM_MIN) * DRUM_ITEM,
+      behavior: behavior || 'smooth',
+    });
+  }
+
+  /* Pointer-drag, the one thing native scrolling does not give us. See the
+   * is-dragging rule in the stylesheet for why snapping is switched off. */
+  dragDrum() {
+    let down = false;
+    let last = 0;
+    const el = this.scroller;
+    el.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0) return;
+      down = true;
+      last = ev.clientY;
+      el.setPointerCapture(ev.pointerId);
+      el.addClass('is-dragging');
+    });
+    el.addEventListener('pointermove', (ev) => {
+      if (!down) return;
+      el.scrollTop -= ev.clientY - last;
+      last = ev.clientY;
+    });
+    const up = (ev) => {
+      if (!down) return;
+      down = false;
+      el.removeClass('is-dragging');            // restoring snap settles it
+      try { el.releasePointerCapture(ev.pointerId); } catch (e) { /* already gone */ }
+    };
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+  }
+
+  // ------------------------------------------------------------------ state
+
+  /**
+   * The single writer. `from` says which control moved, so the others can be
+   * synced without the update bouncing back and fighting the user's finger.
+   */
+  setSeconds(secs, from) {
+    if (secs === this.seconds && from !== 'init') return;
+    this.seconds = secs;
+    if (from !== 'type') this.input.value = formatHuman(secs);
+    if (from !== 'scroll' && from !== 'drag') {
+      const m = this.minutes();
+      if (m >= DRUM_MIN && m <= DRUM_MAX) this.scrollDrumTo(m);
+    }
+    this.render();
+  }
+
+  render(force) {
+    const raw = this.input ? this.input.value.trim() : '';
+    const parsed = raw === '' ? this.seconds : parseDuration(raw);
+    const bad = raw !== '' && parsed == null;
+    this.root.toggleClass('is-bad', bad);
+
+    if (bad) {
+      this.echoEl.setText('Not a duration — try 25m, 1h30, 90s or 1:30');
+    } else {
+      this.echoEl.empty();
+      this.echoEl.createEl('b', { text: formatClock(this.seconds) });
+      this.echoEl.createSpan({ text: '  ·  ends ' });
+      this.echoEl.createEl('b', { text: endsAtClock(this.seconds) });
+    }
+
+    const m = this.minutes();
+    this.items.forEach((it, i) => {
+      const d = Math.abs(i + DRUM_MIN - m);
+      it.toggleClass('is-sel', d === 0);
+      it.toggleClass('is-near', d === 1);
+    });
+
+    this.paintFlaps(formatClock(this.seconds), force);
+  }
+
+  // ------------------------------------------------------------------ flaps
+
+  /* Render `text` across the flap cells, animating only the ones that changed.
+   * Rebuilds the row only when the LENGTH changes — 9:59 to 10:00 adds a digit
+   * and every cell shifts, so there is nothing to preserve. */
+  paintFlaps(text, force) {
+    if (force || text.length !== this.flaps.length) {
+      this.flapEl.empty();
+      this.flaps = [...text].map((ch) => {
+        const cell = this.flapEl.createDiv({ cls: 'midori-timer-flap' });
+        if (!/\d/.test(ch)) cell.addClass('is-sep');
+        cell.createDiv({ cls: 'midori-timer-flap-half midori-timer-flap-top' })
+          .createSpan({ text: ch });
+        cell.createDiv({ cls: 'midori-timer-flap-bottom midori-timer-flap-half' })
+          .createSpan({ text: ch });
+        return cell;
+      });
+      this.shown = text;
+      return;
+    }
+
+    for (let i = 0; i < text.length; i += 1) {
+      if (text[i] === this.shown[i]) continue;   // untouched cells do not flap
+      this.flipCell(this.flaps[i], this.shown[i], text[i]);
+    }
+    this.shown = text;
+  }
+
+  /* One card turning over. The two static halves are updated immediately — top
+   * to the new glyph, bottom still the old — and two throwaway halves animate
+   * over them: the old top folding down, then the new bottom unfolding. Only
+   * the second half of the movement reveals the new lower glyph, which is what
+   * sells one card turning rather than two things swapping.
+   *
+   * THE TIMERS ARE TRACKED AND CLEARED, not left to unwind on their own. A
+   * flip schedules two callbacks, and a fast scroll starts a new flip on the
+   * same cell long before they fire. Left alone they still happen to converge,
+   * because setTimeout preserves scheduling order and the last one scheduled
+   * carries the newest glyph — but that is an argument, not a guarantee, and it
+   * stops being true the moment anything here gains a different delay. Clearing
+   * them makes the cell's state depend only on the flip currently running. */
+  flipCell(cell, from, to) {
+    const top = cell.querySelector('.midori-timer-flap-top');
+    const bottom = cell.querySelector('.midori-timer-flap-bottom');
+    top.firstElementChild.setText(to);
+
+    // Cancel the flip still in the air rather than queueing behind it: queued
+    // flips fall behind a fast scroll and keep flapping after the drum stops.
+    if (cell.midoriTimers) cell.midoriTimers.forEach((id) => window.clearTimeout(id));
+    cell.querySelectorAll('.midori-timer-flap-fold, .midori-timer-flap-unfold')
+      .forEach((el) => el.remove());
+
+    const fold = cell.createDiv({ cls: 'midori-timer-flap-half midori-timer-flap-top midori-timer-flap-fold' });
+    fold.createSpan({ text: from });
+    const unfold = cell.createDiv({ cls: 'midori-timer-flap-half midori-timer-flap-bottom midori-timer-flap-unfold' });
+    unfold.createSpan({ text: to });
+
+    cell.midoriTimers = [
+      // The lower half becomes the new glyph only once the fold has covered it.
+      window.setTimeout(() => { bottom.firstElementChild.setText(to); }, FLAP_MS),
+      window.setTimeout(() => { fold.remove(); unfold.remove(); }, FLAP_MS * 2 + 20),
+    ];
   }
 
   submit() {
-    const secs = parseDuration(this.input.value);
+    const raw = this.input.value.trim();
+    const secs = raw === '' ? this.seconds : parseDuration(raw);
     if (secs == null) {
-      this.preview();
+      this.render();
       return;                                   // keep the modal open to fix it
     }
     this.close();
