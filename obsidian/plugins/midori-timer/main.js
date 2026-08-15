@@ -564,8 +564,19 @@ const STYLE = `
 .midori-timer-header {
   display: inline-flex;
   align-items: center;
-  margin: 0 0.5em 0 0.15em;
   color: var(--text-muted);
+
+  /* SYMMETRIC, AND STATED RATHER THAN INHERITED. .clickable-icon supplies a
+     padding, but a readout is wider than a glyph and the two do not want the
+     same one — and left flush against the pill's edge while every neighbour
+     sits inside its own box, it reads as having fallen out of the row. Equal
+     on both sides, sized off the theme's own spacing step, so the cards are
+     inset from the pill exactly as the glyphs are. It is set here rather than
+     left to the class so the result does not depend on whether the class took. */
+  padding: 0 var(--size-4-2, 8px);
+  margin: 0;
+  width: auto;                      /* .clickable-icon squares some buttons off */
+  height: auto;
 
   /* SIZED AGAINST ITS NEIGHBOURS, NOT AGAINST A STATUS BAR. A status bar is a
      row of 12px labels and the readout matches them. A phone's note header is
@@ -584,10 +595,18 @@ const STYLE = `
    as restraint, it reads as a rendering mistake. The stroke goes up with the
    size for the same reason — Obsidian draws header icons heavier, and matching
    the box while missing the weight leaves it looking faded. */
+/* THE ICON TAKES THE HEADER'S OWN ICON VARIABLES. --icon-size and
+   --icon-stroke are what .clickable-icon sets on itself and what Obsidian's
+   own '.clickable-icon svg' rule reads, so inside one of those this resolves to
+   precisely the geometry the book and overflow glyphs are drawn at — the same
+   box AND the same stroke. Matching the box while missing the weight was the
+   whole problem: a 14px --icon-xs clock at hairline stroke beside two heavier
+   glyphs does not read as restraint, it reads as a rendering fault. The
+   fallbacks are the header's sizes, for the case where the class did not take. */
 .midori-timer-header .midori-timer-icon svg {
-  width: var(--icon-s, 18px);
-  height: var(--icon-s, 18px);
-  stroke-width: var(--icon-s-stroke-width, 2px);
+  width: var(--icon-size, var(--icon-s, 18px));
+  height: var(--icon-size, var(--icon-s, 18px));
+  stroke-width: var(--icon-stroke, var(--icon-s-stroke-width, 2px));
 }
 .midori-timer-header .midori-timer-icon { opacity: 1; }
 
@@ -1887,6 +1906,16 @@ module.exports = class MidoriTimer extends Plugin {
     this.el.addClass('mod-clickable');
     if (Platform.isMobile) {
       this.el.addClass('midori-timer-header');
+      /* WEAR THE HEADER'S OWN CLASSES. Obsidian's header buttons are
+       * '.clickable-icon.view-action', and those classes carry the padding, the
+       * radius, the press state and — through --icon-size and --icon-stroke —
+       * the exact icon geometry its neighbours use. Adding them makes this a
+       * peer of the buttons beside it by construction, rather than by guessing
+       * numbers off a screenshot and re-guessing whenever Obsidian changes
+       * them. The stylesheet below then only has to say the things that are
+       * genuinely ours: the cards. */
+      this.el.addClass('clickable-icon');
+      this.el.addClass('view-action');
       /* A view header belongs to a LEAF, and a leaf is rebuilt whenever the
        * note changes, so an element parked in one is thrown away without
        * warning. Rather than track that, the element is re-homed on every

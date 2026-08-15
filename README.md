@@ -357,6 +357,21 @@ Residual gotchas:
   Obsidian paints it by default, so it was checking contrast against a colour
   that never appears in this theme. A harness that models the host's chrome has
   to model *this* host's chrome.
+- **The cheapest way to match a host's chrome is to wear its classes.** The
+  phone readout sits among Obsidian's own header buttons, which are
+  `.clickable-icon.view-action` — and those classes carry the padding, the
+  radius, the press state, and through `--icon-size` / `--icon-stroke` the exact
+  icon geometry the neighbouring glyphs are drawn at. Adding them makes the
+  readout a peer *by construction* rather than by measuring a screenshot and
+  re-measuring whenever Obsidian changes a number. Two things still have to be
+  said outright: the horizontal padding, because a readout is wider than a glyph
+  and does not want a glyph's padding — and left flush against the pill's edge
+  while every neighbour sat inside its own box, it read as having fallen out of
+  the row; and the fallbacks, so the result does not silently depend on whether
+  the class took. Measured after: 6px from the pill's inner edge to the readout
+  and 6px from the last glyph to the other edge, 8px padding either side in both
+  the running and idle states, icon 18px at stroke 2 exactly like its
+  neighbours.
 - **A component moved to a new home is sized against its new neighbours, not
   its old ones.** The readout's card metrics and icon were tuned for a status
   bar — 12px labels, a 14px `--icon-xs` clock — and putting the same element in
