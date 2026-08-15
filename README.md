@@ -313,6 +313,34 @@ Residual gotchas:
   — a Notice, the chime, the optional OS banner — and a readout parked at 0:00
   wearing a bell until you click it is a chore, and a lie by the time you come
   back to the desk.
+- **The duration window is a drum you flick, reading out on a split-flap clock.**
+  Two implementation notes, both learned the hard way. The drum is a *real
+  scroll container* — `overflow: scroll` plus `scroll-snap-type: mandatory` —
+  which buys momentum, rubber-banding, wheel support, trackpad inertia and touch
+  flinging from the platform; the only hand-written part is pointer-drag,
+  because a mouse press does not scroll a div, and that drag has to switch
+  `scroll-snap-type` off while it runs or every `scrollTop` it sets is yanked
+  back to the nearest snap point and the drum judders. And **position and value
+  are pure arithmetic in both directions, never measured.** The obvious
+  `item.offsetTop - (scroller.clientHeight - item.offsetHeight) / 2` is wrong
+  here in a way that hides: `clientHeight` *includes padding*, and this scroller
+  is mostly padding — 68px top and bottom so the first and last values can reach
+  the centre band. Under content-box sizing `clientHeight` came back 306 instead
+  of 170, every scroll landed two items short, and because the drum's scroll
+  handler writes what it finds back into state, the window quietly rewrote its
+  own default from 25m to 23m on open. A measurement bug in a control that feeds
+  itself does not look like a measurement bug — it looks like the setting not
+  sticking. Centring item *i* is `scrollTop = 34i`; the inverse is one division.
+- **A split-flap that only flips what changed, and cancels rather than queues.**
+  Scrolling the drum changes the value many times a second. Re-rendering every
+  cell flips the unchanged ones too, so the whole board flaps when only the
+  minutes moved, which reads as noise instead of a mechanism; and queued flips
+  fall behind a fast scroll and keep flapping after the drum has stopped. So an
+  unchanged glyph is left completely alone, and a new flip cancels the one in
+  flight — which is also what produces the cascade while you scroll. Each cell's
+  two timers are tracked and cleared, rather than trusting `setTimeout` ordering
+  to make the last write win: that happens to be true today and is an argument
+  rather than a guarantee.
 - **Seven designs, and the first six were the same mistake.** The timer's
   display went through a dotted rail inside the note's edge, the same rail as a
   solid gradient, a warming page-wide glow, a tinted dot grid, a corner bloom,

@@ -1,9 +1,9 @@
 {
   "id": "midori-timer",
   "name": "Midori Timer",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "minAppVersion": "1.4.0",
-  "description": "A timer whose duration you type: 25m, 1h30, 90s or 1:30, in a small window a hotkey can open. While it runs, the caret drifts from its resting indigo through sage and ochre to wine \u2014 that is the whole display. Nothing is added to the page and nothing appears while you write: the caret is already there, and it is the one thing on screen your eye is resting on. Needs Midori Caret, which draws the caret this recolours. A status-bar readout is available instead of it or alongside it, for when you want the number. Counts against an absolute deadline rather than decrementing, so it stays accurate while the window is in the background or the machine sleeps, survives a restart, and resets itself when the time is up.",
+  "description": "Set a session by flicking a drum, or by typing 25m, 1h30, 90s or 1:30 \u2014 a hotkey opens the window with the field already focused. The duration reads out on a split-flap clock and the echo tells you when the session ends in wall-clock time. While it runs, the caret drifts from its resting indigo through sage and ochre to wine; that is the whole display, and nothing is added to the page. Needs Midori Caret, which draws the caret this recolours. A status-bar readout is available too. Counts against an absolute deadline rather than decrementing, so it stays accurate in the background or across sleep, survives a restart, and resets itself when the time is up.",
   "author": "Benjamin Loschen",
   "authorUrl": "https://www.benjaminloschen.com",
   "isDesktopOnly": false
