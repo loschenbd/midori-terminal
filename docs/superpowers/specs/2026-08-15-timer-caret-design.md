@@ -213,6 +213,16 @@ same machinery.
   and is scoped to it: the status bar is opt-in, it is outside the note, and
   the flip is a setting that is off under Reduce Motion. The writing surface is
   still untouched.
+
+  **A phone gets none of it, and that was tested rather than assumed.**
+  Obsidian hides the status bar on mobile, so the readout was homed in the
+  note's own header instead — existing chrome, not the writing surface, and
+  therefore inside the rules above on paper. In use it was removed on sight.
+  The header is where the eye goes to *leave* the note; a countdown parked
+  there is a persistent thing to look at that nobody asked to see, which is the
+  same objection that retired the six painted designs. The tell was in the
+  building: four rounds of geometry and specificity fights to make it sit in a
+  row it did not belong in. On a phone the caret is the whole display.
 - **Two modes: *for* a length, or *until* a clock time.** Both are how a session
   is actually held in the head, and neither is a sub-mode of the other, so it is
   a segmented control with two sets of drums. Until-mode carries hour, minute

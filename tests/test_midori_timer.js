@@ -31,7 +31,7 @@ function load() {
     'const Plugin=class{},PluginSettingTab=class{},Setting=class{},Modal=class{},'
     + 'Menu=class{},Notice=class{},setIcon=()=>{},Platform={isMobile:false};',
   );
-  src += '\nmodule.exports={parseDuration,formatClock,formatHuman,caretColor,CARET_STOPS,parseClockTime,secondsUntil,MidoriTimer:module.exports,Platform};';
+  src += '\nmodule.exports={parseDuration,formatClock,formatHuman,caretColor,CARET_STOPS,parseClockTime,secondsUntil};';
   const mod = { exports: {} };
   const win = { AudioContext: null, setTimeout, setInterval, clearInterval };
   const doc = { head: { appendChild() {} }, createElement: () => ({ remove() {} }) };
@@ -42,7 +42,7 @@ function load() {
 }
 
 const { parseDuration, formatClock, formatHuman, caretColor, CARET_STOPS,
-        parseClockTime, secondsUntil, MidoriTimer, Platform } = load();
+        parseClockTime, secondsUntil } = load();
 
 let fail = 0;
 function eq(got, want, label) {
@@ -189,89 +189,6 @@ eq(at('13pm'), null, 'a meridiem forces a 12-hour reading');
 eq(at(''), null, 'empty');
 eq(at(null), null, 'null');
 eq(secondsUntil(new Date(NOW - 5000), NOW), 0, 'a target in the past is zero, never negative');
-
-
-/* home(): the mobile readout has to survive the leaf being rebuilt.
- *
- * On a phone there is no status bar, so the readout lives in the note's view
- * header — and a view header belongs to a LEAF, which Obsidian throws away and
- * rebuilds whenever the note changes. An element parked in one is simply gone,
- * with no event saying so. This is the method that puts it back, tested against
- * the shipped one rather than a description of it, with the smallest DOM that
- * can express "the same element, a different parent". */
-console.log('== home(): the phone readout follows the active note ==');
-{
-  const node = (cls) => {
-    const el = {
-      cls, children: [], parentElement: null,
-      prepend(child) {
-        if (child.parentElement) {
-          const sibs = child.parentElement.children;
-          sibs.splice(sibs.indexOf(child), 1);
-        }
-        child.parentElement = el;
-        el.children.unshift(child);
-      },
-      querySelector(sel) {
-        const want = sel.replace('.', '');
-        for (const c of el.children) {
-          if (c.cls === want) return c;
-          const deep = c.querySelector(sel);
-          if (deep) return deep;
-        }
-        return null;
-      },
-    };
-    return el;
-  };
-  const leafWith = (childCls) => {
-    const container = node('view-container');
-    const header = node('view-header');
-    container.prepend(header);
-    if (childCls) header.prepend(node(childCls));
-    return { view: { containerEl: container } };
-  };
-
-  Platform.isMobile = true;                    // home() is a no-op otherwise
-  const readout = node('midori-timer');
-  let active = leafWith('view-actions');
-  const plugin = {
-    el: readout,
-    app: { workspace: { get activeLeaf() { return active; } } },
-    home: MidoriTimer.prototype.home,
-  };
-
-  plugin.home();
-  const first = active.view.containerEl.querySelector('.view-actions');
-  ok(readout.parentElement === first, 'lands in the button cluster');
-
-  plugin.home();
-  eq(first.children.length, 1, 'homing twice does not duplicate it');
-
-  // The note changes: a whole new leaf, and the old header is gone.
-  active = leafWith('view-actions');
-  plugin.home();
-  const second = active.view.containerEl.querySelector('.view-actions');
-  ok(second !== first, 'the new note really is a different header');
-  ok(readout.parentElement === second, 'it follows the new note');
-  eq(first.children.length, 0, 'and does not linger in the old one');
-
-  // A view with no button cluster still has a header to sit in.
-  active = leafWith(null);
-  plugin.home();
-  ok(readout.parentElement === active.view.containerEl.querySelector('.view-header'),
-     'falls back to the header itself');
-
-  // Nowhere to go is not an error: leave it where it was.
-  const parked = readout.parentElement;
-  active = { view: null };
-  plugin.home();
-  ok(readout.parentElement === parked, 'a leaf with no view is left alone');
-  active = null;
-  plugin.home();
-  ok(readout.parentElement === parked, 'and so is no leaf at all');
-  Platform.isMobile = false;
-}
 
 console.log(`\nmidori-timer: ${fail ? 'failures above' : 'all green'}`);
 process.exit(fail);
