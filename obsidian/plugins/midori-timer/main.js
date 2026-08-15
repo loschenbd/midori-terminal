@@ -452,19 +452,32 @@ const STYLE = `
    new bottom swings up over the old one. Halves that are transparent do not
    cover, they superimpose — two digits showing through each other, a double
    exposure rather than a card turning. */
+/* THE CARD'S PROPORTIONS ARE FOUR NUMBERS, STATED ONCE. Width, height,
+   separator width and gap have to move together — raise the height alone and
+   the glyph's line-height stops matching its own card — and there are two
+   places that want a different set: a desktop status bar, and a phone's note
+   header, which is a much larger and more generously spaced row. Naming them
+   makes the second place one block of values rather than six overrides hunted
+   through the sheet. */
 .midori-timer-flaps.is-bar {
-  gap: 0.09em;                      /* FLAP_BAR.gap */
+  --flap-w: 0.76em;
+  --flap-h: 1.32em;
+  --flap-sep: 0.24em;
+  --flap-gap: 0.09em;
+  --flap-radius: 2px;
+
+  gap: var(--flap-gap);
   margin: 0;
   perspective: 60px;                /* shallower: the cards are ~9px tall */
 }
 .midori-timer-flaps.is-bar .midori-timer-flap {
-  width: 0.76em;                    /* FLAP_BAR.digit */
-  height: 1.32em;
+  width: var(--flap-w);
+  height: var(--flap-h);
   font-size: inherit;
   color: inherit;
 }
 .midori-timer-flaps.is-bar .midori-timer-flap.is-sep {
-  width: 0.24em;                    /* FLAP_BAR.sep */
+  width: var(--flap-sep);
 }
 
 /* THE CARD IS MIXED, NOT NAMED, and that took three tries to get right.
@@ -509,13 +522,17 @@ const STYLE = `
 .midori-timer-flaps.is-bar .midori-timer-flap.is-sep .midori-timer-flap-half {
   background: none;
 }
-.midori-timer-flaps.is-bar .midori-timer-flap-half > span { line-height: 1.32em; }
+.midori-timer-flaps.is-bar .midori-timer-flap-half > span { line-height: var(--flap-h); }
 
 /* Radius scaled to the card. 4px on a 9px half is a lozenge; 2px reads as a
    corner. The seam stays the theme's hairline, which at this size is most of
    what says "two halves" at all. */
-.midori-timer-flaps.is-bar .midori-timer-flap-top    { border-radius: 2px 2px 0 0; }
-.midori-timer-flaps.is-bar .midori-timer-flap-bottom { border-radius: 0 0 2px 2px; }
+.midori-timer-flaps.is-bar .midori-timer-flap-top {
+  border-radius: var(--flap-radius) var(--flap-radius) 0 0;
+}
+.midori-timer-flaps.is-bar .midori-timer-flap-bottom {
+  border-radius: 0 0 var(--flap-radius) var(--flap-radius);
+}
 .midori-timer .midori-timer-icon {
   display: inline-flex;
   opacity: 0.75;
@@ -547,9 +564,40 @@ const STYLE = `
 .midori-timer-header {
   display: inline-flex;
   align-items: center;
-  margin-right: 0.35em;
-  font-size: var(--font-ui-smaller, 0.8em);
+  margin: 0 0.5em 0 0.15em;
   color: var(--text-muted);
+
+  /* SIZED AGAINST ITS NEIGHBOURS, NOT AGAINST A STATUS BAR. A status bar is a
+     row of 12px labels and the readout matches them. A phone's note header is
+     a row of 24px touch targets, and the same cards there read as something
+     dropped in from another screen: too small to be one of the buttons, too
+     small to be legible at arm's length. --font-ui-small is the theme's own
+     step up, and the cards get TALLER in proportion rather than merely bigger,
+     because a flip card is a portrait object — wider than it is tall, it stops
+     reading as a card and starts reading as a key. */
+  font-size: var(--font-ui-medium, 15px);
+}
+/* THE ICON HAS TO MATCH ITS NEIGHBOURS, NOT ITS OLD HOME. A status bar icon is
+   --icon-xs at 14px beside 12px labels, which is right there and spindly here:
+   in a note header it sits directly next to the reading-mode and overflow
+   glyphs at --icon-s, and a smaller, thinner clock next to them does not read
+   as restraint, it reads as a rendering mistake. The stroke goes up with the
+   size for the same reason — Obsidian draws header icons heavier, and matching
+   the box while missing the weight leaves it looking faded. */
+.midori-timer-header .midori-timer-icon svg {
+  width: var(--icon-s, 18px);
+  height: var(--icon-s, 18px);
+  stroke-width: var(--icon-s-stroke-width, 2px);
+}
+.midori-timer-header .midori-timer-icon { opacity: 1; }
+
+.midori-timer-header .midori-timer-flaps.is-bar {
+  --flap-w: 0.8em;                  /* ~12px */
+  --flap-h: 1.38em;                 /* ~21px: two thirds of the 30px pill */
+  --flap-sep: 0.28em;
+  --flap-gap: 0.13em;
+  --flap-radius: 3px;
+  perspective: 110px;               /* the cards are taller, so the fold is deeper */
 }
 /* NOT :empty, WHICH NEVER MATCHES HERE. The element always has its icon and
    readout spans inside it, so it is never childless no matter how little it is
@@ -2029,8 +2077,10 @@ class MidoriTimerSettings extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName('Show when idle')
-      .setDesc(`Keep a clock in the ${Platform.isMobile ? 'note header' : 'status bar'} while no timer is running, so there is something to click. Off hides it until a timer starts. Ignored when the caret is the only display.`)
+      .setName(Platform.isMobile ? 'Show the clock when idle' : 'Show when idle')
+      .setDesc(Platform.isMobile
+        ? 'Keep the clock icon in the note header while no timer is running, so there is something to tap. Off removes it from the header entirely until a timer starts — the countdown still appears when one does. Ignored when the caret is the only display.'
+        : 'Keep a clock in the status bar while no timer is running, so there is something to click. Off hides it until a timer starts. Ignored when the caret is the only display.')
       .addToggle((t) => t
         .setValue(this.plugin.settings.showWhenIdle)
         .onChange(async (v) => {
