@@ -1,17 +1,18 @@
 'use strict';
 
-/* Midori Timer — a countdown you type, shown as a dotted rail along an edge.
+/* Midori Timer — a countdown you type, shown as a filling rail along an edge.
  *
  * WHAT IT IS. Set a duration by typing "25m", "1h30", "90s" or "1:30" into a
  * small input, which a hotkey can open — bind "Midori Timer: Set duration and
- * start". The default display is a RAIL: a dotted line along one edge of the
- * window that drains as the time runs down, in the page dot grid's own colour
- * and pitch, shifting sage to ochre to wine as it empties. A status-bar
- * readout is available instead of it, or alongside it; that one can be clicked
- * to pause and right-clicked for the rest. Everything is also a command.
+ * start". The default display is a RAIL: a thin line just inside one edge of
+ * the note that FILLS as the time runs, through a sage -> ochre -> wine
+ * gradient, so an empty channel is a timer just started and a full one is a
+ * timer about to end. A status-bar readout is available instead of it, or
+ * alongside it; that one can be clicked to pause and right-clicked for the
+ * rest. Everything is also a command.
  *
- * SIX DECISIONS THAT SHAPE THE CODE. (The rail's own two — why the dots are
- * sized by 'closest-side' and why both layers anchor to the same edge — are at
+ * SEVEN DECISIONS THAT SHAPE THE CODE. (The rail's own — how it is measured
+ * off the note, and why the gradient is clipped rather than stretched — are at
  * the STYLE block, next to the CSS they explain.)
  *
  * 1. A DEADLINE, NOT A COUNTDOWN. The obvious implementation keeps a
@@ -57,17 +58,24 @@
  *    come from the theme's own CSS variables, so the readout tracks Midori
  *    Paper and Midori Night — and any other theme — without hardcoding either.
  *
- * 6. THE RAIL SITS ON document.body, NOT IN THE WORKSPACE. One element then
- *    serves every layout — split panes, sidebars open or shut — and no
- *    workspace rebuild can tear it out. It is pointer-events: none while
- *    running so a rail along the bottom edge cannot steal a click from the
- *    status bar underneath it, and takes clicks only once finished, when it
- *    needs to be dismissible and the status-bar item may not be there.
+ * 6. THE RAIL SITS ON document.body BUT IS MEASURED OFF THE NOTE. One element
+ *    then serves every layout — split panes, sidebars open or shut — and no
+ *    workspace rebuild can tear it out; but its geometry is read from the
+ *    editor's scroller, so it lands on the page rather than on the window and
+ *    tracks the text column when a sidebar opens. It is never flush to an edge
+ *    (railInset), it stops short of the status-bar pill rather than running
+ *    underneath it, and it is pointer-events: none throughout — it is a
+ *    readout, not a control.
+ *
+ * 7. THE RAIL IS VISIBLE ONLY WHILE A TIMER IS GOING. Running or paused, and
+ *    nothing else: idle shows nothing, and the finish is carried by the notice,
+ *    the chime and the optional system banner. A rail that lingers is just a
+ *    line across the page you have to dismiss.
  *
  * MOBILE. Obsidian hides the status bar on phones outright
  * (`.is-mobile .status-bar { display: none }` in app.css), so the status-bar
- * display is desktop-only in practice. The RAIL is not — it is fixed to the
- * window and works on a phone, which is the other reason it is the default.
+ * display is desktop-only in practice. The RAIL is not — it tracks the note's
+ * own geometry and works on a phone, which is the other reason it is default.
  */
 
 const { Plugin, PluginSettingTab, Setting, Modal, Menu, Notice, setIcon, Platform } = require('obsidian');
@@ -84,7 +92,9 @@ const DEFAULTS = {
   railEdge: 'bottom',         // 'bottom' | 'top' | 'left' | 'right'
   railThickness: 3,           // px of dot diameter
   railTrack: true,            // draw the unlit remainder of the rail
+  railInset: 10,              // px in from the note's edge — never flush
 };
+
 
 /* The display refresh rate, not the timekeeping rate — see decision 1. A whole
  * second here would let the readout sit up to a second behind the true value;
@@ -148,23 +158,30 @@ function formatClock(seconds) {
 
 /* The rail's colour ramp, as a fraction of the duration REMAINING.
  *
- * Three stops, not a continuous gradient, because a slow fade between two
- * similar colours is not perceptible at a glance — the point of the colour is
- * to be readable out of the corner of your eye, and a discrete change is what
- * you actually notice. The hues are the theme's own and are used here in the
- * roles they already hold elsewhere in Midori: sage is the accent, ochre is
- * the warning slot (ANSI 3), wine is the error slot (ANSI 1).
+ * The hues are the theme's own, in the roles they already hold elsewhere in
+ * Midori: sage is the accent, ochre is the warning slot (ANSI 3), wine is the
+ * error slot (ANSI 1).
  *
- * Ordered most-remaining first; the first match wins. */
-const RAIL_STOPS = [
-  { above: 0.25, varName: '--interactive-accent', fallback: '#5f6f5e' },  // sage
-  { above: 0.10, varName: '--color-yellow',       fallback: '#b88a3a' },  // ochre
-  { above: -1,   varName: '--color-red',          fallback: '#7a4a4a' },  // wine
+ * These are positions along the WHOLE rail, not thresholds tested against the
+ * current time. The gradient is painted once, at full length, and revealed by
+ * the fill — so the colour under any point of the line is a property of that
+ * point rather than of the moment, and the leading edge picks up its colour by
+ * arriving somewhere rather than by anything recomputing it. Sage holds for
+ * the first three quarters, so the shift toward wine reads as the end
+ * approaching instead of as a wash that has been happening all along. */
+const RAIL_RAMP = [
+  { at: 0,    varName: '--interactive-accent', fallback: '#5f6f5e' },  // sage
+  { at: 0.75, varName: '--interactive-accent', fallback: '#5f6f5e' },  // sage, held
+  { at: 0.90, varName: '--color-yellow',       fallback: '#b88a3a' },  // ochre
+  { at: 1,    varName: '--color-red',          fallback: '#7a4a4a' },  // wine
 ];
 
-function railColor(fraction) {
-  const stop = RAIL_STOPS.find((s) => fraction > s.above) || RAIL_STOPS[RAIL_STOPS.length - 1];
-  return `var(${stop.varName}, ${stop.fallback})`;
+/** The ramp as one CSS gradient, along `dir`. */
+function railGradient(dir) {
+  const stops = RAIL_RAMP
+    .map((s) => `var(${s.varName}, ${s.fallback}) ${(s.at * 100).toFixed(0)}%`)
+    .join(', ');
+  return `linear-gradient(${dir}, ${stops})`;
 }
 
 /** 1500 -> "25m", 5400 -> "1h 30m", 90 -> "1m 30s". For prose, not the readout. */
@@ -245,21 +262,6 @@ const STYLE = `
 .midori-timer.is-paused .midori-timer-time {
   font-style: italic;
 }
-.midori-timer.is-finished .midori-timer-time {
-  color: var(--text-accent, var(--interactive-accent));
-  font-weight: var(--font-semibold, 600);
-}
-/* The only motion, and it stops on its own after a few seconds. Anyone who
-   asked the OS for less motion gets the colour change and no pulse. */
-@media (prefers-reduced-motion: no-preference) {
-  .midori-timer.is-finished {
-    animation: midori-timer-pulse 1s ease-in-out 4;
-  }
-}
-@keyframes midori-timer-pulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.35; }
-}
 .midori-timer-hint {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller, 0.8em);
@@ -275,45 +277,40 @@ const STYLE = `
 
 /* ---------------------------------------------------------------- the rail
 
-   A dotted line along one edge of the window that drains as the timer runs.
+   A solid line just inside one edge of the NOTE that FILLS as the timer runs:
+   an empty channel at the start, a full one at the end. Three things make it
+   sit on the page rather than on the window.
 
-   IT IS THE PAGE'S DOT GRID, IN THE SAME MATERIAL. The theme paints prose on a
-   24px dot grid (--dotgrid-dot at background-size: 24px 24px), and the rail
-   borrows that pitch and that colour for its unlit track, so the dots read as
-   the grid continuing rather than as a new bar. --rail-pitch defaults to 24px
-   for that reason.
+   1. IT IS MEASURED OFF THE SCROLLER, NOT THE WINDOW. Position and length come
+      from the live geometry of the editor's scroll element (see positionRail),
+      because that element is what the page actually is. A window-fixed rail
+      cannot line up with a note that moves when a sidebar opens. Everything
+      here that is not a colour is therefore set from JS.
 
-   Same pitch, NOT the same phase: the grid is painted inside the note's
-   scroller and slides when a sidebar opens, while the rail is fixed to the
-   window. Their dots therefore line up only by coincidence, and no
-   background-position can fix that in general. Matching the pitch and the ink
-   is what does the work; chasing the phase would be chasing a moving target.
+   2. IT IS NEVER FLUSH TO THE EDGE. The railInset setting holds it in off the
+      boundary, and the inset is measured to the rail's OUTER face, so raising
+      the thickness grows the rail inward and does not walk it toward the edge.
 
-   'circle closest-side' IS LOAD-BEARING. A bare 'circle' sizes its radius from
-   the farthest corner of the tile — about 12px in a 24x3 tile — so the dot is
-   drawn 24px wide, clipped to 3px tall, and the rail renders as a row of
-   DASHES. closest-side takes the radius from the short side instead, giving a
-   dot exactly --rail-size across, which is what makes thickness mean what it
-   says.
+   3. IT STOPS SHORT OF THE STATUS BAR rather than running underneath it, again
+      in positionRail, because that bar is a floating pill over the bottom
+      right and a line crossing behind it reads as debris.
 
-   TWO LAYERS, ONE ORIGIN, AND THE ORIGIN IS NOT 'center'. Track and fill are
-   separate elements carrying the same dot pattern, with only the fill's length
-   animated. For a lit dot to land exactly on the track dot it replaces, both
-   background grids must be anchored to the SAME edge — the one the fill grows
-   from. 'background-position: center' looks right and is wrong: it centres the
-   tile grid inside each element, and since the fill's length changes every
-   tick, its dots slide relative to the track's. Rendered, that shows up as a
-   ragged interleave of dark and light dots either side of the boundary rather
-   than a clean edge. Horizontal rails anchor 'left', vertical rails anchor
-   'bottom', matching where each fill is pinned. */
+   THE GRADIENT IS PAINTED AT FULL LENGTH AND REVEALED, NOT STRETCHED. The fill
+   layer always carries the whole sage -> ochre -> wine ramp across the rail's
+   entire length; progress is applied with clip-path, which changes what is
+   VISIBLE without changing what is PAINTED. Animating 'width' instead would
+   rescale the gradient every tick, so the leading edge would sit at the same
+   colour the whole way down and the ramp would mean nothing. Under clip-path
+   each point of the line has a fixed colour and the edge moves through it. */
 .midori-timer-rail {
   position: fixed;
-  z-index: var(--layer-status-bar, 15);
+  z-index: var(--layer-popover, 30);
   pointer-events: none;
-  --rail-pitch: 24px;
-  --rail-dot: var(--dotgrid-dot, rgba(158, 191, 180, 0.46));
-  --rail-lit: var(--interactive-accent, #5f6f5e);
+  --rail-track: var(--dotgrid-dot, rgba(158, 191, 180, 0.46));
   --rail-size: 3px;
+  --rail-progress: 0%;
+  border-radius: var(--rail-size);
+  overflow: hidden;                 /* so the fill's ends are rounded too */
 }
 .midori-timer-rail.is-hidden { display: none; }
 
@@ -321,84 +318,31 @@ const STYLE = `
 .midori-timer-rail-fill {
   position: absolute;
   inset: 0;
-  background-repeat: repeat;
 }
-.midori-timer-rail-track { background-image: radial-gradient(circle closest-side, var(--rail-dot) 96%, transparent 100%); }
-.midori-timer-rail-fill  { background-image: radial-gradient(circle closest-side, var(--rail-lit) 96%, transparent 100%); }
+.midori-timer-rail-track { background: var(--rail-track); opacity: 0.55; }
 
-/* Horizontal edges: a row of dots, the fill shrinking right-to-left. */
+/* Horizontal edges: fills left to right. */
 .midori-timer-rail.edge-bottom,
-.midori-timer-rail.edge-top {
-  left: 0; right: 0;
-  height: var(--rail-size);
-}
-.midori-timer-rail.edge-bottom { bottom: 0; }
-.midori-timer-rail.edge-top    { top: 0; }
-.midori-timer-rail.edge-bottom .midori-timer-rail-track,
-.midori-timer-rail.edge-bottom .midori-timer-rail-fill,
-.midori-timer-rail.edge-top .midori-timer-rail-track,
-.midori-timer-rail.edge-top .midori-timer-rail-fill {
-  background-size: var(--rail-pitch) 100%;
-  background-position: left center;   /* NOT center — see the note above */
-}
+.midori-timer-rail.edge-top { height: var(--rail-size); }
 .midori-timer-rail.edge-bottom .midori-timer-rail-fill,
 .midori-timer-rail.edge-top .midori-timer-rail-fill {
-  right: auto;
-  width: var(--rail-progress, 100%);
+  background: var(--rail-ramp-x);
+  clip-path: inset(0 calc(100% - var(--rail-progress)) 0 0);
 }
 
-/* Vertical edges: a column of dots, draining bottom-to-top. Anchored at the
-   BOTTOM so the lit part sinks, which reads as a level falling rather than a
-   bar retreating upward. */
+/* Vertical edges: fills top to bottom, so it reads as a level rising. */
 .midori-timer-rail.edge-left,
-.midori-timer-rail.edge-right {
-  top: 0; bottom: 0;
-  width: var(--rail-size);
-}
-.midori-timer-rail.edge-left  { left: 0; }
-.midori-timer-rail.edge-right { right: 0; }
-.midori-timer-rail.edge-left .midori-timer-rail-track,
-.midori-timer-rail.edge-left .midori-timer-rail-fill,
-.midori-timer-rail.edge-right .midori-timer-rail-track,
-.midori-timer-rail.edge-right .midori-timer-rail-fill {
-  background-size: 100% var(--rail-pitch);
-  background-position: center bottom;   /* the edge the fill grows from */
-}
+.midori-timer-rail.edge-right { width: var(--rail-size); }
 .midori-timer-rail.edge-left .midori-timer-rail-fill,
 .midori-timer-rail.edge-right .midori-timer-rail-fill {
-  top: auto;
-  height: var(--rail-progress, 100%);
+  background: var(--rail-ramp-y);
+  clip-path: inset(0 0 calc(100% - var(--rail-progress)) 0);
 }
 
 .midori-timer-rail.no-track .midori-timer-rail-track { display: none; }
 
-/* Paused reads as arrested, not as finished: the lit dots stay exactly where
-   they were and simply go quiet. */
+/* Paused reads as arrested: the line holds position and goes quiet. */
 .midori-timer-rail.is-paused { opacity: 0.4; }
-
-/* The one state that takes clicks. While running the rail must never intercept
-   one — it lies over the status bar — but a finished rail has to be
-   dismissible, and when the rail is the only display there is no status-bar
-   item left to click. Widened past the dot row so a 3px line is still an
-   honest target. */
-.midori-timer-rail.is-finished {
-  pointer-events: auto;
-  cursor: var(--cursor, pointer);
-}
-/* The target is grown with a pseudo-element, NOT with padding on the rail.
-   Padding changes the box the dot tiles are measured against, and since the
-   dots are sized by 'closest-side' that silently inflates them — a 3px rail
-   rendered 13px dots at first attempt. This adds a hit region either side of
-   the rail and leaves the geometry alone. */
-.midori-timer-rail.is-finished::after {
-  content: '';
-  position: absolute;
-  inset: -6px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .midori-timer-rail.is-finished { animation: midori-timer-pulse 1s ease-in-out 4; }
-}
 `;
 
 // ------------------------------------------------------------------- modal
@@ -489,7 +433,6 @@ module.exports = class MidoriTimer extends Plugin {
      *   total     the duration that was set, for the finish message */
     this.session = Object.assign({ endsAt: null, pausedAt: null, total: null },
                                  data.session || {});
-    this.finished = false;
     this.timer = null;
 
     const style = document.createElement('style');
@@ -525,7 +468,7 @@ module.exports = class MidoriTimer extends Plugin {
       id: 'stop',
       name: 'Stop timer',
       checkCallback: (checking) => {
-        if (!this.isActive() && !this.finished) return false;
+        if (!this.isActive()) return false;
         if (!checking) this.stop();
         return true;
       },
@@ -577,7 +520,6 @@ module.exports = class MidoriTimer extends Plugin {
 
   start(seconds) {
     if (!Number.isFinite(seconds) || seconds <= 0) return;
-    this.finished = false;
     this.session = {
       endsAt: Date.now() + seconds * 1000,
       pausedAt: null,
@@ -618,7 +560,6 @@ module.exports = class MidoriTimer extends Plugin {
 
   stop() {
     this.clearTick();
-    this.finished = false;
     this.session = { endsAt: null, pausedAt: null, total: null };
     this.render();
     this.save();
@@ -647,12 +588,19 @@ module.exports = class MidoriTimer extends Plugin {
     this.render();
   }
 
-  /** @param {boolean} late true when the deadline passed while Obsidian was shut. */
+  /* Finishing RESETS. The session is cleared, the rail goes away and the
+   * status bar returns to its idle clock, all in the same frame — there is no
+   * sticky "finished" state to dismiss. The end of the timer is announced by
+   * things that announce themselves and then stop: a Notice, the chime, and
+   * the optional OS banner. A readout that sits at 0:00 wearing a bell until
+   * you click it is a chore, and it is also a lie the moment you walk away
+   * from the desk and come back to it hours later.
+   *
+   * @param {boolean} late true when the deadline passed while Obsidian was shut. */
   finish(late) {
     const total = this.session.total;
     this.clearTick();
     this.session = { endsAt: null, pausedAt: null, total: null };
-    this.finished = true;
     this.render();
     this.save();
 
@@ -685,10 +633,9 @@ module.exports = class MidoriTimer extends Plugin {
   // --------------------------------------------------------------- display
 
   /* The rail lives on document.body rather than inside the workspace so one
-   * element serves every layout — split panes, sidebars open or shut, popout
-   * windows aside — and cannot be torn down by a workspace rebuild. It is
-   * pointer-events: none, so a rail across the bottom edge does not steal
-   * clicks from the status bar underneath it. */
+   * element serves every layout — split panes, sidebars open or shut — and no
+   * workspace rebuild can tear it out. Its position is measured from the
+   * editor's scroller each time it is shown (positionRail). */
   buildRail() {
     this.rail = document.createElement('div');
     this.rail.className = 'midori-timer-rail is-hidden';
@@ -697,47 +644,119 @@ module.exports = class MidoriTimer extends Plugin {
     this.railFillEl = this.rail.appendChild(document.createElement('div'));
     this.railFillEl.className = 'midori-timer-rail-fill';
     document.body.appendChild(this.rail);
-    // Only reachable while finished — see the pointer-events note in STYLE.
-    this.rail.addEventListener('click', () => { if (this.finished) this.stop(); });
     this.register(() => this.rail.remove());
+
+    // Anything that can move or resize the note moves the rail with it.
+    const reposition = () => { if (this.isActive()) this.positionRail(); };
+    this.registerDomEvent(window, 'resize', reposition);
+    this.registerEvent(this.app.workspace.on('resize', reposition));
+    this.registerEvent(this.app.workspace.on('layout-change', reposition));
+    this.registerEvent(this.app.workspace.on('active-leaf-change', reposition));
+  }
+
+  /* The element that actually carries the dot grid. Reading its geometry is
+   * what lets the rail sit on the note rather than on the window — and the two
+   * differ by the whole width of a sidebar. */
+  scrollerEl() {
+    // Scope to the focused leaf first, so a split shows the rail under the
+    // pane you are typing in rather than under whichever one happens to be
+    // first in the DOM. Fall back outward until something exists: a leaf with
+    // no scroller (a graph view, say) still gets a rail, on the root split.
+    const active = document.querySelector('.workspace-leaf.mod-active');
+    for (const root of [active, document]) {
+      if (!root) continue;
+      const el = root.querySelector('.cm-scroller')
+        || root.querySelector('.markdown-preview-view');
+      if (el) return el;
+    }
+    return document.querySelector('.workspace-split.mod-root') || document.body;
+  }
+
+  /* Everything geometric about the rail, in one place, from live measurements.
+   *
+   * Clearing the status bar is a hard requirement rather than a nicety: it is a
+   * floating pill at the bottom right, so a full-width bottom rail runs
+   * straight underneath it and the dots read as debris behind the word count.
+   * Measured on a 1728px window, it occupied x 1347..1719 — a fifth of the
+   * rail. The rail is shortened to stop before it, but only when the two
+   * actually overlap vertically, so a top or left rail keeps its full length. */
+  positionRail() {
+    if (!this.rail) return;
+    const el = this.scrollerEl();
+    const r = el.getBoundingClientRect();
+    const cs = window.getComputedStyle(el);
+    const padL = parseFloat(cs.paddingLeft) || 0;
+    const padR = parseFloat(cs.paddingRight) || 0;
+    const padT = parseFloat(cs.paddingTop) || 0;
+    const padB = parseFloat(cs.paddingBottom) || 0;
+
+    // The content box: the page's own text column, padding excluded.
+    const left = r.left + padL;
+    const right = r.right - padR;
+    const top = r.top + padT;
+    const bottom = r.bottom - padB;
+
+    const inset = Math.max(0, this.settings.railInset);
+    const edge = this.settings.railEdge;
+    const st = this.rail.style;
+    st.left = st.right = st.top = st.bottom = st.width = st.height = '';
+
+    if (edge === 'bottom' || edge === 'top') {
+      let x0 = left;
+      let x1 = right;
+      // Inset to the OUTER face, so thickness grows the rail inward.
+      const thick = this.settings.railThickness;
+      const y = edge === 'bottom' ? bottom - inset - thick : top + inset;
+      const bar = document.querySelector('.status-bar');
+      if (bar) {
+        const b = bar.getBoundingClientRect();
+        const band = thick + 6;                            // the rail's own band
+        if (b.width > 0 && b.bottom > y - band && b.top < y + band) {
+          if (b.left > x0 + 40) x1 = Math.min(x1, b.left - 8);   // pill on the right
+          else x0 = Math.max(x0, b.right + 8);                   // or on the left
+        }
+      }
+      st.left = `${x0}px`;
+      st.width = `${Math.max(0, x1 - x0)}px`;
+      st.top = `${y}px`;
+    } else {
+      const x = edge === 'left' ? left + inset : right - inset - this.settings.railThickness;
+      st.left = `${x}px`;
+      st.top = `${top}px`;
+      st.height = `${Math.max(0, bottom - top)}px`;
+    }
   }
 
   renderRail() {
     if (!this.rail) return;
     const wanted = this.settings.display === 'rail' || this.settings.display === 'both';
-    const active = this.isActive() || this.finished;
+    // Running or paused only. A finished or idle timer shows nothing: the rail
+    // is for a timer that is GOING, and the finish is carried by the notice,
+    // the chime and the optional system banner.
+    const active = this.isActive();
 
     if (!wanted || !active) {
       this.rail.addClass('is-hidden');
       return;
     }
 
+    // ELAPSED, not remaining: the line fills as the time goes rather than
+    // draining away from you, so a full rail is a finished timer.
     const total = this.session.total || 0;
-    /* Running: the fraction LEFT, so the lit line drains.
-     *
-     * Finished: FULL, not empty. Draining to nothing is the literal reading,
-     * and it is the wrong one — an empty rail is indistinguishable from no
-     * timer at all, which is exactly the moment you most need to be told
-     * something. A full wine rail says "time is up" at a glance and keeps
-     * saying it until dismissed. */
-    const fraction = this.finished
-      ? 1
-      : (total <= 0 ? 0 : Math.max(0, Math.min(1, this.remaining() / total)));
+    const done = total <= 0 ? 0 : 1 - Math.max(0, Math.min(1, this.remaining() / total));
 
-    this.rail.removeClass('is-hidden');
     this.rail.className = [
       'midori-timer-rail',
       `edge-${this.settings.railEdge}`,
       this.settings.railTrack ? '' : 'no-track',
       this.isPaused() ? 'is-paused' : '',
-      this.finished ? 'is-finished' : '',
     ].filter(Boolean).join(' ');
 
-    this.rail.style.setProperty('--rail-progress', `${(fraction * 100).toFixed(3)}%`);
+    this.rail.style.setProperty('--rail-progress', `${(done * 100).toFixed(3)}%`);
     this.rail.style.setProperty('--rail-size', `${this.settings.railThickness}px`);
-    // A finished rail is full, so `fraction` would pick the sage stop; force
-    // the last stop instead, which is the colour "time is up" wants.
-    this.rail.style.setProperty('--rail-lit', this.finished ? railColor(0) : railColor(fraction));
+    this.rail.style.setProperty('--rail-ramp-x', railGradient('to right'));
+    this.rail.style.setProperty('--rail-ramp-y', railGradient('to bottom'));
+    this.positionRail();
   }
 
   buildStatusBar() {
@@ -775,7 +794,7 @@ module.exports = class MidoriTimer extends Plugin {
       menu.addItem((i) => i.setTitle('Add 5 minutes').setIcon('plus')
         .onClick(() => this.extend(300)));
     }
-    if (this.isActive() || this.finished) {
+    if (this.isActive()) {
       menu.addItem((i) => i.setTitle('Stop').setIcon('square')
         .onClick(() => this.stop()));
     }
@@ -801,7 +820,6 @@ module.exports = class MidoriTimer extends Plugin {
     if (this.settings.display === 'rail') {
       this.el.removeClass('is-running');
       this.el.removeClass('is-paused');
-      this.el.removeClass('is-finished');
       this.timeEl.setText('');
       this.timeEl.style.minWidth = '';
       this.iconEl.hide();
@@ -812,7 +830,6 @@ module.exports = class MidoriTimer extends Plugin {
 
     this.el.removeClass('is-running');
     this.el.removeClass('is-paused');
-    this.el.removeClass('is-finished');
 
     if (this.isActive()) {
       this.el.addClass(this.isPaused() ? 'is-paused' : 'is-running');
@@ -821,15 +838,6 @@ module.exports = class MidoriTimer extends Plugin {
       this.timeEl.setText(formatClock(this.remaining()));
       this.el.setAttr('aria-label',
         `${this.isPaused() ? 'Paused' : 'Timer'} — click to ${this.isPaused() ? 'resume' : 'pause'}, right-click for more`);
-      return;
-    }
-
-    if (this.finished) {
-      this.el.addClass('is-finished');
-      this.iconEl.show();
-      setIcon(this.iconEl, 'bell');
-      this.timeEl.setText('0:00');
-      this.el.setAttr('aria-label', 'Timer finished — click to set another');
       return;
     }
 
@@ -916,6 +924,19 @@ class MidoriTimerSettings extends PluginSettingTab {
         .setDynamicTooltip()
         .onChange(async (v) => {
           this.plugin.settings.railThickness = v;
+          await this.plugin.save();
+          this.plugin.render();
+        }));
+
+    new Setting(containerEl)
+      .setName('Rail inset')
+      .setDesc('How far in from the note\'s edge the rail sits, in pixels. 0 puts it flush against the edge; the default holds it in the way the dot grid\'s own outer dots are held in.')
+      .addSlider((s) => s
+        .setLimits(0, 40, 1)
+        .setValue(this.plugin.settings.railInset)
+        .setDynamicTooltip()
+        .onChange(async (v) => {
+          this.plugin.settings.railInset = v;
           await this.plugin.save();
           this.plugin.render();
         }));
