@@ -566,15 +566,6 @@ const STYLE = `
   align-items: center;
   color: var(--text-muted);
 
-  /* SYMMETRIC, AND STATED RATHER THAN INHERITED. .clickable-icon supplies a
-     padding, but a readout is wider than a glyph and the two do not want the
-     same one — and left flush against the pill's edge while every neighbour
-     sits inside its own box, it reads as having fallen out of the row. Equal
-     on both sides, sized off the theme's own spacing step, so the cards are
-     inset from the pill exactly as the glyphs are. It is set here rather than
-     left to the class so the result does not depend on whether the class took. */
-  padding: 0 var(--size-4-2, 8px);
-  margin: 0;
   width: auto;                      /* .clickable-icon squares some buttons off */
   height: auto;
 
@@ -588,6 +579,27 @@ const STYLE = `
      reading as a card and starts reading as a key. */
   font-size: var(--font-ui-medium, 15px);
 }
+
+/* THE PADDING IS WRITTEN AT (0,3,0), AND THAT IS THE ENTIRE POINT OF THIS RULE.
+   Wearing .clickable-icon buys the header's icon geometry and its press state,
+   and it also opts into everything Obsidian says about that class — including
+   '.view-actions .clickable-icon { padding: ... }', a DESCENDANT selector at
+   (0,2,0). A plugin's own single-class rule is (0,1,0) and loses to it in
+   silence: the padding never applied at all, and the readout sat flush against
+   the pill's edge while every neighbour sat inside its own box. Twice.
+
+   Three classes on the element itself beat any two-class rule from the host
+   without depending on load order — which matters, because Obsidian hot-reloads
+   its own CSS and a plugin's stylesheet is injected whenever the plugin loads.
+
+   Symmetric on both sides and on the ELEMENT rather than on its contents, so
+   the clock and the cards are inset from the pill identically and neither
+   state has to be reasoned about separately. */
+.midori-timer.midori-timer-header.clickable-icon {
+  padding: 0 var(--size-4-2, 8px);
+  margin: 0;
+}
+
 /* THE ICON HAS TO MATCH ITS NEIGHBOURS, NOT ITS OLD HOME. A status bar icon is
    --icon-xs at 14px beside 12px labels, which is right there and spindly here:
    in a note header it sits directly next to the reading-mode and overflow
