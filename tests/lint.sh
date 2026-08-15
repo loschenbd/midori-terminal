@@ -49,6 +49,22 @@ if python3 tests/test_patch_claude_diffs.py; then :; else FAIL=1; fi
 echo "== moshi themes are current =="
 if python3 tests/test_moshi_themes.py; then :; else FAIL=1; fi
 
+echo "== midori-timer unit tests =="
+if command -v node >/dev/null 2>&1; then
+  if node tests/test_midori_timer.js; then :; else FAIL=1; fi
+else
+  echo "  skip (node not found)"
+fi
+
+echo "== obsidian plugins parse =="
+if command -v node >/dev/null 2>&1; then
+  for js in obsidian/plugins/*/main.js; do
+    if node --check "$js" 2>/dev/null; then ok "node --check $js"; else bad "node --check $js"; fi
+  done
+else
+  echo "  skip (node not found)"
+fi
+
 echo
 [ "$FAIL" -eq 0 ] && echo "LINT: all green" || echo "LINT: failures above"
 exit "$FAIL"
