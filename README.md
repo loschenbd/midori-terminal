@@ -371,6 +371,21 @@ Residual gotchas:
   see. On a phone the caret is the whole display now, which is what it is on
   desktop by default anyway. The findings below survive it, because they were
   about the mechanism rather than the place.
+- **Inheriting another component's gate inherits its reasons, which may not be
+  yours.** The timer recolours the caret `midori-caret` draws, so it hung its
+  rules on `body.midori-drawn` — the class that plugin sets when it detects the
+  Midori stylesheet. Under any other theme the whole caret display was silently
+  inert, which read as a bug and was in fact a copied premise. `midori-caret`
+  gates itself because it replaces caret **geometry**, and the numbers it uses
+  to do that are `theme.css`'s; the timer only ever wanted **colour**, and
+  colour is portable — the native caret has taken `caret-color` since forever.
+  So there is now a second rule, `body:not(.midori-drawn)`, painting the native
+  caret with the same drift. The `:not()` is not defensive tidiness: where the
+  drawn caret exists the theme paints the native one transparent, so both
+  branches live at once would be setting the colour of something invisible. The
+  general form: when you adopt a neighbouring component's feature detection,
+  check what it is detecting *for*. A gate is an answer to a question, and it
+  travels without the question attached.
 - **`:empty` never matches an element that has children, however little it is
   showing.** The readout is emptied when it has nothing to say, and Obsidian's
   own `.status-bar-item:empty { display: none }` was expected to take it out of

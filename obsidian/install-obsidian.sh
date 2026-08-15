@@ -89,9 +89,10 @@ PY
   #   midori-confetti  throws confetti when a note crosses a word target, in the
   #                    theme's own accent colours.
   #   midori-timer     a countdown whose duration you type, carried by the
-  #                    colour of the caret — which means it NEEDS midori-caret,
-  #                    whose element it recolours, and is inert without it. The
-  #                    optional status-bar readout is desktop only in practice
+  #                    colour of the caret. It recolours midori-caret's element
+  #                    where that exists and the native caret where it does not,
+  #                    so it works under any theme, with or without that plugin.
+  #                    The optional status-bar readout is desktop only in practice
   #                    (Obsidian hides the status bar on phones); the caret and
   #                    the commands work everywhere.
   #

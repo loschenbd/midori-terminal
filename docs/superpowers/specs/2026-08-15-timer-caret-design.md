@@ -172,6 +172,29 @@ on a class only the timer sets, so it is inert whenever no timer is running.
 The title caret inherits the treatment at no extra cost, since
 `.midori-title-caret` takes its colour from the same declaration.
 
+**And the same display without `midori-caret`, or under another theme.** As
+first shipped this was a hard dependency: `midori-drawn` is set only when the
+Midori stylesheet is loaded *and* `midori-caret` is enabled, so under any other
+theme the caret display was silently inert. That was a misreading of what
+`midori-caret`'s own gate is for. It gates itself because it replaces caret
+**geometry**, and the constants it uses are `theme.css`'s. Colour is not
+geometry: the native caret has taken `caret-color` since forever. A second rule
+paints it directly wherever the drawn one is absent:
+
+```css
+body:not(.midori-drawn).midori-timer-running .markdown-source-view .cm-content,
+body:not(.midori-drawn).midori-timer-running .inline-title {
+  caret-color: var(--midori-timer-caret, var(--caret-color));
+}
+```
+
+`:not(.midori-drawn)` makes the two branches mutually exclusive, which matters
+because `theme.css` paints the native caret transparent wherever the drawn one
+is present. Specificity is (0,4,1) and (0,3,1) against Obsidian's own (0,3,0);
+a theme with a heavier opinion about the caret still wins, which is correct.
+The plugin already writes `--midori-timer-caret` to `body` unconditionally, so
+nothing in the JavaScript changes.
+
 ### Update cadence
 
 The existing 250ms tick drives the readout. The caret colour is recomputed on
