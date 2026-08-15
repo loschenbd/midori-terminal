@@ -131,17 +131,20 @@
  *
  * MOBILE. Obsidian hides the status bar on phones outright
  * (`.is-mobile .status-bar { display: none }` in app.css) and offers no other
- * surface a plugin can park a persistent item in. So on a phone the readout
- * goes into the NOTE'S OWN HEADER, beside the reading-mode and overflow
- * buttons: existing chrome rather than the writing surface, where a phone puts
- * everything else of this kind, and it disappears with the header in Zen mode
- * without being asked to. It is the same 'Show the timer as' setting — only the
- * wording of the middle option changes — because it is the same decision.
- * A view header belongs to a leaf, and leaves are rebuilt when the note
- * changes, so the element is re-homed rather than tracked; see home().
+ * surface a plugin can park a persistent item in. So on a phone there is no
+ * readout at all: the caret is the display, which is what it is on desktop by
+ * default anyway.
  *
- * The caret needs none of this. It is the same caret on a phone, which is the
- * other reason it is the default.
+ * THIS WAS TRIED THE OTHER WAY AND WITHDRAWN. The readout was homed in the
+ * note's own header, beside the reading-mode and overflow buttons, on the
+ * grounds that it was existing chrome rather than the writing surface. It was
+ * removed on sight in use, and the reason is the same one that retired six
+ * painted timer designs: the header is where the eye goes to leave the note,
+ * and a countdown parked there is a persistent thing to look at that nobody
+ * asked to see. Fitting it took four rounds of specificity and geometry
+ * fights, which was the tell — a control that has to be argued into a row it
+ * does not belong in. The caret needs none of that. It is the same caret on a
+ * phone, which is the other reason it is the default.
  *
  * The setting window needs two concessions there, both about the keyboard.
  * It is NOT autofocused, because summoning the keyboard covers the drums and
@@ -551,106 +554,6 @@ const STYLE = `
   font-style: italic;
 }
 
-/* ---- the phone's readout ---------------------------------------------
-
-   Same element, sitting in the note's header instead of a status bar, because
-   a phone has no status bar to sit in. It goes at the head of the button
-   cluster, so it reads as one of the header's own controls rather than as
-   something parked on top of them, and it takes the header's own type size.
-
-   The empty case matters more here than in a status bar: a header is a tight
-   row of touch targets, so an idle readout that is switched off must take up
-   no width at all rather than leaving a dead gap between two buttons. */
-.midori-timer-header {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-muted);
-
-  width: auto;                      /* .clickable-icon squares some buttons off */
-  height: auto;
-
-  /* SIZED AGAINST ITS NEIGHBOURS, NOT AGAINST A STATUS BAR. A status bar is a
-     row of 12px labels and the readout matches them. A phone's note header is
-     a row of 24px touch targets, and the same cards there read as something
-     dropped in from another screen: too small to be one of the buttons, too
-     small to be legible at arm's length. --font-ui-small is the theme's own
-     step up, and the cards get TALLER in proportion rather than merely bigger,
-     because a flip card is a portrait object — wider than it is tall, it stops
-     reading as a card and starts reading as a key. */
-  font-size: var(--font-ui-medium, 15px);
-}
-
-/* THE INSET IS PUT ON OUR OWN ELEMENTS, WHICH IS THE ONLY PLACE IT IS SAFE.
-   Three rounds went into padding the readout itself, and each lost to the host
-   in a different way: a single-class rule is (0,1,0) and Obsidian styles
-   '.view-actions .clickable-icon' at (0,2,0); raising it to three classes won
-   that fight and still left the cards flush, because the moment an element
-   wears a host class it is inside a cascade nobody here can enumerate.
-
-   .midori-timer-flaps and .midori-timer-icon are names that exist nowhere but
-   this file. No host rule can target them, no future Obsidian release can
-   start doing so, and there is no specificity to lose — the margin simply
-   applies. That is worth more than putting it on the tidier element.
-
-   Equal on both sides of whichever one is showing, so the clock and the
-   countdown are inset from the pill identically without either state being
-   reasoned about on its own. */
-.midori-timer-header .midori-timer-flaps,
-.midori-timer-header .midori-timer-icon {
-  margin: 0 var(--size-4-2, 8px);
-}
-.midori-timer.midori-timer-header.clickable-icon {
-  padding: 0;
-  margin: 0;
-}
-
-/* NO PAUSE ICON ON A PHONE, and it costs nothing to lose. It is there on
-   desktop because a stopped countdown could be a finished one — except that it
-   could not: finishing RESETS, so the readout returns to the idle clock, and a
-   number that is sitting still can only be a paused number. The italic and the
-   dimming already say so. What it does cost is width, in the one place there is
-   none: the header's pill grows with its contents only so far, and the icon
-   plus a four-card countdown pushed the readout out past the pill's own edge. */
-.midori-timer-header.is-paused .midori-timer-icon { display: none; }
-
-/* THE ICON HAS TO MATCH ITS NEIGHBOURS, NOT ITS OLD HOME. A status bar icon is
-   --icon-xs at 14px beside 12px labels, which is right there and spindly here:
-   in a note header it sits directly next to the reading-mode and overflow
-   glyphs at --icon-s, and a smaller, thinner clock next to them does not read
-   as restraint, it reads as a rendering mistake. The stroke goes up with the
-   size for the same reason — Obsidian draws header icons heavier, and matching
-   the box while missing the weight leaves it looking faded. */
-/* THE ICON TAKES THE HEADER'S OWN ICON VARIABLES. --icon-size and
-   --icon-stroke are what .clickable-icon sets on itself and what Obsidian's
-   own '.clickable-icon svg' rule reads, so inside one of those this resolves to
-   precisely the geometry the book and overflow glyphs are drawn at — the same
-   box AND the same stroke. Matching the box while missing the weight was the
-   whole problem: a 14px --icon-xs clock at hairline stroke beside two heavier
-   glyphs does not read as restraint, it reads as a rendering fault. The
-   fallbacks are the header's sizes, for the case where the class did not take. */
-.midori-timer-header .midori-timer-icon svg {
-  width: var(--icon-size, var(--icon-s, 18px));
-  height: var(--icon-size, var(--icon-s, 18px));
-  stroke-width: var(--icon-stroke, var(--icon-s-stroke-width, 2px));
-}
-.midori-timer-header .midori-timer-icon { opacity: 1; }
-
-.midori-timer-header .midori-timer-flaps.is-bar {
-  --flap-w: 0.8em;                  /* ~12px */
-  --flap-h: 1.38em;                 /* ~21px: two thirds of the 30px pill */
-  --flap-sep: 0.28em;
-  --flap-gap: 0.13em;
-  --flap-radius: 3px;
-  perspective: 110px;               /* the cards are taller, so the fold is deeper */
-}
-/* NOT :empty, WHICH NEVER MATCHES HERE. The element always has its icon and
-   readout spans inside it, so it is never childless no matter how little it is
-   showing — and Obsidian's own '.status-bar-item:empty { display: none }'
-   never fired on it either, for exactly the same reason. Emptied but present,
-   it is an invisible item still taking a gap between two real ones, which in a
-   header's tight row of touch targets is a hole. The plugin says so directly
-   instead of hoping a selector notices. */
-.midori-timer.is-blank { display: none; }
 /* ------------------------------------------------------------- the dial
 
    The duration modal. Obsidian's Setting class is deliberately NOT used here:
@@ -1688,7 +1591,7 @@ module.exports = class MidoriTimer extends Plugin {
     document.head.appendChild(style);
     this.register(() => style.remove());
 
-    this.buildReadout();
+    this.buildStatusBar();
     this.addSettingTab(new MidoriTimerSettings(this.app, this));
 
     this.addCommand({
@@ -1909,47 +1812,16 @@ module.exports = class MidoriTimer extends Plugin {
     document.body.style.setProperty('--midori-timer-caret', next.color);
   }
 
-  /* The readout, wherever this platform will take one.
-   *
-   * ON DESKTOP that is the status bar, which is what a status bar is for. ON A
-   * PHONE there is no status bar — Obsidian hides it outright — and no mobile
-   * surface a plugin can add a persistent item to. The nearest honest place is
-   * the note's own header, beside the reading-mode and overflow buttons: it is
-   * EXISTING CHROME rather than the writing surface, it is where a phone puts
-   * everything else of this kind, and in Zen mode it goes away with the rest of
-   * the header, which is the right behaviour without asking for it.
-   *
-   * IT IS THE SAME SETTING, not a second one. 'Show the timer as' already reads
-   * caret / status bar / both, and on a phone the middle option simply means a
-   * different place; only the wording in the dropdown changes. A second setting
-   * would make the reader choose twice about one thing. */
-  buildReadout() {
-    this.el = Platform.isMobile
-      ? createDiv()                             // homed into the header below
-      : this.addStatusBarItem();
+  buildStatusBar() {
+    /* On mobile Obsidian hides the status bar entirely and offers no other
+     * surface a plugin can park a persistent item in, so there is no readout
+     * there and the commands are all that remain — see the MOBILE note in the
+     * header for why that is the right answer rather than a gap. */
+    if (Platform.isMobile) return;
+
+    this.el = this.addStatusBarItem();
     this.el.addClass('midori-timer');
     this.el.addClass('mod-clickable');
-    if (Platform.isMobile) {
-      this.el.addClass('midori-timer-header');
-      /* WEAR THE HEADER'S OWN CLASSES. Obsidian's header buttons are
-       * '.clickable-icon.view-action', and those classes carry the padding, the
-       * radius, the press state and — through --icon-size and --icon-stroke —
-       * the exact icon geometry its neighbours use. Adding them makes this a
-       * peer of the buttons beside it by construction, rather than by guessing
-       * numbers off a screenshot and re-guessing whenever Obsidian changes
-       * them. The stylesheet below then only has to say the things that are
-       * genuinely ours: the cards. */
-      this.el.addClass('clickable-icon');
-      this.el.addClass('view-action');
-      /* A view header belongs to a LEAF, and a leaf is rebuilt whenever the
-       * note changes, so an element parked in one is thrown away without
-       * warning. Rather than track that, the element is re-homed on every
-       * workspace change and on every render — appendChild on the element's
-       * existing parent is a no-op, so re-homing when nothing moved costs a
-       * parent comparison. */
-      this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.home()));
-      this.registerEvent(this.app.workspace.on('layout-change', () => this.home()));
-    }
 
     this.iconEl = this.el.createSpan({ cls: 'midori-timer-icon' });
     setIcon(this.iconEl, 'clock');
@@ -1971,19 +1843,6 @@ module.exports = class MidoriTimer extends Plugin {
       ev.preventDefault();
       this.contextMenu(ev);
     });
-  }
-
-  /** Put the mobile readout back in the active note's header, if it has moved. */
-  home() {
-    if (!this.el || !Platform.isMobile) return;
-    const leaf = this.app.workspace.activeLeaf;
-    const view = leaf && leaf.view && leaf.view.containerEl;
-    if (!view) return;
-    // .view-actions is the button cluster; the header itself is the fallback,
-    // because a view without actions is still a view with somewhere to sit.
-    const host = view.querySelector('.view-actions') || view.querySelector('.view-header');
-    if (!host || this.el.parentElement === host) return;
-    host.prepend(this.el);
   }
 
   contextMenu(ev) {
@@ -2008,7 +1867,6 @@ module.exports = class MidoriTimer extends Plugin {
   render() {
     this.renderCaret();
     if (!this.el) return;
-    this.home();                                // no-op unless the leaf changed
 
     // The status bar item is emptied outright when the caret is the only
     // display, so Obsidian's `.status-bar-item:empty { display: none }` takes
@@ -2099,11 +1957,11 @@ class MidoriTimerSettings extends PluginSettingTab {
       .setName('Show the timer as')
       .setDesc('The caret drifts from its resting indigo through sage and ochre to wine as the session runs. Nothing is added to the page and nothing appears while you write: the caret is already there, and it is the one thing on screen your eye is resting on.'
         + (Platform.isMobile
-          ? ' A phone has no status bar, so the readout sits in the note\u2019s header instead \u2014 and goes away with the header in Zen mode.'
+          ? ' Obsidian has no status bar on a phone, so the caret is the whole display here whichever of these is chosen \u2014 the other two take effect on desktop.'
           : ''))
       .addDropdown((d) => d
         .addOption('caret', 'Caret only')
-        .addOption('statusbar', Platform.isMobile ? 'Note header only' : 'Status bar only')
+        .addOption('statusbar', 'Status bar only')
         .addOption('both', 'Both')
         .setValue(this.plugin.settings.display)
         .onChange(async (v) => {
@@ -2117,7 +1975,7 @@ class MidoriTimerSettings extends PluginSettingTab {
       .setDesc('Runs a 20-second timer, compressing the whole indigo-to-wine drift into 20 seconds. Over a real session it is deliberately imperceptible; this is the only way to watch the whole ramp.')
       .addButton((b) => b.setButtonText('Run 20s').onClick(() => this.plugin.start(20)));
 
-    containerEl.createEl('h3', { text: Platform.isMobile ? 'Readout' : 'Status bar' });
+    containerEl.createEl('h3', { text: 'Status bar' });
 
     new Setting(containerEl)
       .setName('Flip the digits')
@@ -2131,10 +1989,8 @@ class MidoriTimerSettings extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
-      .setName(Platform.isMobile ? 'Show the clock when idle' : 'Show when idle')
-      .setDesc(Platform.isMobile
-        ? 'Keep the clock icon in the note header while no timer is running, so there is something to tap. Off removes it from the header entirely until a timer starts — the countdown still appears when one does. Ignored when the caret is the only display.'
-        : 'Keep a clock in the status bar while no timer is running, so there is something to click. Off hides it until a timer starts. Ignored when the caret is the only display.')
+      .setName('Show when idle')
+      .setDesc('Keep a clock in the status bar while no timer is running, so there is something to click. Off hides it until a timer starts. Ignored when the caret is the only display, and on a phone, which has no status bar.')
       .addToggle((t) => t
         .setValue(this.plugin.settings.showWhenIdle)
         .onChange(async (v) => {

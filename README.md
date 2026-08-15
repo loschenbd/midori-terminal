@@ -357,62 +357,20 @@ Residual gotchas:
   Obsidian paints it by default, so it was checking contrast against a colour
   that never appears in this theme. A harness that models the host's chrome has
   to model *this* host's chrome.
-- **Spacing that must survive belongs on a class the host has never heard of.**
-  Three rounds went into padding the phone readout and each lost differently: a
-  single-class rule is (0,1,0) and Obsidian styles `.view-actions
-  .clickable-icon` at (0,2,0); raising it to three classes won *that* fight and
-  the cards still came out flush, because the moment an element wears a host
-  class it is inside a cascade nobody can enumerate from the outside. The
-  spacing went onto `.midori-timer-flaps` and `.midori-timer-icon` instead —
-  names that exist nowhere but the plugin's own file. No host rule can target
-  them, no future release can start to, and there is no specificity left to
-  lose. Putting it on the tidier element was worth less than putting it
-  somewhere it simply applies.
-- **Wearing the host's classes also opts you into the host's specificity.**
-  Adding `.clickable-icon` to the phone readout bought the header's icon
-  geometry and press state, and with them everything Obsidian says about that
-  class — including `.view-actions .clickable-icon { padding: … }`, a
-  *descendant* selector at (0,2,0). The plugin's own `.midori-timer-header`
-  rule is (0,1,0), so its padding never applied at all and the readout sat
-  flush against the pill's edge while every neighbour sat inside its own box.
-  It lost silently, and it took two rounds to see, because a padding that does
-  not apply looks exactly like a padding that is too small. The fix is three
-  classes on the element itself — `.midori-timer.midori-timer-header
-  .clickable-icon` at (0,3,0) — which beats any two-class rule from the host
-  *without depending on load order*, and load order is not something a plugin
-  can rely on: Obsidian hot-reloads its own CSS, and a plugin's stylesheet is
-  injected whenever the plugin happens to load. The padding also goes on the
-  element rather than on its contents, so the clock and the cards are inset
-  identically and neither state has to be reasoned about separately.
-- **The cheapest way to match a host's chrome is to wear its classes.** The
-  phone readout sits among Obsidian's own header buttons, which are
-  `.clickable-icon.view-action` — and those classes carry the padding, the
-  radius, the press state, and through `--icon-size` / `--icon-stroke` the exact
-  icon geometry the neighbouring glyphs are drawn at. Adding them makes the
-  readout a peer *by construction* rather than by measuring a screenshot and
-  re-measuring whenever Obsidian changes a number. Two things still have to be
-  said outright: the horizontal padding, because a readout is wider than a glyph
-  and does not want a glyph's padding — and left flush against the pill's edge
-  while every neighbour sat inside its own box, it read as having fallen out of
-  the row; and the fallbacks, so the result does not silently depend on whether
-  the class took. Measured after: 6px from the pill's inner edge to the readout
-  and 6px from the last glyph to the other edge, 8px padding either side in both
-  the running and idle states, icon 18px at stroke 2 exactly like its
-  neighbours.
-- **A component moved to a new home is sized against its new neighbours, not
-  its old ones.** The readout's card metrics and icon were tuned for a status
-  bar — 12px labels, a 14px `--icon-xs` clock — and putting the same element in
-  a phone's note header, a row of 26px touch targets, made it read as something
-  dropped in from another screen rather than as one of the header's own
-  controls. Not smaller-and-restrained: smaller-and-wrong. It is now
-  `--font-ui-medium` with `--icon-s` and the heavier stroke Obsidian draws
-  header icons at, and the cards grew *taller in proportion* rather than merely
-  bigger, because a flip card is a portrait object — wider than it is tall it
-  stops reading as a card and starts reading as a key. Measured against a mock
-  built to the screenshot's real dimensions: card 20.7px in a 30px pill (69%),
-  0.8 of the button box, 1.72:1 portrait. The four card metrics are custom
-  properties for exactly this reason — a second home is one block of values
-  rather than six overrides hunted through the sheet.
+- **A placement that takes four rounds of fighting to fit is the wrong
+  placement.** The status-bar readout has no home on a phone — Obsidian hides
+  the status bar there and offers nothing else to park a persistent item in —
+  so it was homed in the note's own header instead, on the grounds that a
+  header is existing chrome rather than the writing surface. Making it fit took
+  a re-homing dance across leaf rebuilds, a resize against the neighbours'
+  metrics, an icon matched to their stroke, and three separate rounds losing to
+  the host's specificity. Every one of those was solvable and every one was a
+  signal. It was removed on sight in use, for the same reason six painted timer
+  designs were: the header is where the eye goes to *leave* the note, and a
+  countdown parked there is a persistent thing to look at that nobody asked to
+  see. On a phone the caret is the whole display now, which is what it is on
+  desktop by default anyway. The findings below survive it, because they were
+  about the mechanism rather than the place.
 - **`:empty` never matches an element that has children, however little it is
   showing.** The readout is emptied when it has nothing to say, and Obsidian's
   own `.status-bar-item:empty { display: none }` was expected to take it out of
