@@ -357,6 +357,22 @@ Residual gotchas:
   Obsidian paints it by default, so it was checking contrast against a colour
   that never appears in this theme. A harness that models the host's chrome has
   to model *this* host's chrome.
+- **Wearing the host's classes also opts you into the host's specificity.**
+  Adding `.clickable-icon` to the phone readout bought the header's icon
+  geometry and press state, and with them everything Obsidian says about that
+  class — including `.view-actions .clickable-icon { padding: … }`, a
+  *descendant* selector at (0,2,0). The plugin's own `.midori-timer-header`
+  rule is (0,1,0), so its padding never applied at all and the readout sat
+  flush against the pill's edge while every neighbour sat inside its own box.
+  It lost silently, and it took two rounds to see, because a padding that does
+  not apply looks exactly like a padding that is too small. The fix is three
+  classes on the element itself — `.midori-timer.midori-timer-header
+  .clickable-icon` at (0,3,0) — which beats any two-class rule from the host
+  *without depending on load order*, and load order is not something a plugin
+  can rely on: Obsidian hot-reloads its own CSS, and a plugin's stylesheet is
+  injected whenever the plugin happens to load. The padding also goes on the
+  element rather than on its contents, so the clock and the cards are inset
+  identically and neither state has to be reasoned about separately.
 - **The cheapest way to match a host's chrome is to wear its classes.** The
   phone readout sits among Obsidian's own header buttons, which are
   `.clickable-icon.view-action` — and those classes carry the padding, the
