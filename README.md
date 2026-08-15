@@ -354,6 +354,19 @@ Residual gotchas:
   moved a drum: the drums report `pointerdown`/`wheel`/`touchstart` separately
   from any value change, so the window can tell a scroll it caused from a
   scroll the reader caused, and never rewrites text under a live cursor.
+- **The same split-flap board reads the countdown in the status bar, and
+  turning the flip off cannot be done in CSS.** The obvious way to honour
+  Reduce Motion — or a "don't flip" setting — is to hide the two animated
+  halves and let the static ones change. That leaves a real defect: the lower
+  static half is *deliberately late*, because it must not change until the fold
+  has covered it, so with nothing covering it the top of the glyph shows the
+  new digit and the bottom shows the old one for 90ms. A torn character, once a
+  second. The suppression has to set both halves in the same frame, which is
+  JS. The bar variant also drops the card, the seam and the radius — at 13px a
+  card reads as a button — but the two *moving* halves keep an opaque
+  background in the bar's own colour, because a fold works by covering:
+  transparent, the two digits superimpose and it reads as a double exposure
+  rather than as a card turning.
 - **A split-flap that only flips what changed, and cancels rather than queues.**
   Scrolling the drum changes the value many times a second. Re-rendering every
   cell flips the unchanged ones too, so the whole board flaps when only the

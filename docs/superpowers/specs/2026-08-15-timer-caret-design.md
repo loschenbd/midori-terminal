@@ -207,7 +207,12 @@ same machinery.
   with `scroll-snap-type: y mandatory`, so momentum, rubber-banding, wheel,
   trackpad inertia and touch flinging are the platform's. Hours, minutes and
   seconds, which makes everything under a day reachable by dragging.
-- **Split-flap readout**, flipping only the cells whose glyph changed.
+- **Split-flap readout**, flipping only the cells whose glyph changed — the
+  same board, at one seventh the size, now also reads the countdown in the
+  status bar. That is a deliberate exception to the no-motion argument above
+  and is scoped to it: the status bar is opt-in, it is outside the note, and
+  the flip is a setting that is off under Reduce Motion. The writing surface is
+  still untouched.
 - **Two modes: *for* a length, or *until* a clock time.** Both are how a session
   is actually held in the head, and neither is a sub-mode of the other, so it is
   a segmented control with two sets of drums. Until-mode carries hour, minute
