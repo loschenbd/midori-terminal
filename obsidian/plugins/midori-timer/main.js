@@ -62,6 +62,16 @@
  *    and the readout also reserves the width of the largest form it will show
  *    during THIS run, so the item does not jump when 1:00:00 becomes 59:59.
  *
+ *    The readout is the SAME split-flap board as the setting window, one
+ *    seventh the size and stripped of its card — see FlapBoard, and the bar
+ *    variant in the stylesheet. That makes the reserve a sum of cell widths
+ *    rather than a count of characters, which is why FLAP_BAR exists in JS as
+ *    well as in the CSS: there is no way to ask a row that has not been
+ *    rendered yet how wide it is going to be. The flip is a setting, because
+ *    motion at the edge of vision is the one thing the caret display exists to
+ *    avoid, and off it is genuinely off — see FlapBoard.still for why that
+ *    cannot be done by hiding the animation in CSS.
+ *
  * 3. SET IT BY DRAGGING, OR BY TYPING, AND NEVER ONLY ONE. The window is a
  *    row of drums you flick — real scroll containers, so the momentum and
  *    snapping are the platform's — reading out through a split-flap clock. But
@@ -130,6 +140,7 @@ const DEFAULTS = {
   finishMessage: '',          // blank -> "Timer finished (25m)"
 
   display: 'caret',           // 'caret' | 'statusbar' | 'both'
+  barFlap: true,              // flip the status-bar readout, or just replace it
 };
 
 
@@ -404,7 +415,49 @@ const STYLE = `
   /* Decision 2: fixed-width digits, plus a reserved width set from JS. */
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-  text-align: right;
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+/* The bar's board is the SAME cells as the window's, one seventh the size and
+   stripped of the furniture. No card, no seam, no radius: at 13px a card reads
+   as a button, and the status bar already has enough boxes in it. What is left
+   is the movement, which is the part that carries the meaning.
+
+   That is also why switching the flip off needs no second code path — with no
+   card to see, a board that does not animate looks exactly like text. */
+.midori-timer-flaps.is-bar {
+  gap: 0.06em;                      /* FLAP_BAR.gap */
+  margin: 0;
+  perspective: 60px;                /* shallower: the cells are 8px tall */
+}
+.midori-timer-flaps.is-bar .midori-timer-flap {
+  width: 0.62em;                    /* FLAP_BAR.digit */
+  height: 1em;
+  font-size: inherit;
+  color: inherit;
+}
+.midori-timer-flaps.is-bar .midori-timer-flap.is-sep { width: 0.26em; }
+.midori-timer-flaps.is-bar .midori-timer-flap-half {
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.midori-timer-flaps.is-bar .midori-timer-flap-half > span { line-height: 1em; }
+
+/* THE MOVING HALVES STILL NEED TO BE OPAQUE, which is the one thing dropping
+   the card costs. A fold works by covering: the old top swings down OVER the
+   new glyph, and the new bottom swings up over the old one. Transparent, they
+   do not cover, they superimpose — the two digits show through each other and
+   the flip reads as a double exposure rather than as a card turning.
+
+   So only the two animated halves are painted, and only while they exist: at
+   rest the readout is bare text in the bar. The colour is the status bar's own
+   ground rather than the window's card, because it has to disappear against
+   what is behind it. */
+.midori-timer-flaps.is-bar .midori-timer-flap-fold,
+.midori-timer-flaps.is-bar .midori-timer-flap-unfold {
+  background: var(--background-secondary);
 }
 .midori-timer .midori-timer-icon {
   display: inline-flex;
@@ -523,16 +576,19 @@ const STYLE = `
 @keyframes midori-flap-fold   { to   { transform: rotateX(-90deg); } }
 @keyframes midori-flap-unfold { from { transform: rotateX(90deg); } to { transform: rotateX(0); } }
 
-/* Reduced motion keeps the card and drops the mechanism: the glyph simply is
-   the new one. The layout must not change, or the readout jumps. */
-@media (prefers-reduced-motion: reduce) {
-  .midori-timer-flap-fold,
-  .midori-timer-flap-unfold { display: none; }
-}
+/* SUPPRESSING THE FLIP IS DONE IN JS, NOT HERE, and the reason is worth
+   stating where the temptation is. Hiding the two animated halves with
+   'prefers-reduced-motion: reduce { display: none }' looks like the
+   obvious fix and leaves a real defect: the STATIC halves still update 90ms
+   apart, because the lower one is deliberately late so the fold can cover it.
+   With the animation hidden there is nothing covering it, so for 90ms the top
+   of the glyph is the new digit and the bottom is the old one — a torn
+   character, every second. FlapBoard.flip sets both halves at once instead;
+   see FlapBoard.still. */
 
 .midori-timer-echo {
   text-align: center;
-  font-size: var(--font-ui-smaller, 0.8em);
+  font-size: var(--font-ui-small, 0.85em);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   min-height: 1.5em;
@@ -602,11 +658,31 @@ const STYLE = `
   flex: 1;
   min-width: 0;
 }
+.midori-timer-column.is-narrow { flex: 0 0 3.2em; }
+
+/* Captions are LABELS, so they are set as labels: uppercase, tracked out, and
+   small enough that they never compete with the digits above them for the
+   first read. Set as lowercase running text they read as content. */
 .midori-timer-caption {
   text-align: center;
-  font-size: var(--font-ui-smaller, 0.75em);
+  font-size: 0.68em;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--text-faint, var(--text-muted));
-  margin-top: 2px;
+  margin-top: 3px;
+}
+
+/* Outside the columns, so it does not scroll with them, and vertically on the
+   band rather than on the row — the row is taller by the captions' height. */
+.midori-timer-drum-colon {
+  flex: 0 0 auto;
+  height: 170px;
+  display: flex;
+  align-items: center;
+  padding: 0 1px;
+  color: var(--text-faint, var(--text-muted));
+  font-size: 1.1em;
+  user-select: none;
 }
 .midori-timer-drum {
   position: relative;
@@ -694,13 +770,18 @@ const STYLE = `
     var(--color-blue) 0%, var(--interactive-accent) 40%, var(--color-yellow) 80%, var(--color-red) 100%);
 }
 .midori-timer-ramp-legend {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 4px;
-  font-size: var(--font-ui-smaller, 0.75em);
+  margin-top: 5px;
+  text-align: center;
+  font-size: 0.72em;
+  letter-spacing: 0.03em;
   color: var(--text-faint, var(--text-muted));
 }
-.midori-timer-start { width: 100%; margin-top: 0.3em; }
+.midori-timer-start {
+  width: 100%;
+  margin-top: 0.3em;
+  padding: 0.6em 0;
+  font-weight: var(--font-semibold, 600);
+}
 
 /* --------------------------------------------------------------- the caret
 
@@ -735,6 +816,11 @@ body.midori-drawn.midori-timer-running .midori-title-caret {
  * clicking an idle readout, or from the right-click menu. */
 const DRUM_ITEM = 34;               // px, and must match the stylesheet
 const FLAP_MS = 90;                 // per half-fold; a full flip is twice this
+
+/* Cell metrics for the status-bar board, in em, and they must match the
+ * stylesheet. They exist in JS only so the width of a string can be worked out
+ * BEFORE its cells are rendered — see decision 2 and FlapBoard.barWidth. */
+const FLAP_BAR = { digit: 0.62, sep: 0.26, gap: 0.06 };
 
 /* Does this reader's locale put the clock on a 12-hour dial? It decides whether
  * the "until" drums carry an AM/PM column, and it is asked of Intl rather than
@@ -895,6 +981,119 @@ const sameDay = (a, b) => a.getFullYear() === b.getFullYear()
  * than resetting it — 25 minutes becomes the clock time 25 minutes from now,
  * and back again — so the switch is a change of framing, not of intent.
  */
+/* The split-flap board, on two surfaces.
+ *
+ * Each glyph is a card split across the middle. Four layers per cell: the
+ * static top showing the NEW glyph, the static bottom still showing the OLD
+ * one, and two throwaway halves that animate over them — the old top folding
+ * down over the seam, then the new bottom unfolding from behind it. Only the
+ * second half of the movement reveals the new lower glyph, which is what sells
+ * it as one physical card rather than two things swapping.
+ *
+ * WHY IT IS A CLASS. It reads the duration in the setting window, where it is
+ * 2.6em and changes as fast as a drum can be flicked, and it reads the
+ * countdown in the status bar, where it is 13px and changes once a second.
+ * Those are the same mechanism at different sizes, and the size is the only
+ * thing the two callers differ on, so it is one implementation with a variant
+ * class rather than two that drift.
+ */
+class FlapBoard {
+  constructor(host, variant) {
+    this.el = host.createDiv({ cls: 'midori-timer-flaps' + (variant ? ' ' + variant : '') });
+    this.cells = [];
+    this.shown = '';
+    this.still = false;             // set by the caller; see flip()
+    this.reduce = window.matchMedia
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : { matches: false };
+  }
+
+  /* Render `text`, animating ONLY the cells whose glyph changed. Re-rendering
+   * every cell flips the unchanged ones too, and a whole board flapping when
+   * only the seconds moved reads as noise rather than as a mechanism.
+   *
+   * Rebuilds the row only when the LENGTH changes — 9:59 to 10:00 adds a digit
+   * and every cell shifts, so there is nothing left to preserve. */
+  set(text, force) {
+    if (force || text.length !== this.cells.length) {
+      this.el.empty();
+      this.cells = [...text].map((ch) => {
+        const cell = this.el.createDiv({ cls: 'midori-timer-flap' });
+        if (!/\d/.test(ch)) cell.addClass('is-sep');
+        cell.createDiv({ cls: 'midori-timer-flap-half midori-timer-flap-top' })
+          .createSpan({ text: ch });
+        cell.createDiv({ cls: 'midori-timer-flap-bottom midori-timer-flap-half' })
+          .createSpan({ text: ch });
+        return cell;
+      });
+      this.shown = text;
+      return;
+    }
+
+    for (let i = 0; i < text.length; i += 1) {
+      if (text[i] === this.shown[i]) continue;   // untouched cells do not flap
+      this.flip(this.cells[i], this.shown[i], text[i]);
+    }
+    this.shown = text;
+  }
+
+  /* One card turning over.
+   *
+   * THE TIMERS ARE TRACKED AND CLEARED, not left to unwind on their own. A flip
+   * schedules two callbacks, and a fast scroll starts a new flip on the same
+   * cell long before they fire. Left alone they still happen to converge,
+   * because setTimeout preserves scheduling order and the last one scheduled
+   * carries the newest glyph — but that is an argument, not a guarantee, and it
+   * stops being true the moment anything here gains a different delay. Clearing
+   * them makes the cell's state depend only on the flip currently running. */
+  flip(cell, from, to) {
+    const top = cell.querySelector('.midori-timer-flap-top');
+    const bottom = cell.querySelector('.midori-timer-flap-bottom');
+    top.firstElementChild.setText(to);
+
+    // Cancel the flip still in the air rather than queueing behind it: queued
+    // flips fall behind a fast scroll and keep flapping after the drum stops.
+    if (cell.midoriTimers) cell.midoriTimers.forEach((id) => window.clearTimeout(id));
+    cell.querySelectorAll('.midori-timer-flap-fold, .midori-timer-flap-unfold')
+      .forEach((el) => el.remove());
+
+    /* NOT ANIMATING MEANS SETTING BOTH HALVES AT ONCE, and this is the part
+     * that cannot be done in CSS. The lower half is deliberately late — it
+     * changes once the fold has covered it — so hiding the fold without
+     * changing this leaves the top of the glyph showing the new digit and the
+     * bottom showing the old one for 90ms: a torn character, once a second.
+     * Here the card just is the new glyph, which is what a stopped mechanism
+     * should look like. */
+    if (this.still || this.reduce.matches) {
+      bottom.firstElementChild.setText(to);
+      return;
+    }
+
+    const fold = cell.createDiv({ cls: 'midori-timer-flap-half midori-timer-flap-top midori-timer-flap-fold' });
+    fold.createSpan({ text: from });
+    const unfold = cell.createDiv({ cls: 'midori-timer-flap-half midori-timer-flap-bottom midori-timer-flap-unfold' });
+    unfold.createSpan({ text: to });
+
+    cell.midoriTimers = [
+      // The lower half becomes the new glyph only once the fold has covered it.
+      window.setTimeout(() => { bottom.firstElementChild.setText(to); }, FLAP_MS),
+      window.setTimeout(() => { fold.remove(); unfold.remove(); }, FLAP_MS * 2 + 20),
+    ];
+  }
+
+  /* The board's width in em, for callers that must reserve space before the
+   * cells exist. The constants are the stylesheet's and are stated in both
+   * places; there is no way to ask a not-yet-rendered row how wide it will be.
+   * Only the status bar needs this — see decision 2. */
+  static barWidth(text) {
+    const cells = [...text];
+    const digits = cells.filter((c) => /\d/.test(c)).length;
+    return digits * FLAP_BAR.digit
+      + (cells.length - digits) * FLAP_BAR.sep
+      + Math.max(0, cells.length - 1) * FLAP_BAR.gap;
+  }
+}
+
 class DurationModal extends Modal {
   constructor(app, plugin) {
     super(app);
@@ -904,8 +1103,6 @@ class DurationModal extends Modal {
     this.target = null;             // the Date being counted down to, in until
     this.twelve = usesTwelveHour();
     this.lastTouched = 'type';      // which control the human moved last
-    this.flaps = [];                // one cell per character of the clock
-    this.shown = '';                // what those cells currently read
   }
 
   onOpen() {
@@ -915,21 +1112,29 @@ class DurationModal extends Modal {
     this.root = contentEl.createDiv({ cls: 'midori-timer-dial' });
 
     const modes = this.root.createDiv({ cls: 'midori-timer-modes' });
-    this.forBtn = modes.createEl('button', { text: 'For' });
-    this.untilBtn = modes.createEl('button', { text: 'Until' });
+    this.forBtn = modes.createEl('button', { text: 'For a length' });
+    this.untilBtn = modes.createEl('button', { text: 'Until a time' });
     this.forBtn.addEventListener('click', () => this.setMode('for'));
     this.untilBtn.addEventListener('click', () => this.setMode('until'));
 
-    this.flapEl = this.root.createDiv({ cls: 'midori-timer-flaps' });
+    this.board = new FlapBoard(this.root);
     this.echoEl = this.root.createDiv({ cls: 'midori-timer-echo' });
 
     const pick = () => this.fromDrums();
     const touch = () => { this.lastTouched = 'drum'; };
 
+    // The colons are what make three scrollers read as one clock rather than
+    // as three adjacent controls. They sit outside the columns so they do not
+    // scroll, and they are aria-hidden because the captions already say it.
+    const colon = (host) => host.createDiv({ cls: 'midori-timer-drum-colon', text: ':' })
+      .setAttribute('aria-hidden', 'true');
+
     this.forDrums = this.root.createDiv({ cls: 'midori-timer-drums' });
     this.dH = new Drum(this.forDrums, range(0, 23), 'hours', pick, touch);
-    this.dM = new Drum(this.forDrums, range(0, 59, true), 'min', pick, touch);
-    this.dS = new Drum(this.forDrums, range(0, 59, true), 'sec', pick, touch);
+    colon(this.forDrums);
+    this.dM = new Drum(this.forDrums, range(0, 59, true), 'minutes', pick, touch);
+    colon(this.forDrums);
+    this.dS = new Drum(this.forDrums, range(0, 59, true), 'seconds', pick, touch);
     this.forDrums.createDiv({ cls: 'midori-timer-drum-band' });
 
     /* The until drums carry no seconds column. A target is stated to the
@@ -938,11 +1143,13 @@ class DurationModal extends Modal {
     this.untilDrums = this.root.createDiv({ cls: 'midori-timer-drums' });
     this.uH = new Drum(this.untilDrums, this.twelve ? range(1, 12) : range(0, 23),
       'hour', pick, touch);
-    this.uM = new Drum(this.untilDrums, range(0, 59, true), 'min', pick, touch);
+    colon(this.untilDrums);
+    this.uM = new Drum(this.untilDrums, range(0, 59, true), 'minute', pick, touch);
     this.uAP = this.twelve
       ? new Drum(this.untilDrums,
         [{ value: 'am', text: 'AM' }, { value: 'pm', text: 'PM' }], '\u00a0', pick, touch)
       : null;
+    if (this.uAP) this.uAP.column.addClass('is-narrow');
     this.untilDrums.createDiv({ cls: 'midori-timer-drum-band' });
 
     this.input = this.root.createEl('input', { cls: 'midori-timer-type', type: 'text' });
@@ -960,15 +1167,19 @@ class DurationModal extends Modal {
       this.render();                            // show the error, keep the value
     });
 
+    /* The ramp is the only place this design explains itself, now that the
+     * running timer is a colour drift on the caret and says nothing. A
+     * two-ended legend kept trying to label the gradient's endpoints, which is
+     * both wrong (it is continuous) and unreadable at this size; one sentence
+     * naming what the strip IS does the job. */
     const ramp = this.root.createDiv({ cls: 'midori-timer-ramp' });
     ramp.createDiv({ cls: 'midori-timer-ramp-bar' });
-    const legend = ramp.createDiv({ cls: 'midori-timer-ramp-legend' });
-    legend.createSpan({ text: 'your caret now' });
-    legend.createSpan({ text: 'when it ends' });
+    ramp.createDiv({ cls: 'midori-timer-ramp-legend',
+      text: 'your caret, across the session' });
 
-    const start = this.root.createEl('button', { cls: 'midori-timer-start', text: 'Start' });
-    start.addClass('mod-cta');
-    start.addEventListener('click', () => this.submit());
+    this.startEl = this.root.createEl('button', { cls: 'midori-timer-start' });
+    this.startEl.addClass('mod-cta');
+    this.startEl.addEventListener('click', () => this.submit());
 
     // Enter submits from anywhere in the window. Escape is Obsidian's already.
     this.scope.register([], 'Enter', (ev) => { ev.preventDefault(); this.submit(); return false; });
@@ -1112,71 +1323,13 @@ class DurationModal extends Modal {
     // The flaps always read the DURATION, in both modes. Spinning a target
     // time and watching the countdown assemble itself is the answer to the
     // question that mode is being used to ask.
-    this.paintFlaps(formatClock(this.seconds), force);
-  }
+    this.board.set(formatClock(this.seconds), force);
 
-  // ------------------------------------------------------------------ flaps
-
-  /* Render `text` across the flap cells, animating only the ones that changed.
-   * Rebuilds the row only when the LENGTH changes — 9:59 to 10:00 adds a digit
-   * and every cell shifts, so there is nothing to preserve. */
-  paintFlaps(text, force) {
-    if (force || text.length !== this.flaps.length) {
-      this.flapEl.empty();
-      this.flaps = [...text].map((ch) => {
-        const cell = this.flapEl.createDiv({ cls: 'midori-timer-flap' });
-        if (!/\d/.test(ch)) cell.addClass('is-sep');
-        cell.createDiv({ cls: 'midori-timer-flap-half midori-timer-flap-top' })
-          .createSpan({ text: ch });
-        cell.createDiv({ cls: 'midori-timer-flap-bottom midori-timer-flap-half' })
-          .createSpan({ text: ch });
-        return cell;
-      });
-      this.shown = text;
-      return;
-    }
-
-    for (let i = 0; i < text.length; i += 1) {
-      if (text[i] === this.shown[i]) continue;   // untouched cells do not flap
-      this.flipCell(this.flaps[i], this.shown[i], text[i]);
-    }
-    this.shown = text;
-  }
-
-  /* One card turning over. The two static halves are updated immediately — top
-   * to the new glyph, bottom still the old — and two throwaway halves animate
-   * over them: the old top folding down, then the new bottom unfolding. Only
-   * the second half of the movement reveals the new lower glyph, which is what
-   * sells one card turning rather than two things swapping.
-   *
-   * THE TIMERS ARE TRACKED AND CLEARED, not left to unwind on their own. A
-   * flip schedules two callbacks, and a fast scroll starts a new flip on the
-   * same cell long before they fire. Left alone they still happen to converge,
-   * because setTimeout preserves scheduling order and the last one scheduled
-   * carries the newest glyph — but that is an argument, not a guarantee, and it
-   * stops being true the moment anything here gains a different delay. Clearing
-   * them makes the cell's state depend only on the flip currently running. */
-  flipCell(cell, from, to) {
-    const top = cell.querySelector('.midori-timer-flap-top');
-    const bottom = cell.querySelector('.midori-timer-flap-bottom');
-    top.firstElementChild.setText(to);
-
-    // Cancel the flip still in the air rather than queueing behind it: queued
-    // flips fall behind a fast scroll and keep flapping after the drum stops.
-    if (cell.midoriTimers) cell.midoriTimers.forEach((id) => window.clearTimeout(id));
-    cell.querySelectorAll('.midori-timer-flap-fold, .midori-timer-flap-unfold')
-      .forEach((el) => el.remove());
-
-    const fold = cell.createDiv({ cls: 'midori-timer-flap-half midori-timer-flap-top midori-timer-flap-fold' });
-    fold.createSpan({ text: from });
-    const unfold = cell.createDiv({ cls: 'midori-timer-flap-half midori-timer-flap-bottom midori-timer-flap-unfold' });
-    unfold.createSpan({ text: to });
-
-    cell.midoriTimers = [
-      // The lower half becomes the new glyph only once the fold has covered it.
-      window.setTimeout(() => { bottom.firstElementChild.setText(to); }, FLAP_MS),
-      window.setTimeout(() => { fold.remove(); unfold.remove(); }, FLAP_MS * 2 + 20),
-    ];
+    // The button states what pressing it commits to, rather than 'Start' and a
+    // hope that the echo was read. It goes bare when the field does not parse,
+    // because naming a duration there would be naming the wrong one.
+    this.startEl.setText(field.ok && this.seconds > 0
+      ? `Start ${formatHuman(this.seconds)}` : 'Start');
   }
 
   submit() {
@@ -1460,6 +1613,14 @@ module.exports = class MidoriTimer extends Plugin {
     setIcon(this.iconEl, 'clock');
     this.timeEl = this.el.createSpan({ cls: 'midori-timer-time' });
 
+    /* The readout is the same split-flap board as the setting window, one
+     * seventh the size. Turning the flip OFF is a class, not a second code
+     * path: the bar variant has no card and no seam, so a board that does not
+     * animate is indistinguishable from plain text — which is what makes one
+     * renderer able to serve both settings, and what lets the reduced-motion
+     * rule do its job without a JS branch. */
+    this.bar = new FlapBoard(this.timeEl, 'is-bar');
+
     this.el.addEventListener('click', () => {
       if (this.isActive()) this.toggle();
       else new DurationModal(this.app, this).open();
@@ -1495,7 +1656,8 @@ module.exports = class MidoriTimer extends Plugin {
    * `ch` against tabular figures, where one ch is exactly one digit. */
   reserveWidth(seconds) {
     if (!this.timeEl) return;
-    this.timeEl.style.minWidth = `${formatClock(Math.max(0, seconds || 0)).length}ch`;
+    const widest = formatClock(Math.max(0, seconds || 0));
+    this.timeEl.style.minWidth = `${FlapBoard.barWidth(widest).toFixed(3)}em`;
   }
 
   render() {
@@ -1508,13 +1670,14 @@ module.exports = class MidoriTimer extends Plugin {
     if (this.settings.display === 'caret') {
       this.el.removeClass('is-running');
       this.el.removeClass('is-paused');
-      this.timeEl.setText('');
+      this.bar.set('');
       this.timeEl.style.minWidth = '';
       this.iconEl.hide();
       this.el.removeAttribute('aria-label');
       return;
     }
     this.iconEl.show();
+    this.bar.still = !this.settings.barFlap;
 
     this.el.removeClass('is-running');
     this.el.removeClass('is-paused');
@@ -1523,7 +1686,7 @@ module.exports = class MidoriTimer extends Plugin {
       this.el.addClass(this.isPaused() ? 'is-paused' : 'is-running');
       this.iconEl.show();
       setIcon(this.iconEl, this.isPaused() ? 'pause' : 'clock');
-      this.timeEl.setText(formatClock(this.remaining()));
+      this.bar.set(formatClock(this.remaining()));
       this.el.setAttr('aria-label',
         `${this.isPaused() ? 'Paused' : 'Timer'} — click to ${this.isPaused() ? 'resume' : 'pause'}, right-click for more`);
       return;
@@ -1532,7 +1695,7 @@ module.exports = class MidoriTimer extends Plugin {
     // Idle. Emptying the element makes Obsidian's own
     // `.status-bar-item:empty { display: none }` hide it, which is exactly the
     // behaviour the "show when idle" setting wants when it is off.
-    this.timeEl.setText('');
+    this.bar.set('');
     this.timeEl.style.minWidth = '';
     if (this.settings.showWhenIdle) {
       this.iconEl.show();
@@ -1595,6 +1758,17 @@ class MidoriTimerSettings extends PluginSettingTab {
       .addButton((b) => b.setButtonText('Run 20s').onClick(() => this.plugin.start(20)));
 
     containerEl.createEl('h3', { text: 'Status bar' });
+
+    new Setting(containerEl)
+      .setName('Flip the digits')
+      .setDesc('The readout turns over like a split-flap board, one card per digit that changed — so the seconds flip every second and the minutes once a minute. It is motion at the edge of vision, which is the one thing the caret display exists to avoid, so it is a choice: off, the digits simply change. Ignored when the caret is the only display, and always off under Reduce Motion.')
+      .addToggle((t) => t
+        .setValue(this.plugin.settings.barFlap)
+        .onChange(async (v) => {
+          this.plugin.settings.barFlap = v;
+          await this.plugin.save();
+          this.plugin.render();
+        }));
 
     new Setting(containerEl)
       .setName('Show when idle')
