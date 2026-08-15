@@ -83,6 +83,52 @@ means everything here is inert for a reader who has turned readable line length
 off — correct, and not something to fight. And app.css uses the same variable
 for `.document-search`, so the find bar stays aligned to the column for free.
 
+**The direction of em-resolution differs by consuming property**, which is why
+the same reasoning does not condemn Task 4. For `max-width` (`--file-line-width`)
+an em resolves against the consuming element's **own** font-size — the trap
+above. For `font-size` itself (`--h1-size`…`--h6-size`, `--inline-title-size`)
+an em resolves against the **parent's** font-size, and a heading's parent is at
+the base size in both panes. Heading sizes in em are therefore correct and
+stable; the measure in em is not. Both follow from custom properties inheriting
+as unresolved token streams — Obsidian ships no `@property` registrations, so
+nothing absolutises early.
+
+**One accepted cost of the `calc`.** app.css deliberately overrides the editor
+font-size in sidebars, hover popovers and footnotes
+(`--sidebar-markdown-font-size`, `--popover-font-size`, `--footnote-size`). An
+em measure would have adapted to those; a `calc` against `--font-text-size`
+hands them the same pixel width, which is a longer measure in characters where
+the text is smaller. That is what the 700px default already did, so it is not a
+regression — and those columns are usually constrained by their container before
+`max-width` binds.
+
+**What no stylesheet can beat.** app.js writes these as *inline* styles on
+`document.body` from vault config: `--font-text-size`, `--font-text-override`,
+`--font-interface-override`, `--font-monospace-override`, `--font-print-override`,
+`--accent-h/s/l`, `--text-on-accent`, `--zoom-factor`, `--indent-size`. A theme
+declaration loses to all of them at any specificity, without `!important`. This
+plan only ever *reads* `--font-text-size`, which is the supported direction.
+
+It also explains the `!important` the theme currently carries on `.inline-title`:
+app.css resolves the body face as
+`--font-text: var(--font-text-override), var(--font-text-theme), var(--font-default)`,
+so a per-vault Appearance font (inline `--font-text-override`) beats a theme's
+`--font-text-theme`. The heading chain is separate — `--inline-title-font`
+defaults to `var(--h1-font)` — which is why Task 4b expects the `!important` to
+become unnecessary. Note the real gate while editing there:
+`.inline-title:not([data-level])` is **(0,2,0)**, so a bare `.inline-title` rule
+at (0,1,0) loses to app.css regardless.
+
+**Two more facts worth having on hand.** Theme CSS is appended to the *end* of
+`<head>`, while CodeMirror's own injected rules go in at `head.firstChild` — so
+equal specificity beats CM6 without `!important`, though not app.css. And there
+is **no published stability or deprecation policy** for either class names or
+CSS variables; Obsidian's own guidelines name broken selectors as the most
+common theme-maintenance failure. `.cm-sizer` and `.cm-contentContainer` are
+Obsidian-injected wrappers that do not exist in upstream CodeMirror 6 at all, so
+the element this plan's measure hangs off carries no guarantee from either
+vendor. Re-run `dump-app-css.py` after an update; that is the whole mitigation.
+
 ## File Structure
 
 | File | Responsibility |
@@ -862,11 +908,33 @@ body {
 
 The existing `.inline-title { font-family: var(--inline-title-font) !important }`
 was added because a per-vault Font override in Settings → Appearance drives the
-title off `--font-text` and a plain rule lost. With `--h1-font` set, the title
-takes its face from the variable chain instead. Remove the `!important`, then
-**verify with a vault font override actually set** — Settings → Appearance →
-Font → pick any face. If the title reverts to that face, restore the
-`!important` and leave the existing comment explaining why.
+title off `--font-text` and a plain rule lost. app.css explains both halves of
+that: the body face resolves as
+`--font-text: var(--font-text-override), var(--font-text-theme), var(--font-default)`
+with `--font-text-override` written *inline* by app.js, and the title's own rule
+is `.inline-title:not([data-level])` at **(0,2,0)** — so a bare `.inline-title`
+declaration at (0,1,0) was losing on specificity even before the inline value
+entered it. With `--h1-font` set, the title takes its face from
+`--inline-title-font → var(--h1-font)`, a chain that never touches
+`--font-text`. Remove the `!important`, then **verify with a vault font override
+actually set** — Settings → Appearance → Font → pick any face. If the title
+reverts to that face, restore the `!important` and leave the existing comment.
+
+- [ ] **Step 3b: Move the title's bottom margin onto its variable**
+
+The theme sets `.inline-title { margin-bottom: 0 }` so the 24px sizer padding
+supplies the whole gap. app.css drives that from an **undocumented** token —
+`--inline-title-margin-bottom`, default `0.5em`, consumed as `margin-block-end`
+on a rule at (0,1,0). Setting the variable instead of the property keeps the
+theme out of a tie it would have to win on document order:
+
+```css
+body {
+  /* Undocumented but consumed by app.css on .inline-title. The sizer's own
+     top padding is already one full grid row of air, so the title adds none. */
+  --inline-title-margin-bottom: 0;
+}
+```
 
 - [ ] **Step 4: Verify both panes and the title**
 

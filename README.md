@@ -363,9 +363,16 @@ Residual gotchas:
   so it was homed in the note's own header instead, on the grounds that a
   header is existing chrome rather than the writing surface. Making it fit took
   a re-homing dance across leaf rebuilds, a resize against the neighbours'
-  metrics, an icon matched to their stroke, and three separate rounds losing to
-  the host's specificity. Every one of those was solvable and every one was a
-  signal. It was removed on sight in use, for the same reason six painted timer
+  metrics, an icon matched to their stroke, and three separate rounds of the
+  spacing simply not applying. Every one of those was solvable and every one was
+  a signal. (The cause was diagnosed at the time as a specificity fight with a
+  `.view-actions .clickable-icon` rule. Reading the shipped `app.css` afterwards
+  — see `obsidian/dump-app-css.py` — there is no such rule in the current build.
+  What actually zeroes the spacing is the *container*: `.view-actions { gap: 0 }`
+  and, on a phone, `.is-phone .view-header .view-actions { padding: 0; margin: 0 }`.
+  The fix that worked — putting the inset on class names the host has never
+  heard of — was right for a reason other than the one recorded, which is worth
+  knowing, because a wrong mechanism generalises to the wrong next fix.) It was removed on sight in use, for the same reason six painted timer
   designs were: the header is where the eye goes to *leave* the note, and a
   countdown parked there is a persistent thing to look at that nobody asked to
   see. On a phone the caret is the whole display now, which is what it is on
