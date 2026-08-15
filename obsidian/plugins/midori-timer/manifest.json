@@ -1,9 +1,9 @@
 {
   "id": "midori-timer",
   "name": "Midori Timer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minAppVersion": "1.4.0",
-  "description": "A countdown in the status bar whose duration you type: 25m, 1h30, 90s or 1:30, in a small window a hotkey can open. Click the readout to pause or resume, right-click to extend or stop. Counts against an absolute deadline rather than decrementing a number, so it stays accurate while the window is in the background or the machine sleeps, and survives a restart. The readout uses tabular figures and reserves its width so the status bar never reflows. Desktop only for the widget, since Obsidian hides the status bar on phones; the commands work everywhere.",
+  "description": "A timer whose duration you type: 25m, 1h30, 90s or 1:30, in a small window a hotkey can open. Shows as a dotted rail along an edge of the window that drains as the time runs down, borrowing the page dot grid's own colour and 24px pitch, and shifting sage to ochre to wine as it empties; a status-bar readout is available instead of, or alongside, the rail. Counts against an absolute deadline rather than decrementing a number, so it stays accurate while the window is in the background or the machine sleeps, and survives a restart.",
   "author": "Benjamin Loschen",
   "authorUrl": "https://www.benjaminloschen.com",
   "isDesktopOnly": false
