@@ -357,6 +357,20 @@ Residual gotchas:
   Obsidian paints it by default, so it was checking contrast against a colour
   that never appears in this theme. A harness that models the host's chrome has
   to model *this* host's chrome.
+- **A component moved to a new home is sized against its new neighbours, not
+  its old ones.** The readout's card metrics and icon were tuned for a status
+  bar — 12px labels, a 14px `--icon-xs` clock — and putting the same element in
+  a phone's note header, a row of 26px touch targets, made it read as something
+  dropped in from another screen rather than as one of the header's own
+  controls. Not smaller-and-restrained: smaller-and-wrong. It is now
+  `--font-ui-medium` with `--icon-s` and the heavier stroke Obsidian draws
+  header icons at, and the cards grew *taller in proportion* rather than merely
+  bigger, because a flip card is a portrait object — wider than it is tall it
+  stops reading as a card and starts reading as a key. Measured against a mock
+  built to the screenshot's real dimensions: card 20.7px in a 30px pill (69%),
+  0.8 of the button box, 1.72:1 portrait. The four card metrics are custom
+  properties for exactly this reason — a second home is one block of values
+  rather than six overrides hunted through the sheet.
 - **`:empty` never matches an element that has children, however little it is
   showing.** The readout is emptied when it has nothing to say, and Obsidian's
   own `.status-bar-item:empty { display: none }` was expected to take it out of
