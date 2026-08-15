@@ -2,19 +2,22 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Bring the Midori theme's writing surface onto the three typographic
-settings that survived evidence review — a measure inside the preference band,
-a vertical grid that follows the reader's own text size instead of assuming
-16px, and a heading ladder whose *visual* steps match its em steps — without
-touching anything the evidence does not support.
+**Goal:** Bring the Midori theme's writing surface onto the settings that
+survived evidence review — a measure inside the preference band, a vertical grid
+that follows the reader's own text size instead of assuming one, and a heading
+ladder whose *visual* steps match its em steps — then fold the writing mode into
+this repo so it ships, and take ownership of the paragraph rhythm currently held
+by a third-party plugin that fights the grid.
 
-**Architecture:** Every change is a CSS custom property in `obsidian/theme.css`
-plus a static test that reads the stylesheet back and checks the number in the
-units the research uses (characters per line, ratio of leading to base size,
-x-height). No JavaScript, no new plugin, no new dependency. The one risky
-change — making the 24px grid scale — is gated behind a rendered measurement,
-and reverts to a fixed grid with a documented supported range if that
-measurement disagrees.
+**Architecture:** Most changes are CSS custom properties in
+`obsidian/theme.css` plus a static test that reads the stylesheet back and
+checks the number in the units the research uses (characters per line, ratio of
+leading to base size, x-height). One existing plugin moves into the repo
+unchanged in behaviour. The boundary throughout: **a plugin owns the element it
+creates; the theme owns how the app's chrome reacts.** The one risky change —
+making the 24px grid scale — is gated behind a rendered measurement, and reverts
+to a fixed grid with a documented supported range if that measurement
+disagrees.
 
 **Tech Stack:** CSS custom properties; Python 3 (stdlib only) for the static
 tests, wired into `tests/lint.sh`; a generated HTML harness driven through the
@@ -24,6 +27,10 @@ only for re-deriving font constants, never at test time.
 ## Global Constraints
 
 - **Evidence source of truth:** `docs/superpowers/specs/2026-08-15-prose-typography-evidence.md`. Do not introduce a number this plan does not trace to it.
+- **Design source of truth:** `docs/superpowers/specs/2026-08-15-prose-writing-experience-design.md`, which records what was cut and why. Do not re-add a declined item.
+- **The reader's real base size is 14px** (`baseFontSize: 14` in the live vault), not the 15–16 the theme's own comment claims. Every number below is stated for the base it applies to, and every mechanism follows the slider rather than assuming a value.
+- **A plugin owns the element it creates and styles only that element; the theme owns how the app's chrome reacts.** Same boundary `midori-timer` uses.
+- **Every `body.zen-mode` rule that mentions `--header-height` must also require `.show-view-header`** — app.css sets `display: none` on `.view-header` when the setting is off.
 - **Nothing enters the writing surface unbidden.** No new element, no new mark, no animation on the page. Every change here is a property of something already on screen.
 - **Font constants, measured from `fonts/*.ttf` with a `BoundsPen`, not `OS/2`:** M PLUS 1p x-height `0.520`em, cap `0.730`em, average prose advance `0.4818`em. Spectral x-height `0.450`em, cap `0.660`em, average advance `0.4352`em. Re-derive with `obsidian/.fontenv/bin/python3 tests/measure_prose_type.py`.
 - **Characters per line = `N ÷ 0.4818`** where the measure is `calc(var(--font-text-size) * N)`. This is the only conversion between a stylesheet number and the research's unit.
@@ -140,6 +147,9 @@ vendor. Re-run `dump-app-css.py` after an update; that is the whole mitigation.
 | `tests/measure_prose_type.py` (existing) | Already committed. Re-derives the font constants. Unchanged. |
 | `docs/superpowers/specs/2026-08-15-prose-typography-evidence.md` (existing) | Evidence. Unchanged by this plan. |
 | `README.md` (modify) | One findings bullet per shipped change, in the established voice. |
+| `obsidian/plugins/zen-toggle/` (create) | The mode's toggle, moved in from the vault: the status-bar dot, its stylesheet, the `body.zen-mode` class, the command. Owns nothing else. |
+| `obsidian/install-obsidian.sh` (modify) | Plugin roster comment; renaming the superseded `zen-mode.css` snippet aside. |
+| `obsidian/dump-app-css.py` (existing) | Extracts Obsidian's `app.css`/`app.js` from the asar. Unchanged; used to re-check the schema after an app update. |
 | `obsidian/manifest.json` (modify) | Version bump at the end. |
 
 ---
@@ -1013,7 +1023,501 @@ before/after ratios in the message.
 
 ---
 
-### Task 6: Documentation, version, install
+### Task 6: Move `zen-toggle` into the repo
+
+The writing mode's toggle is a plugin authored here but kept in the vault, so it
+ships to nobody. Moving it in makes it a real artifact, covered by
+`tests/check_plugin_loads.js` and fanned out by the installer. **Its behaviour
+does not change.**
+
+**Files:**
+- Create: `obsidian/plugins/zen-toggle/main.js`, `obsidian/plugins/zen-toggle/manifest.json`
+- Modify: `obsidian/install-obsidian.sh` (the plugin roster comment, ~line 84)
+
+**Interfaces:**
+- Produces: `body.zen-mode`, toggled by a status-bar dot and the command `zen-toggle:toggle-zen`. Task 7's CSS is gated entirely on that class.
+
+- [ ] **Step 1: Copy the plugin in and confirm the load test sees it**
+
+```bash
+VAULT="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/Mud & Silicon/.obsidian"
+mkdir -p obsidian/plugins/zen-toggle
+cp "$VAULT/plugins/zen-toggle/main.js" "$VAULT/plugins/zen-toggle/manifest.json" obsidian/plugins/zen-toggle/
+node tests/check_plugin_loads.js
+```
+
+Expected: a new pair of lines, `ok zen-toggle loads and exports a Plugin` and
+`ok zen-toggle manifest v1.0.0`. Do **not** copy `data.json` — that is the saved
+zen state for one vault, not part of the plugin.
+
+- [ ] **Step 2: Correct the manifest description**
+
+It currently says "Subtle in-page dot (and command) that toggles zen mode by
+flipping a body class; pairs with the zen-mode.css snippet." Two things in that
+are no longer true: the dot is a **status-bar** item, not in-page, and the
+snippet is being absorbed into the theme. Replace the `description` with:
+
+```json
+"description": "Toggles zen mode by flipping a body class, from a dot in the status bar or the command. The rules that respond to that class live in the Midori theme; without it this plugin sets a class nothing reads."
+```
+
+- [ ] **Step 3: Move the dot's styling out of inline JS into the plugin's own stylesheet**
+
+The dot is currently styled by `Object.assign(this.dot.style, {...})`, which
+writes **inline** styles — the reason the vault snippet's hover rule needs
+`!important` to reach it. A plugin should style the element it creates the way
+`midori-timer` does, so nothing downstream has to fight it. In `main.js`, delete
+the `Object.assign` block and add, above `module.exports`:
+
+```js
+/* The dot is this plugin's own element, so this plugin styles it — and via a
+ * stylesheet rather than inline styles, which is not a nicety: an inline style
+ * can only be overridden with !important, and the theme should be able to
+ * restyle a dot sitting in its own status bar without that. */
+const STYLE = `
+.zen-toggle-btn {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-faint);
+  background: transparent;
+  vertical-align: middle;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.zen-toggle-btn.is-on {
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+}
+.status-bar-item:hover .zen-toggle-btn {
+  border-color: var(--interactive-accent);
+}
+`;
+```
+
+In `onload()`, inject it the way `midori-timer` does, and drop the inline block:
+
+```js
+    const style = document.createElement('style');
+    style.id = 'zen-toggle-style';
+    style.textContent = STYLE;
+    document.head.appendChild(style);
+    this.register(() => style.remove());
+```
+
+And replace `render()` with the class form:
+
+```js
+  render() {
+    if (!this.dot) return;
+    this.dot.toggleClass('is-on', this.zen);
+  }
+```
+
+- [ ] **Step 4: Run the guards**
+
+```bash
+python3 tests/check_style_literals.py
+node tests/check_plugin_loads.js
+sh tests/lint.sh
+```
+
+Expected: all green. The stylesheet check matters here — this task adds a second
+template literal to the repo, and a backtick inside one has ended a stylesheet
+four times in this codebase.
+
+- [ ] **Step 5: Add it to the installer's roster**
+
+In `obsidian/install-obsidian.sh`, in the comment block listing the companion
+plugins, after the `midori-timer` entry:
+
+```sh
+  #   zen-toggle       flips `zen-mode` on <body> from a status-bar dot or a
+  #                    command. The rules that respond live in theme.css, so
+  #                    the plugin is inert without the theme and the theme's
+  #                    zen block is inert without the plugin.
+```
+
+- [ ] **Step 6: Install and confirm the toggle still works**
+
+```bash
+sh obsidian/install-obsidian.sh
+```
+
+In Obsidian: the dot appears in the status bar, clicking it fills it, and the
+`Toggle zen mode` command does the same. Nothing about the page changes yet —
+Task 7 is what responds.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add obsidian/plugins/zen-toggle obsidian/install-obsidian.sh
+git commit -m "zen-toggle: move the plugin into the repo
+
+It was authored here and kept in one vault, so the writing mode shipped
+to nobody. Behaviour is unchanged; the dot's inline styles become an
+injected stylesheet, because an inline style can only be overridden with
+!important and the snippet's hover rule was paying that price."
+```
+
+---
+
+### Task 7: The zen CSS, consolidated and gated
+
+Two homes become one, and the rules stop assuming a view header that the app has
+been told to hide.
+
+**Files:**
+- Modify: `obsidian/theme.css` (the zen block at ~504–562)
+- Modify: `tests/test_prose_typography.py`
+- Modify: `obsidian/install-obsidian.sh` (snippet retirement)
+
+**Interfaces:**
+- Consumes: `body.zen-mode` from Task 6; `--midori-row` from Task 2.
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/test_prose_typography.py` and register in `__main__`:
+
+```python
+def rules():
+    """Every (selector, declarations) pair in theme.css, comments stripped.
+
+    SPLIT, DO NOT MATCH. The obvious regex for a CSS rule —
+    `([^{}]*KEYWORD[^{}]*)\{([^{}]*)\}` — has two unbounded quantifiers on
+    either side of a literal, which is polynomial: against this 90KB
+    stylesheet it does not finish. Splitting on braces is linear and needs no
+    cleverness. Nested at-rules degrade gracefully: the inner rule is found
+    and the wrapper is ignored, which is all any check here wants.
+    """
+    body = re.sub(r"/\*.*?\*/", "", THEME, flags=re.S)
+    out = []
+    for chunk in body.split("}"):
+        if "{" not in chunk:
+            continue
+        selector, _, decls = chunk.rpartition("{")
+        out.append((" ".join(selector.split()), decls))
+    return out
+
+
+def test_zen_header_rules_are_gated():
+    """A zen rule that compensates for the view header must check it exists.
+
+    app.css: `body:not(.show-view-header):not(.is-phone) .view-header
+    { display: none }`. With the setting off there is no header, so an
+    ungated `padding-top: var(--header-height)` adds a header's worth of
+    empty space above the note and shifts the dot grid to match.
+    """
+    ungated = []
+    for selector, decls in rules():
+        if "body.zen-mode" not in selector:
+            continue
+        if "--header-height" in decls and "show-view-header" not in selector:
+            ungated.append(selector[:70])
+    if ungated:
+        for sel in ungated:
+            bad(f"zen rule uses --header-height but is not gated on "
+                f".show-view-header: {sel}")
+    else:
+        ok("every zen rule that compensates for the view header checks it exists")
+```
+
+- [ ] **Step 2: Run it to make sure it fails**
+
+Run: `python3 tests/test_prose_typography.py`
+Expected: two failures — the `.cm-sizer` padding rule and the
+`background-position` phase rule, both naming their selectors.
+
+- [ ] **Step 3: Gate the header-dependent rules**
+
+In `obsidian/theme.css`, add `.show-view-header` to the three rules that exist
+only to compensate for the header, and leave the rest of the zen block alone:
+
+```css
+body.zen-mode.show-view-header .markdown-source-view.mod-cm6 .cm-scroller,
+body.zen-mode.show-view-header .markdown-reading-view .markdown-preview-view {
+  background-position: 0 calc(var(--dotgrid-offset-y) + var(--header-height));
+}
+body.zen-mode.show-view-header .markdown-source-view.mod-cm6 .cm-sizer {
+  padding-top: var(--header-height);
+}
+body.zen-mode.show-view-header .markdown-reading-view .markdown-preview-sizer {
+  padding-top: calc(var(--midori-row) + var(--header-height));
+}
+```
+
+Note the third rule also picks up `--midori-row` in place of its literal `24px`,
+which Task 2 requires.
+
+Extend the block's existing comment with the reason, so the next reader does not
+"simplify" the gate away:
+
+```css
+/* WHY .show-view-header IS PART OF THE SELECTOR. These three rules exist only
+   to compensate for a header this block floats out of flow. Obsidian removes
+   that header outright when Settings -> Appearance -> Show view header is off
+   (`body:not(.show-view-header):not(.is-phone) .view-header { display: none }`),
+   and with it gone the compensation becomes a header's worth of empty space
+   above the note plus a grid phase shifted to match it. Gating on the same
+   class app.css keys off makes the mode correct under both settings. */
+```
+
+- [ ] **Step 4: Absorb the snippet's rules**
+
+Move the four rule groups from the vault's `zen-mode.css` into the same block in
+`theme.css`, verbatim except for the dot rule, which now belongs to the plugin
+(Task 6, Step 3) and must **not** be copied:
+
+- `body.zen-mode .view-header-title-container { visibility: hidden; }`
+- `body.zen-mode .view-header { background-color: transparent; border-bottom: none; }`
+- the single-tab strip group (`:not(:has(.workspace-tab-header:nth-child(2)))`), including its 12px drag-handle height
+- the commented-out "hide the inline title too" note, kept as a comment
+
+The first two are no-ops while the header is hidden and correct for anyone who
+keeps it — leave them ungated, since they cost nothing when the element is
+absent.
+
+- [ ] **Step 5: Run the test to verify it passes**
+
+Run: `python3 tests/test_prose_typography.py`
+Expected: `ok every zen rule that compensates for the view header checks it exists`.
+
+- [ ] **Step 6: Retire the vault snippet — by renaming, never deleting**
+
+In `obsidian/install-obsidian.sh`, beside the existing snippet handling:
+
+```sh
+  # The zen rules now live in theme.css. A vault that still has the old snippet
+  # would apply both, and the snippet's copy is the ungated one. Rename it aside
+  # ONCE rather than deleting it: this script did not write that file, and a
+  # user's snippet is theirs.
+  SNIP="$VAULT/.obsidian/snippets/zen-mode.css"
+  if [ -f "$SNIP" ]; then
+    mv "$SNIP" "$SNIP.superseded"
+    echo "  moved zen-mode.css aside (now in theme.css) -> zen-mode.css.superseded"
+  fi
+```
+
+- [ ] **Step 7: Verify in the app, both settings**
+
+```bash
+sh tests/lint.sh && sh obsidian/install-obsidian.sh
+```
+
+With `showViewHeader: false` (current): toggle zen on and off and confirm **the
+note's first line does not move** — that is the bug this task fixes. Then turn
+Show view header on in Settings → Appearance and toggle zen again: the header
+should float over the canvas with the grid running behind it, as before.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add obsidian/theme.css tests/test_prose_typography.py obsidian/install-obsidian.sh
+git commit -m "theme: consolidate the zen rules and gate them on the header
+
+The snippet and theme.css both carried zen rules; now only theme.css
+does, and the installer renames the snippet aside rather than deleting a
+file it did not write. Three rules that compensate for the floated view
+header now require .show-view-header, the class app.css itself keys off
+-- without it, a vault with 'Show view header' off got a header's worth
+of empty space above every note in zen mode, and a dot grid shifted to
+match."
+```
+
+---
+
+### Task 8: Paragraph indents, grid-correct
+
+The theme takes over what `pretty-paragraphs` does, because the plugin's version
+steps off the dot grid and only the grid's owner can fix that.
+
+**Files:**
+- Modify: `obsidian/theme.css` (paragraph rules, ~1113–1130)
+- Modify: `tests/test_prose_typography.py`
+
+**Interfaces:**
+- Consumes: `--midori-row` from Task 2.
+- Produces: `--midori-indent`, default `2em`.
+
+- [ ] **Step 1: Write the failing tests**
+
+Append and register both:
+
+```python
+def test_blank_line_keeps_the_grid():
+    """The blank line the caret sits on must be a whole grid row.
+
+    pretty-paragraphs gives it `line-height: normal` — about 16.8px at a 14px
+    base, which is not a multiple of 24 — so every line below it leaves the
+    lattice whenever the caret rests on an empty line.
+    """
+    for selector, decls in rules():
+        if ".cm-line" in selector and re.search(r"line-height:\s*normal", decls):
+            bad(f"a .cm-line rule sets line-height: normal, which is not a "
+                f"grid row: {selector[:70]}")
+            return
+    ok("no .cm-line rule sets line-height: normal")
+
+
+def test_indent_excludes_non_prose():
+    """Only prose is indented.
+
+    The obvious selector — the line after a blank one — also matches a heading
+    that follows a blank line, which is every heading in a real note.
+    """
+    indented = [sel for sel, decls in rules()
+                if "text-indent: var(--midori-indent)" in decls and ".cm-line" in sel]
+    if not indented:
+        bad("no Live Preview rule applies --midori-indent")
+        return
+    for sel in indented:
+        for kind in ("HyperMD-header", "HyperMD-list-line", "HyperMD-codeblock"):
+            if kind not in sel:
+                bad(f"the Live Preview indent does not exclude .{kind}: "
+                    f"{sel[:70]}")
+                return
+    ok("the Live Preview indent excludes headings, lists and code")
+```
+
+- [ ] **Step 2: Run them to make sure they fail**
+
+Run: `python3 tests/test_prose_typography.py`
+Expected: `no Live Preview rule applies --midori-indent`. (The blank-line test
+passes already — the theme has no such rule yet — and is there to stop the
+plugin's version being pasted in wholesale later.)
+
+- [ ] **Step 3: Write the paragraph rules**
+
+Replace the reading-view paragraph margin in `obsidian/theme.css` and add the
+Live Preview half:
+
+```css
+/* PARAGRAPH RHYTHM: A NOVEL'S INDENTS, NOT A WEB PAGE'S GAPS.
+
+   Taken over from the pretty-paragraphs plugin, which did this well except for
+   the grid. Two defects came with it and are fixed here, both only fixable by
+   whoever owns the lattice:
+
+   1. It gave the blank line under the caret `line-height: normal` so the caret
+      stays visible. `normal` is ~16.8px at a 14px base — not a multiple of the
+      row — so the whole note below the caret stepped off the dots every time
+      the caret rested on an empty line. One full row does the same job and
+      lands where the dots are.
+   2. Its indent selector was "the line after a blank line", which is also every
+      heading in a real note, so headings were indented 2em.
+
+   The evidence review found nothing either way on indent-versus-blank-line.
+   This is a stated preference, and it is in the theme rather than a plugin
+   because the grid-correct version cannot live anywhere else. */
+body {
+  --midori-indent: 2em;
+}
+
+/* Reading view: the indent replaces the paragraph gap, which also gives the
+   grid a row back at every paragraph break. */
+.markdown-preview-view p {
+  text-indent: var(--midori-indent);
+  margin-block: 0;
+}
+/* Not inside quotes, lists, callouts or tables — those are their own blocks. */
+.markdown-preview-view :is(blockquote, li, .callout, table) p {
+  text-indent: 0;
+}
+
+/* Live Preview: a paragraph is ONE .cm-line (soft-wrapped), and the blank line
+   between paragraphs is its own .cm-line containing nothing but a <br>. */
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) {
+  line-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  color: transparent;
+}
+/* The blank line the caret is on, and a deliberate second blank line, each keep
+   a whole row — visible caret, intact lattice. */
+.markdown-source-view.mod-cm6 .cm-line.cm-active:has(> br:only-child),
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) + .cm-line:has(> br:only-child) {
+  line-height: var(--midori-row);
+}
+/* The line that starts a paragraph: the first line of the note, or the line
+   after a blank one — and prose only. */
+.markdown-source-view.mod-cm6 .cm-content > .cm-line:first-child:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout),
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) + .cm-line:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout) {
+  text-indent: var(--midori-indent);
+}
+```
+
+**Every paragraph is indented, including the first after a heading.** That
+departs from the book convention deliberately: the exception is expressible in
+Reading view (`h1 + p`) and not in Live Preview, where a blank line stands
+between the heading and the paragraph and the selector becomes positional and
+fragile. The two panes matching matters more here, and this theme has paid for
+pane divergence before.
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `python3 tests/test_prose_typography.py`
+Expected: `ok no .cm-line rule sets line-height: normal` and
+`ok the Live Preview indent excludes headings, lists and code`.
+
+- [ ] **Step 5: Prove the grid survives a caret on a blank line**
+
+This is the check the plugin would have failed, and a static test cannot see it.
+Regenerate the harness with a blank-line case, serve it, and measure:
+
+```js
+(() => {
+  const row = parseFloat(getComputedStyle(document.body).getPropertyValue('--midori-row'));
+  const lines = [...document.querySelectorAll('.cm-line')];
+  // simulate the caret sitting on the blank line
+  lines.find(l => l.querySelector('br:only-child')).classList.add('cm-active');
+  const top = lines[0].getBoundingClientRect().top;
+  return lines.map(l => {
+    const off = (l.getBoundingClientRect().top - top) % row;
+    return { text: l.textContent.slice(0, 12), phase: Math.round(off * 100) / 100,
+             onGrid: Math.min(off, row - off) < 0.5 };
+  });
+})()
+```
+
+**Gate:** `onGrid` true for every line, with the blank line active. Then remove
+`cm-active` and confirm it is still true.
+
+- [ ] **Step 6: Disable `pretty-paragraphs`**
+
+Now redundant, and its `margin-block: 0 !important` would keep beating the
+theme's paragraph rules. Turn it off in Settings → Community plugins in each
+vault. **Do not automate this** — the installer manages the theme and this
+repo's own plugins, and disabling a third-party plugin a user installed is not
+its business. Its justify option is not carried over; nothing asked for it.
+
+- [ ] **Step 7: Verify in the app**
+
+```bash
+sh tests/lint.sh && sh obsidian/install-obsidian.sh
+```
+
+In a real note, in both panes: paragraphs indent, no gap between them, headings
+are **not** indented, list items and code are untouched, and the dots stay on
+the baselines as the caret moves onto and off an empty line.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add obsidian/theme.css tests/test_prose_typography.py
+git commit -m "theme: own the paragraph indents, and keep them on the grid
+
+Taken over from pretty-paragraphs, which did this well except for the
+lattice. It gave the caret's blank line line-height: normal -- ~16.8px
+at a 14px base, not a multiple of 24 -- so the note stepped off the dot
+grid whenever the caret rested on an empty line; a full row does the
+same job and lands where the dots are. And its indent selector was 'the
+line after a blank line', which is also every heading in a real note.
+Both are fixable only by whoever owns the grid."
+```
+
+---
+
+### Task 9: Documentation, version, install
 
 **Files:**
 - Modify: `README.md` (findings bullets, in the established voice)
@@ -1029,7 +1533,9 @@ entries. Required content:
 - **The measure was outside every band and the band has no experiment behind it.** ~91 cpl at a 16px base; the rule traces to Spencer asserting and Rayner & Pollatsek deducing from print; what is real is the speed/preference split, and a writing surface takes the preference side. In `em`, so it survives the reader's text-size slider.
 - **A grid tuned to one base size is tuned to one person.** 24px is exactly 1.5 leading at 16px and 1.33 at 18px. The row now follows `--font-text-size`; the dot offset became an offset from the historical row rather than a constant measured against it, and the baseline-vs-dot phase was measured at five base sizes.
 - **Apparent size follows x-height, not em.** Spectral 0.450 against M PLUS 1p 0.520 meant an h4 read 1.10× body while claiming 1.27×.
-- **What was deliberately not changed**, and why: leading (no experiment separates 1.4/1.5/1.6, and the much-cited Chaparro result is a null), letter-spacing, serif-vs-sans (unresolved, not a proven null — the claim that it is settled was itself refuted), and anything about the caret or focus mode (no evidence exists at all).
+- **A mode that lives in three homes ships from none of them.** The writing mode needed a plugin and a snippet that were not in this repo; only `theme.css` travelled. Folding the plugin in and absorbing the snippet made it one artifact — and doing so exposed that three of its rules compensated for a view header the app removes outright when `Show view header` is off, so zen mode was adding a header's worth of empty space above every note and shifting the dot grid to match.
+- **A plugin that gets typography right can still get the grid wrong.** `pretty-paragraphs` gave the caret's blank line `line-height: normal` so the caret stays visible — about 16.8px at a 14px base, which is not a multiple of 24, so the note stepped off the lattice whenever the caret rested on an empty line. Its indent selector was also "the line after a blank line", which is every heading in a real note. Both are fixable only by whoever owns the grid, which is the argument for the theme owning paragraph rhythm rather than delegating it.
+- **What was deliberately not changed**, and why: leading (no experiment separates 1.4/1.5/1.6, and the much-cited Chaparro result is a null), letter-spacing, serif-vs-sans (unresolved, not a proven null — the claim that it is settled was itself refuted), revision and look-back support, the seams around the note, and anything about typewriter scrolling or dimming (no evidence exists at all, and each was explicitly declined).
 
 - [ ] **Step 2: Bump the theme version**
 
@@ -1066,7 +1572,7 @@ installer reporting all three vaults.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add README.md obsidian/manifest.json docs/superpowers/specs/2026-08-15-prose-typography-evidence.md
+git add README.md obsidian/manifest.json docs/superpowers/specs/
 git commit -m "docs: record the prose typography changes and what was left alone"
 ```
 
@@ -1081,5 +1587,6 @@ and re-litigating them costs more than writing them down once.
 - **Serif vs sans for the body face.** Unresolved by citable evidence — the claim that it is a settled null was itself refuted 0–3. Not a reason to switch, and not a reason to defend the current choice on legibility grounds.
 - **Changing the leading ratio.** Nothing distinguishes 1.4 from 1.5 from 1.6.
 - **Raising the base size.** The recommendation to do so came from arithmetic on a Retina laptop; on this 81 ppi panel 16px clears the 0.2° critical-print-size floor out to ~72cm. The base is the reader's setting, and Task 3 makes the theme follow it rather than argue with it.
-- **Typewriter scrolling, focus mode, paragraph-indent instead of blank line, centred column, caret size.** No evidence exists in either direction; they are design choices, and [[nothing-enters-the-writing-surface-unbidden]] governs them, not this plan.
+- **Typewriter scrolling, focus mode, centred column, caret size, paragraph justification.** No evidence exists in either direction, and each was explicitly declined in the design session. (**Paragraph indents moved IN** — see Task 8. Not because evidence appeared, but because the plugin currently providing them breaks the dot grid, and only the grid's owner can fix that.)
+- **Revision and look-back support, and everything around the note** — starting, phone, export, print. Both declined in the design session.
 - **Revision-specific leading.** The one genuinely decision-relevant unknown — whether extra leading is *costly* when the eye hops between lines to revise — and untested by anyone. Worth an experiment of our own someday; not a stylesheet change today.
