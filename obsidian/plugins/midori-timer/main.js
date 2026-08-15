@@ -62,15 +62,21 @@
  *    and the readout also reserves the width of the largest form it will show
  *    during THIS run, so the item does not jump when 1:00:00 becomes 59:59.
  *
- *    The readout is the SAME split-flap board as the setting window, one
- *    seventh the size and stripped of its card — see FlapBoard, and the bar
- *    variant in the stylesheet. That makes the reserve a sum of cell widths
- *    rather than a count of characters, which is why FLAP_BAR exists in JS as
- *    well as in the CSS: there is no way to ask a row that has not been
- *    rendered yet how wide it is going to be. The flip is a setting, because
- *    motion at the edge of vision is the one thing the caret display exists to
- *    avoid, and off it is genuinely off — see FlapBoard.still for why that
- *    cannot be done by hiding the animation in CSS.
+ *    THE RESERVE IS GONE, and its removal is the same decision as its
+ *    addition. It existed because a proportional countdown changes width twice
+ *    a second; the readout is now a board of fixed-width cards, so its width
+ *    changes only when a CELL is dropped — at 1:00:00 to 59:59, and at 10:00 to
+ *    9:59. Twice in a session, not twice a second. Reserving for that costs a
+ *    permanently visible gap beside the cards, because reserved emptiness that
+ *    was invisible in a run of text is perfectly visible next to objects. Two
+ *    rare one-cell shifts is the cheaper of the two.
+ *
+ *    The readout is the SAME split-flap board as the setting window, at one
+ *    seventh the size — see FlapBoard and the bar variant in the stylesheet.
+ *    The flip is a setting, because motion at the edge of vision is the one
+ *    thing the caret display exists to avoid, and off it is genuinely off —
+ *    see FlapBoard.still for why that cannot be done by hiding the animation
+ *    in CSS.
  *
  * 3. SET IT BY DRAGGING, OR BY TYPING, AND NEVER ONLY ONE. The window is a
  *    row of drums you flick — real scroll containers, so the momentum and
@@ -412,11 +418,9 @@ const STYLE = `
   cursor: var(--cursor, pointer);
 }
 .midori-timer-time {
-  /* Decision 2: fixed-width digits, plus a reserved width set from JS. */
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   display: inline-flex;
-  justify-content: flex-end;
 }
 
 /* The bar's board is the SAME cells as the window's, at one seventh the size
@@ -457,15 +461,30 @@ const STYLE = `
    sets '.status-bar { background-color: transparent }' — the bar shows the
    PAGE ground, which is exactly --background-primary. Same bug, other colour.
 
-   There is no surface variable that is reliably distinct from a ground a theme
-   is free to define, so the card is derived from the ground instead: primary
-   nudged 8% toward the ink. That is a step in whichever direction the theme
-   goes — darker on paper, lighter at night — and it cannot collide with the
-   thing it is meant to contrast with, because it is defined as an offset from
-   it. It also stays fully OPAQUE, which a translucent tint would not: the fold
-   has to cover the glyph beneath it, not filter it. */
+   There is no surface variable reliably distinct from a ground a theme is free
+   to redefine, so the card is derived from the ground: lifted off it, the way
+   a real card sits on the desk it is lying on. It stays fully OPAQUE, which a
+   translucent tint would not — the fold has to cover the glyph beneath it, not
+   filter it.
+
+   TWO AMOUNTS, ONE DIRECTION, and the second table is unavoidable rather than
+   lazy. "Lighter" is one instruction, but the room to obey it is not
+   symmetric: Midori Paper's ground is #f3f1eb, twelve points of headroom below
+   white, while Night's #1a1917 has almost the whole range. A single percentage
+   toward white is either invisible on paper or a floodlight at night. So the
+   mix is stated per theme and the DIRECTION is what stays constant.
+
+   It is stated as a custom property rather than as two background rules, so
+   that the theme branch and the is-sep exception cannot end up tied on
+   specificity and settled by document order. */
+.midori-timer-flaps.is-bar {
+  --midori-flap-card: color-mix(in oklab, #fff 85%, var(--background-primary));
+}
+.theme-dark .midori-timer-flaps.is-bar {
+  --midori-flap-card: color-mix(in oklab, var(--text-normal) 9%, var(--background-primary));
+}
 .midori-timer-flaps.is-bar .midori-timer-flap-half {
-  background: color-mix(in oklab, var(--text-normal) 8%, var(--background-primary));
+  background: var(--midori-flap-card);
 }
 /* The colon is not a card. Stated at (0,4,0) rather than left to the tie it
    would otherwise have with the rule above, which document order happens to
@@ -838,10 +857,6 @@ body.midori-drawn.midori-timer-running .midori-title-caret {
 const DRUM_ITEM = 34;               // px, and must match the stylesheet
 const FLAP_MS = 90;                 // per half-fold; a full flip is twice this
 
-/* Cell metrics for the status-bar board, in em, and they must match the
- * stylesheet. They exist in JS only so the width of a string can be worked out
- * BEFORE its cells are rendered — see decision 2 and FlapBoard.barWidth. */
-const FLAP_BAR = { digit: 0.76, sep: 0.24, gap: 0.09 };
 
 /* Does this reader's locale put the clock on a 12-hour dial? It decides whether
  * the "until" drums carry an AM/PM column, and it is asked of Intl rather than
@@ -1176,17 +1191,6 @@ class FlapBoard {
     ];
   }
 
-  /* The board's width in em, for callers that must reserve space before the
-   * cells exist. The constants are the stylesheet's and are stated in both
-   * places; there is no way to ask a not-yet-rendered row how wide it will be.
-   * Only the status bar needs this — see decision 2. */
-  static barWidth(text) {
-    const cells = [...text];
-    const digits = cells.filter((c) => /\d/.test(c)).length;
-    return digits * FLAP_BAR.digit
-      + (cells.length - digits) * FLAP_BAR.sep
-      + Math.max(0, cells.length - 1) * FLAP_BAR.gap;
-  }
 }
 
 class DurationModal extends Modal {
@@ -1579,7 +1583,6 @@ module.exports = class MidoriTimer extends Plugin {
       pausedAt: null,
       total: seconds,
     };
-    this.reserveWidth(seconds);
     this.run();
     this.save();
     new Notice(`Timer set for ${formatHuman(seconds)}.`);
@@ -1606,7 +1609,6 @@ module.exports = class MidoriTimer extends Plugin {
     else if (this.isRunning()) this.session.endsAt += seconds * 1000;
     else return;
     if (this.session.total != null) this.session.total += seconds;
-    this.reserveWidth(this.remaining());
     this.render();
     this.save();
     new Notice(`Timer extended to ${formatClock(this.remaining())}.`);
@@ -1621,7 +1623,6 @@ module.exports = class MidoriTimer extends Plugin {
 
   run() {
     this.clearTick();
-    this.reserveWidth(Math.max(this.remaining(), this.session.total || 0));
     this.render();
     // registerInterval so an unload during a run cannot leave it ticking.
     this.tick = this.registerInterval(
@@ -1762,16 +1763,6 @@ module.exports = class MidoriTimer extends Plugin {
     menu.showAtMouseEvent(ev);
   }
 
-  /* Decision 2. Reserve the width of the widest string this run can produce, so
-   * the item keeps one width from 1:00:00 all the way down to 0:00 instead of
-   * shrinking by a character and dragging its neighbours across. Measured in
-   * `ch` against tabular figures, where one ch is exactly one digit. */
-  reserveWidth(seconds) {
-    if (!this.timeEl) return;
-    const widest = formatClock(Math.max(0, seconds || 0));
-    this.timeEl.style.minWidth = `${FlapBoard.barWidth(widest).toFixed(3)}em`;
-  }
-
   render() {
     this.renderCaret();
     if (!this.el) return;
@@ -1783,7 +1774,6 @@ module.exports = class MidoriTimer extends Plugin {
       this.el.removeClass('is-running');
       this.el.removeClass('is-paused');
       this.bar.set('');
-      this.timeEl.style.minWidth = '';
       this.iconEl.hide();
       this.el.removeAttribute('aria-label');
       return;
@@ -1818,7 +1808,6 @@ module.exports = class MidoriTimer extends Plugin {
     // `.status-bar-item:empty { display: none }` hide it, which is exactly the
     // behaviour the "show when idle" setting wants when it is off.
     this.bar.set('');
-    this.timeEl.style.minWidth = '';
     if (this.settings.showWhenIdle) {
       this.iconEl.show();
       setIcon(this.iconEl, 'clock');
