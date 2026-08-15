@@ -419,46 +419,58 @@ const STYLE = `
   justify-content: flex-end;
 }
 
-/* The bar's board is the SAME cells as the window's, one seventh the size and
-   stripped of the furniture. No card, no seam, no radius: at 13px a card reads
-   as a button, and the status bar already has enough boxes in it. What is left
-   is the movement, which is the part that carries the meaning.
+/* The bar's board is the SAME cells as the window's, at one seventh the size
+   and with nothing taken away. It keeps the card, the seam and the radius: a
+   flip card that is only a flipping glyph is a flourish, and a flip card that
+   is a card is an OBJECT — a small mechanical clock parked in the status bar,
+   which is what it is meant to read as. Scaling it down is a matter of
+   numbers, and the numbers are here.
 
-   That is also why switching the flip off needs no second code path — with no
-   card to see, a board that does not animate looks exactly like text. */
+   Every half stays painted, which is also what makes the fold work at all. A
+   fold works by COVERING: the old top swings down over the new glyph and the
+   new bottom swings up over the old one. Halves that are transparent do not
+   cover, they superimpose — two digits showing through each other, a double
+   exposure rather than a card turning. */
 .midori-timer-flaps.is-bar {
-  gap: 0.06em;                      /* FLAP_BAR.gap */
+  gap: 0.09em;                      /* FLAP_BAR.gap */
   margin: 0;
-  perspective: 60px;                /* shallower: the cells are 8px tall */
+  perspective: 60px;                /* shallower: the cards are ~9px tall */
 }
 .midori-timer-flaps.is-bar .midori-timer-flap {
-  width: 0.62em;                    /* FLAP_BAR.digit */
-  height: 1em;
+  width: 0.76em;                    /* FLAP_BAR.digit */
+  height: 1.32em;
   font-size: inherit;
   color: inherit;
 }
-.midori-timer-flaps.is-bar .midori-timer-flap.is-sep { width: 0.26em; }
+.midori-timer-flaps.is-bar .midori-timer-flap.is-sep {
+  width: 0.24em;                    /* FLAP_BAR.sep */
+}
+
+/* THE CARD TAKES THE NOTE'S GROUND, NOT THE FORM-FIELD GROUND the window's
+   cards use, and the difference is the whole reason this reads as an object.
+   A status bar is already --background-secondary, and --background-modifier-
+   form-field sits a hair off it — so cards painted that way are invisible
+   against the bar, and all that survives is the seam: a hairline straight
+   through the middle of every digit, which reads as a strikethrough rather
+   than as a card. --background-primary is the one ground guaranteed to differ
+   from the bar in both Paper and Night, because it is what the bar is
+   contrasted AGAINST by design. */
 .midori-timer-flaps.is-bar .midori-timer-flap-half {
+  background: var(--background-primary);
+}
+/* The colon is not a card. Stated at (0,4,0) rather than left to the tie it
+   would otherwise have with the rule above, which document order happens to
+   resolve correctly today and would stop doing the moment either block moves. */
+.midori-timer-flaps.is-bar .midori-timer-flap.is-sep .midori-timer-flap-half {
   background: none;
-  border-radius: 0;
-  box-shadow: none;
 }
-.midori-timer-flaps.is-bar .midori-timer-flap-half > span { line-height: 1em; }
+.midori-timer-flaps.is-bar .midori-timer-flap-half > span { line-height: 1.32em; }
 
-/* THE MOVING HALVES STILL NEED TO BE OPAQUE, which is the one thing dropping
-   the card costs. A fold works by covering: the old top swings down OVER the
-   new glyph, and the new bottom swings up over the old one. Transparent, they
-   do not cover, they superimpose — the two digits show through each other and
-   the flip reads as a double exposure rather than as a card turning.
-
-   So only the two animated halves are painted, and only while they exist: at
-   rest the readout is bare text in the bar. The colour is the status bar's own
-   ground rather than the window's card, because it has to disappear against
-   what is behind it. */
-.midori-timer-flaps.is-bar .midori-timer-flap-fold,
-.midori-timer-flaps.is-bar .midori-timer-flap-unfold {
-  background: var(--background-secondary);
-}
+/* Radius scaled to the card. 4px on a 9px half is a lozenge; 2px reads as a
+   corner. The seam stays the theme's hairline, which at this size is most of
+   what says "two halves" at all. */
+.midori-timer-flaps.is-bar .midori-timer-flap-top    { border-radius: 2px 2px 0 0; }
+.midori-timer-flaps.is-bar .midori-timer-flap-bottom { border-radius: 0 0 2px 2px; }
 .midori-timer .midori-timer-icon {
   display: inline-flex;
   opacity: 0.75;
@@ -820,7 +832,7 @@ const FLAP_MS = 90;                 // per half-fold; a full flip is twice this
 /* Cell metrics for the status-bar board, in em, and they must match the
  * stylesheet. They exist in JS only so the width of a string can be worked out
  * BEFORE its cells are rendered — see decision 2 and FlapBoard.barWidth. */
-const FLAP_BAR = { digit: 0.62, sep: 0.26, gap: 0.06 };
+const FLAP_BAR = { digit: 0.76, sep: 0.24, gap: 0.09 };
 
 /* Does this reader's locale put the clock on a 12-hour dial? It decides whether
  * the "until" drums carry an AM/PM column, and it is asked of Intl rather than
@@ -862,11 +874,18 @@ class Drum {
     this.scroller = this.el.createDiv({ cls: 'midori-timer-drum-scroll' });
     this.items = rows.map((row) => {
       const it = this.scroller.createDiv({ cls: 'midori-timer-drum-item', text: row.text });
-      it.addEventListener('click', () => this.set(row.value));
+      it.addEventListener('click', () => {
+        // A press that caught a spinning drum has already done its job.
+        if (this.caught) { this.caught = false; return; }
+        this.set(row.value);
+      });
       return it;
     });
     if (caption) this.column.createDiv({ cls: 'midori-timer-caption', text: caption });
     this.index = 0;
+    this.v = 0;                     // px per frame, carried out of a drag
+    this.glide = null;              // rAF id of a throw in flight
+    this.caught = false;            // did the last press stop one?
 
     // One read per frame. A scroll event fires many times between paints and
     // each read would otherwise cost a layout, which makes a fling stutter.
@@ -907,6 +926,7 @@ class Drum {
   set(value, behavior, silent) {
     const idx = this.rows.findIndex((r) => r.value === value);
     if (idx < 0) return;
+    this.settle();                  // a throw in flight would undo this
     const changed = idx !== this.index;
     this.index = idx;                           // BEFORE the scroll, so the
     this.paint();                               // resulting event reads as a no-op
@@ -922,32 +942,98 @@ class Drum {
     });
   }
 
-  /* Pointer-drag, the one thing native scrolling does not provide. Snapping is
-   * switched off for the duration — see the is-dragging rule for why. */
+  /* Pointer-drag and the throw that follows it — the two things native
+   * scrolling does not provide to a mouse. A trackpad and a finger both hand
+   * the platform a velocity on release and get momentum for free; a mouse
+   * button hands it nothing, so a flicked drum stopped dead the instant the
+   * button came up, which is the one thing that makes a dial feel like a list
+   * of rows instead of a wheel.
+   *
+   * VELOCITY IS SMOOTHED, NOT SAMPLED. Taking the last move's distance as the
+   * throw speed makes the result depend on where in the frame the button
+   * happened to come up: the same gesture flies or dies depending on whether
+   * the final event carried 14px or 1px. An exponential average over the moves
+   * is stable across that, and pointermove arrives about once a frame, so the
+   * unit is already px per frame — the same unit the glide steps in.
+   *
+   * SNAPPING STAYS OFF FOR THE WHOLE THROW, not just the drag. Restoring it
+   * while the drum is still moving hauls it to the nearest row mid-flight; it
+   * goes back on when the glide ends, which is also what settles the drum onto
+   * a value. See the is-dragging rule in the stylesheet. */
   drag() {
     const el = this.scroller;
     let down = false;
     let last = 0;
+
     el.addEventListener('pointerdown', (ev) => {
       if (ev.button !== 0) return;
+      // A press on a moving drum stops it, as it does on a phone. The flag is
+      // read by the row click handler, so the press that catches a spinning
+      // drum does not also select whatever row it was passing.
+      this.caught = this.caught || this.glide != null;
+      this.stop();
       down = true;
       last = ev.clientY;
+      this.v = 0;
       el.setPointerCapture(ev.pointerId);
       el.addClass('is-dragging');
     });
+
     el.addEventListener('pointermove', (ev) => {
       if (!down) return;
-      el.scrollTop -= ev.clientY - last;
+      const dy = ev.clientY - last;
       last = ev.clientY;
+      el.scrollTop -= dy;
+      this.v = this.v * 0.7 + dy * 0.3;
     });
+
     const up = (ev) => {
       if (!down) return;
       down = false;
-      el.removeClass('is-dragging');            // restoring snap settles it
       try { el.releasePointerCapture(ev.pointerId); } catch (e) { /* already gone */ }
+      if (Math.abs(this.v) > 1.5) this.throw();  // below that it is a placement
+      else this.settle();
     };
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
+  }
+
+  /* Coast to a stop under friction.
+   *
+   * 0.96 A FRAME IS A LONG TAIL ON PURPOSE. It is a 25-frame e-folding and a
+   * total run of about 25x the release speed: a firm flick carries fifteen
+   * rows over roughly a second and a half, which is the difference between a
+   * dial that keeps rolling and one that coasts politely to a halt. It can
+   * afford to be long because it is trivially interruptible — a press anywhere
+   * in the window stops it dead, so overshooting costs a tap rather than
+   * another gesture in the opposite direction. */
+  throw() {
+    const el = this.scroller;
+    const max = (this.rows.length - 1) * DRUM_ITEM;
+    const step = () => {
+      this.v *= 0.96;
+      el.scrollTop -= this.v;
+      // Stop at the ends rather than grinding against them: a drum pinned at 0
+      // with a live glide behind it swallows the next flick.
+      const done = Math.abs(this.v) < 0.25 || el.scrollTop <= 0 || el.scrollTop >= max;
+      if (done) { this.settle(); return; }
+      this.glide = window.requestAnimationFrame(step);
+    };
+    this.glide = window.requestAnimationFrame(step);
+  }
+
+  /** Cancel any throw in flight, leaving the drum exactly where it is. */
+  stop() {
+    if (this.glide == null) return;
+    window.cancelAnimationFrame(this.glide);
+    this.glide = null;
+  }
+
+  /** Hand the drum back to the platform: snap returns and pulls it onto a row. */
+  settle() {
+    this.stop();
+    this.v = 0;
+    this.scroller.removeClass('is-dragging');
   }
 }
 
@@ -1184,10 +1270,27 @@ class DurationModal extends Modal {
     // Enter submits from anywhere in the window. Escape is Obsidian's already.
     this.scope.register([], 'Enter', (ev) => { ev.preventDefault(); this.submit(); return false; });
 
+    /* A CLICK ANYWHERE IN THE WINDOW STOPS EVERY DRUM, which is how a phone
+     * behaves and is the only way to catch a throw you did not aim. In capture,
+     * so it runs before the drum's own handler and before any row click; each
+     * drum it actually stops is marked as having caught the press, so that
+     * press selects nothing. */
+    this.root.addEventListener('pointerdown', () => {
+      this.drums().forEach((d) => {
+        if (d.glide != null) d.caught = true;
+        d.settle();
+      });
+    }, true);
+
     this.paintMode();                           // must precede the first seed
     this.seedFor(this.seconds);
     this.render(true);
     window.setTimeout(() => { this.input.focus(); }, 0);
+  }
+
+  /** Every drum in the window, both modes, so callers need not know the shape. */
+  drums() {
+    return [this.dH, this.dM, this.dS, this.uH, this.uM, this.uAP].filter(Boolean);
   }
 
   // ------------------------------------------------------------------ mode
@@ -1676,7 +1779,6 @@ module.exports = class MidoriTimer extends Plugin {
       this.el.removeAttribute('aria-label');
       return;
     }
-    this.iconEl.show();
     this.bar.still = !this.settings.barFlap;
 
     this.el.removeClass('is-running');
@@ -1684,8 +1786,19 @@ module.exports = class MidoriTimer extends Plugin {
 
     if (this.isActive()) {
       this.el.addClass(this.isPaused() ? 'is-paused' : 'is-running');
-      this.iconEl.show();
-      setIcon(this.iconEl, this.isPaused() ? 'pause' : 'clock');
+      // THE ICON IS FOR THE IDLE STATE ONLY. A running board of cards is not
+      // ambiguous about what it is, and a clock face next to a clock is the
+      // kind of redundancy that makes a bar feel crowded. The icon exists
+      // because an idle timer needs something to click; once it is running the
+      // digits are the thing to click, so the icon gets out of the way.
+      // A pause is the one exception: nothing about a stopped countdown says
+      // "paused" rather than "finished", so that icon stays.
+      if (this.isPaused()) {
+        this.iconEl.show();
+        setIcon(this.iconEl, 'pause');
+      } else {
+        this.iconEl.hide();
+      }
       this.bar.set(formatClock(this.remaining()));
       this.el.setAttr('aria-label',
         `${this.isPaused() ? 'Paused' : 'Timer'} — click to ${this.isPaused() ? 'resume' : 'pause'}, right-click for more`);
