@@ -88,9 +88,11 @@ PY
   #                    it on the baseline. This draws a caret the theme can style.
   #   midori-confetti  throws confetti when a note crosses a word target, in the
   #                    theme's own accent colours.
-  #   midori-timer     a status-bar countdown whose duration you type. Desktop
-  #                    only in practice — Obsidian hides the status bar on
-  #                    phones — but its commands work everywhere.
+  #   midori-timer     a countdown whose duration you type, shown as a thin line
+  #                    just inside an edge of the note that fills as the time
+  #                    runs. The optional status-bar readout is desktop only in
+  #                    practice — Obsidian hides the status bar on phones — but
+  #                    the rail and the commands work everywhere.
   #
   # All are enabled below but none is required by the theme; delete the
   # directory and re-run to drop one.

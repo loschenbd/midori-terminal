@@ -307,18 +307,28 @@ Residual gotchas:
   resume the same countdown instead of losing it. The readout uses tabular
   figures *and* reserves the width of the longest form the run will produce,
   because a proportional countdown changes its own width twice a second and
-  drags every status item to its left along with it. The default display is not
-  the status bar but a **rail**: a dotted line along one edge of the window
-  that drains as the time runs down, borrowing `--dotgrid-dot` and the grid's
-  24px pitch so it reads as the page's own dots lighting up, and stepping sage
-  → ochre → wine as it empties. Two things there are easy to get wrong and were
-  both wrong first: a bare `radial-gradient(circle, …)` takes its radius from
-  the tile's farthest corner, so in a 24×3 tile it draws a 24px dot clipped to
-  3px and the rail renders as *dashes* — `closest-side` is what makes thickness
-  mean thickness; and `background-position: center` on the lit layer looks
-  right but slides its dots out of step with the track's as the fill shrinks,
-  giving a ragged interleave at the boundary instead of a clean edge. Both
-  layers anchor to the edge the fill grows from.
+  drags every status item to its left along with it. Finishing *resets*: the
+  session clears, the rail goes away and the bar returns to its idle clock in
+  the same frame, because the end is announced by things that announce
+  themselves and then stop — a Notice, the chime, the optional OS banner — and
+  a readout parked at 0:00 wearing a bell until you click it is a chore, and a
+  lie by the time you come back to the desk. The default display is not the
+  status bar but a **rail**: a thin line just inside one edge of the *note*
+  that fills as the time runs, through a sage → ochre → wine gradient, so an
+  empty channel is a timer just started and a full one is a timer about to
+  end. It is measured off the editor's scroller rather than the window — a
+  window-fixed rail cannot track a text column that moves when a sidebar opens
+  — held in off the edge rather than flush to it, stopped short of the
+  status-bar pill instead of running underneath it, and shown only while a
+  timer is actually going. The one thing that has to be right is that the
+  gradient is *revealed*, not stretched: the fill layer carries the whole ramp
+  across the rail's full length and progress is applied with `clip-path`, which
+  changes what is visible without changing what is painted. Animating `width`
+  instead rescales the gradient every tick, so the leading edge sits at the
+  same colour the whole way down and the ramp means nothing. Under `clip-path`
+  each point of the line has a fixed colour and the edge travels through it,
+  which is what makes the warm tip in the last tenth read as *nearly done*
+  rather than as decoration.
 - **Notices and tooltips are Obsidian's dark toast, and the text colour is not
   a variable.** `.notice`, `.tooltip`, `.cm-completionInfo` and
   `.cm-tooltip-docstring` all take their background from
