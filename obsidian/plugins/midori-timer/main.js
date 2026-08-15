@@ -1613,6 +1613,7 @@ module.exports = class MidoriTimer extends Plugin {
     this.session = Object.assign({ endsAt: null, pausedAt: null, total: null },
                                  data.session || {});
     this.timer = null;
+    this.caretPending = null;   // a colour waiting for a keystroke to land on
 
     const style = document.createElement('style');
     style.id = 'midori-timer-style';
@@ -1622,6 +1623,13 @@ module.exports = class MidoriTimer extends Plugin {
 
     this.buildStatusBar();
     this.addSettingTab(new MidoriTimerSettings(this.app, this));
+
+    /* The two events that mean "the caret is being typed at", and therefore
+     * held solid by the browser — see renderCaret. Capture, because whether
+     * some editor extension stops propagation is not this plugin's business;
+     * and both, because a phone's keyboard composes rather than keydowns. */
+    this.registerDomEvent(document, 'keydown', () => this.flushCaret(), true);
+    this.registerDomEvent(document, 'input', () => this.flushCaret(), true);
 
     this.addCommand({
       id: 'set-duration',
@@ -1826,6 +1834,7 @@ module.exports = class MidoriTimer extends Plugin {
     if (!on) {
       document.body.style.removeProperty('--midori-timer-caret');
       this.caretKey = null;
+      this.caretPending = null;
       return;
     }
 
@@ -1838,7 +1847,46 @@ module.exports = class MidoriTimer extends Plugin {
     // property invalidates style for the subtree every single time.
     if (next.key === this.caretKey) return;
     this.caretKey = next.key;
-    document.body.style.setProperty('--midori-timer-caret', next.color);
+
+    /* THE NATIVE CARET IS REPAINTED ONLY WHILE TYPING. Recolouring the drawn
+     * caret is free: it is an element, its blink is a CSS animation, and
+     * changing a background does not restart one. The native caret's blink is
+     * the browser's, on the browser's own clock, and it does not survive
+     * having its colour changed underneath it — it snaps back to visible and
+     * starts the cycle again. Once is nothing; ~300 times a session, at
+     * intervals that have no relation to the blink, is a caret that blinks
+     * wrong, which is far more noticeable than the colour this is trying to
+     * deliver. Suppressing the blink instead was not an option: it is the
+     * platform's, other apps have it, and a caret that stops blinking during a
+     * session is a change nobody asked for.
+     *
+     * So the write waits for the next keystroke, which is the one moment the
+     * blink is not this plugin's to spoil. Chromium holds the caret SOLID
+     * while typing, so the colour changes where there is no blink at all to
+     * disturb; and even where it does not, a keystroke resets the blink by
+     * itself, so the write rides a reset that was going to happen anyway. The
+     * fix does not depend on which of those two is true.
+     *
+     * The cost is that an idle caret holds a stale colour until the writer
+     * types again, and after a long pause it catches up in one step. That is
+     * the right trade twice over: the drift is read as "a different colour
+     * than last time I noticed" and never as an absolute value, and a caret
+     * that only moves while writing is a fair description of a writing
+     * session. Nobody is reading the caret of a note they are not typing in. */
+    if (document.body.classList.contains('midori-drawn')) {
+      this.caretPending = null;
+      document.body.style.setProperty('--midori-timer-caret', next.color);
+      return;
+    }
+    this.caretPending = next.color;
+  }
+
+  /* Called on every keystroke, so it does nothing at all in the usual case. */
+  flushCaret() {
+    if (this.caretPending == null) return;
+    const color = this.caretPending;
+    this.caretPending = null;
+    document.body.style.setProperty('--midori-timer-caret', color);
   }
 
   buildStatusBar() {

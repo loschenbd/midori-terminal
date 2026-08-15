@@ -386,6 +386,23 @@ Residual gotchas:
   general form: when you adopt a neighbouring component's feature detection,
   check what it is detecting *for*. A gate is an answer to a question, and it
   travels without the question attached.
+- **A native caret's blink does not survive having its colour changed
+  underneath it**, so the colour is written *on the next keystroke* instead.
+  The drawn caret is an element whose blink is a CSS animation, and a
+  background change does not restart one; the native caret's blink is the
+  browser's, and every write snaps it back to visible and starts the cycle
+  over. Three hundred of those a session, on a clock with no relation to the
+  blink's, reads as the caret blinking *wrong* — which is a much louder signal
+  than the 1.5px of colour it was carrying, and it is the thing that gets
+  reported. Suppressing the blink is not the fix; it is the platform's, and a
+  caret that stops blinking mid-session is exactly the unbidden change this
+  whole design exists to avoid. The write waits for `keydown`/`input`, because
+  Chromium holds the caret solid while typing — and because a keystroke resets
+  the blink by itself, so the write rides a reset that was already going to
+  happen, which means the fix holds whichever of those two is doing the work.
+  The general form: **a property you are borrowing may be carrying state you
+  cannot see.** Colour looked like the inert half of the caret and it was not;
+  it is an input to an animation the browser is running.
 - **`:empty` never matches an element that has children, however little it is
   showing.** The readout is emptied when it has nothing to say, and Obsidian's
   own `.status-bar-item:empty { display: none }` was expected to take it out of
