@@ -595,7 +595,7 @@ body.zen-mode .markdown-source-view.mod-cm6 .cm-sizer {
   padding-top: var(--header-height);
 }
 body.zen-mode .markdown-reading-view .markdown-preview-sizer {
-  padding-top: calc(24px + var(--header-height));   /* keeps the base grid row */
+  padding-top: calc(var(--midori-row) + var(--header-height));   /* keeps the base grid row */
 }
 
 /* --------------------------------------------------------------------------
@@ -1209,13 +1209,13 @@ body.is-ios .midori-title-selection {
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-3,
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-4 {
   line-height: var(--midori-row);
-  padding-top: 24px;
+  padding-top: var(--midori-row);
   padding-bottom: 0;
 }
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-5,
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-6 {
   line-height: var(--midori-row);
-  padding-top: 24px;
+  padding-top: var(--midori-row);
 }
 
 /* The footnote definition marker is display:inline-block with top:-0.3em, and
@@ -1233,7 +1233,7 @@ body.is-ios .midori-title-selection {
    applies, so it has to be the whole-row one; setting the margin alone leaves
    every post-paragraph heading half a row out. */
 body {
-  --heading-spacing: 24px;
+  --heading-spacing: var(--midori-row);
 }
 
 /* Every heading box is one row and every baseline sits at L/2, so these are
@@ -1257,7 +1257,7 @@ body {
    their 24 restated at that same specificity or they inherit the 36. */
 .markdown-rendered :is(p, pre, table, ul, ol) + :is(h5, h6),
 .markdown-rendered div:is(.el-blockquote, .el-p, .el-pre, .el-table, .el-ul, .el-ol) + div > :is(h5, h6) {
-  margin-top: 24px;
+  margin-top: var(--midori-row);
 }
 
 /* --------------------------------------------------------------------------
@@ -1273,7 +1273,7 @@ body {
    preview AND table block margins, so moving it to 24px fixes both at once.
    -------------------------------------------------------------------------- */
 body {
-  --p-spacing: 24px;
+  --p-spacing: var(--midori-row);
   /* Stays 0: this one pads the line AFTER a heading. 0 and 24 are both grid
      multiples, so it is free either way — 0 just avoids inserting a blank row
      under every heading that was not there before. */
@@ -1355,7 +1355,7 @@ body {
    1px costs nothing. 24px box + the theme's usual 24px bottom margin = two
    rows, with the line centred in the first. */
 .markdown-rendered hr {
-  height: 24px;
+  height: var(--midori-row);
   border: none;
   margin-block: 0 var(--midori-row);
   background:
@@ -1395,7 +1395,7 @@ body {
   line-height: var(--midori-row);
 }
 .markdown-rendered pre {
-  padding-block: 24px;
+  padding-block: var(--midori-row);
   min-height: 72px;
 }
 .markdown-rendered pre code {
@@ -1405,7 +1405,7 @@ body {
 /* Callouts: padding in whole rows, and the 1px border is absorbed by
    box-sizing rather than added on top. */
 body {
-  --callout-padding: 24px;
+  --callout-padding: var(--midori-row);
 }
 .callout {
   box-sizing: border-box;
@@ -1428,7 +1428,7 @@ body {
 .callout-title {
   padding-block: 0;
   line-height: var(--midori-row);
-  min-height: 24px;
+  min-height: var(--midori-row);
 }
 .callout-content {
   padding-block: 0;
@@ -1448,7 +1448,7 @@ body {
    neither is a row. */
 .callout-content .callout,
 .markdown-source-view.mod-cm6 .callout-content .callout {
-  margin: 24px 0 0;
+  margin: var(--midori-row) 0 0;
 }
 
 /* Tables. A cell was 18n + 9 px tall for n wrapped lines, never 24n:
@@ -2166,7 +2166,7 @@ body.is-mobile .inline-title { padding-top: 0; }
    -------------------------------------------------------------------------- */
 .metadata-container,
 body.is-mobile .metadata-container {
-  --metadata-input-height: 24px;
+  --metadata-input-height: var(--midori-row);
 }
 body.is-mobile .metadata-content {
   background-color: transparent;
@@ -2276,11 +2276,11 @@ body {
      so the error scales with how many properties a note has. */
   --metadata-padding: 0;
   --metadata-gap: 0;
-  --metadata-input-height: 24px;
+  --metadata-input-height: var(--midori-row);
   --metadata-input-padding: 0 var(--size-4-2);
 
   /* .inline-title:not([data-level]) is (0,2,0) and drives line-height from
-     this variable, so the theme's own `.inline-title { line-height: calc(var(--midori-row) * 2) }`
+     this variable, so the theme's own `.inline-title { line-height: 48px }`
      at (0,1,0) never applied — set the variable, not the rule.
 
      The symmetric metrics put the baseline at exactly L/2, which is what
@@ -2309,12 +2309,12 @@ body {
 }
 /* The row of air that used to be the title box's own top half. */
 .inline-title {
-  margin-block-start: 24px;
+  margin-block-start: var(--midori-row);
 }
 /* ...and the row that used to sit between the title and the properties card.
    The card asks for it; a paragraph does not, which is the whole point. */
 .metadata-container {
-  margin-block-start: 24px;
+  margin-block-start: var(--midori-row);
 }
 
 /* The add button's intrinsic height will not quantise: pinning height to 24px
@@ -2386,8 +2386,8 @@ body {
   margin-inline: calc(-1 * var(--midori-metadata-bleed));
   padding-inline: var(--midori-metadata-bleed);
   padding-top: var(--midori-metadata-inset);
-  padding-bottom: 24px;
-  margin-block-end: calc(48px - var(--midori-metadata-inset));
+  padding-bottom: var(--midori-row);
+  margin-block-end: calc(var(--midori-row) * 2 - var(--midori-metadata-inset));
 }
 /* THE WIDGET USES THE NATURAL FACE, NOT THE NORMALISED ONE, and that is a
    reversal worth spelling out because the opposite is right everywhere else.
@@ -2433,7 +2433,7 @@ body {
 .metadata-properties-heading {
   padding: 0;
   margin: 0;
-  height: 24px;
+  height: var(--midori-row);
   line-height: var(--midori-row);
   display: flex;
   align-items: center;
@@ -2442,7 +2442,7 @@ body {
 .metadata-container .metadata-show-source-button {
   position: absolute; bottom: 0;
   inset-inline-start: var(--midori-metadata-bleed);
-  margin: 0; padding-block: 0; height: 24px; line-height: var(--midori-row);
+  margin: 0; padding-block: 0; height: var(--midori-row); line-height: var(--midori-row);
   /* The button ships as a plain inline box: its "+" is an inline SVG that
      baseline-aligns against the label, which puts the glyph low and the text
      high by however much the icon's descent happens to be. Make it a flex row
@@ -2457,9 +2457,9 @@ body {
    flex box whose height is max(input height, tallest child), so the pills in
    a multi-value property (tags) push it to 28.5px unless they are capped. */
 .metadata-property { align-items: center; }
-.metadata-property-key, .metadata-property-value { min-height: 24px; }
+.metadata-property-key, .metadata-property-value { min-height: var(--midori-row); }
 .metadata-property-key > *, .metadata-property-value > * { line-height: var(--midori-row); }
-.multi-select-container { min-height: 24px; }
+.multi-select-container { min-height: var(--midori-row); }
 
 /* --------------------------------------------------------------------------
    Row interiors line up with each other, not with the dots — see the paper
