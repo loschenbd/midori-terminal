@@ -692,9 +692,13 @@ Residual gotchas:
   for a view header the app removes outright when Settings → Appearance →
   Show view header is off, so zen mode was adding a header's worth of empty
   space above every note and shifting the dot grid to match. Those three
-  rules are now gated on `.show-view-header`, measured in the app.css +
-  theme.css harness: with the header off, the note's first line sits at the
-  same position whether zen is on or off.
+  rules are now gated on `:is(.show-view-header, .is-phone)` — app.css hides
+  the header on `body:not(.show-view-header):not(.is-phone)`, two negations,
+  and a gate that mirrors only the first leaves a phone with the setting off
+  drawing a header nothing compensates for, which is the same bug 40px in the
+  other direction. Measured in the app.css + theme.css harness: with the
+  header off, the note's first line sits at the same position whether zen is
+  on or off.
 - **A plugin that gets typography right can still get the grid wrong.**
   `pretty-paragraphs` gave the caret's blank line `line-height: normal` so
   the caret stays visible — about 16.8px at a 14px base, which is not a
