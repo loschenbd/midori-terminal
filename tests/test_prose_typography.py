@@ -251,7 +251,7 @@ def test_heading_ladder_is_optical():
 
 
 def rules():
-    """Every (selector, declarations) pair in theme.css, comments stripped.
+    r"""Every (selector, declarations) pair in theme.css, comments stripped.
 
     SPLIT, DO NOT MATCH. The obvious regex for a CSS rule —
     `([^{}]*KEYWORD[^{}]*)\{([^{}]*)\}` — has two unbounded quantifiers on
