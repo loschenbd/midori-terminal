@@ -863,8 +863,9 @@ body.midori-drawn .midori-title-caret {
 }
 
 /* ...and the title's SELECTION band, which is off by even more than the
-   caret was. The title's line box is 24px (--inline-title-line-height) while
-   its face runs ~25.9px, so the native band is 12px either side of the
+   caret was. The title's line box is --inline-title-line-height, which is the
+   row — 24px at the 15-16px base these numbers were measured at, more above it
+   — while its face runs ~25.9px, so the native band is 12px either side of the
    baseline against ink that reaches ~19px up and ~6px down: it starts
    halfway up the capitals and hangs well below the descenders. That is the
    band in the screenshot, and it is the same root cause as the prose one —
