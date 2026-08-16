@@ -623,6 +623,98 @@ Residual gotchas:
   clears them.
 - Elements with arbitrary heights (images, Mermaid diagrams, embeds) knock
   following lines off-register — inherent to baseline grids.
+- **The measure was outside every band, and the band has no experiment behind
+  it.** Obsidian's 700px default is ~91 characters per line at a 16px base;
+  the 45–75 / 66-character rule traces to Spencer asserting and Rayner &
+  Pollatsek deducing from Tinker's print data, not to a screen study. What is
+  real is the speed/preference split — longer lines are read faster, moderate
+  lines are preferred, and subjective ratings do not track performance — and a
+  writing surface, sat at for hours, takes the preference side. `theme.css`
+  sets `--file-line-width: calc(var(--font-text-size) * 34)`: 34 times
+  `--font-text-size`, the variable Obsidian's own `updateFontSize()` writes on
+  `<body>` from the reader's text-size slider, so the line grows and shrinks
+  with the reader's setting rather than staying pinned to the size one person
+  happened to use.
+- **A grid tuned to one base size is tuned to one person.** 24px is exactly
+  1.5 leading at a 16px base and 1.33 at 18px — under the WCAG 1.4.8 policy
+  floor as soon as a reader raises their text size, with no signal that the
+  theme had an opinion. The row now follows `--font-text-size` via
+  `round(up, max(24px, var(--font-text-size) * 1.5), 2px)`, gated behind
+  `@supports` because a custom property parses as a token stream and a plain
+  second declaration hands every consumer an unparseable value rather than
+  degrading gracefully. The dot offset became
+  `calc(10.98px + (var(--midori-row) - 24px) / 2)` — an offset from the
+  historical row rather than a constant measured against it — and the
+  baseline-vs-dot phase was measured across the app's full 10–30px clamp: one
+  distinct offset at every base, not the per-device magic number this theme's
+  history is made of.
+- **Apparent size follows x-height, not em.** Headings are Spectral
+  (x-height 0.450em) against M PLUS 1p body copy (0.520em), and every
+  print-size result in the vision literature is stated in x-height for
+  exactly this reason. Set at Obsidian's default em ladder, an h4 read 1.03x
+  body to the eye while its em claimed 1.19x, and the bottom of the hierarchy
+  stopped reading as hierarchy. `x1.1556 = 0.520 / 0.450` restores it:
+  `--h1-size` through `--h4-size` now ship 1.870/1.690/1.523/1.373em; h5/h6
+  stay untouched — already Midori Text, and uppercase, where cap-height
+  carries the size, not x-height. The line box does not move: every heading
+  keeps `line-height: var(--midori-row)`, one row at every base tested
+  (14/16/20/24/30px) in both panes. What moves is how far the ink reaches into
+  the row of air above — an h1 at a 16px base now reaches 7.1px into its
+  24px margin, against 1.2px before.
+- **A nominal contrast ratio overstates legibility at 1x, but less than the
+  premise assumed.** At 81 ppi a stem is about a pixel wide, and the
+  antialiaser spends most of a glyph's pixels on partial coverage — the
+  estimate going in was that only ~9% carry full ink. Measured on paper
+  `#f3f1eb` against ink `#3d3933` (the shipped `--text-normal`, not
+  `#33302b`, the unlifted foreground it is a step lifted from), nominal
+  10.15:1, from Playwright screenshots at devicePixelRatio 1 — the panel's
+  real regime: base 14 puts 22.9% of glyph pixels at full ink, median
+  3.30:1; base 16, 27.1%, median 3.68:1; base 18, 30.8%, median 4.17:1. So
+  the effect is real but less acute than assumed. The gate was p90 ≥ 5:1, and
+  p90 measured 10.15:1 at every base — but it SATURATES here: once more than
+  10% of a glyph's pixels sit at full ink the 90th percentile is 1.0 by
+  construction, so it stops discriminating, and the informative numbers are
+  the full-ink fraction and the median. That median is 3.30:1 at base 14,
+  below the 4.5:1 floor — the overstatement effect itself, and the strongest
+  evidence yet that 15–16 suits this 81 ppi panel better than 14. Nothing
+  changed: the gate passed with room. Two caveats. Playwright's Chromium at
+  dpr 1 is the right pixel regime, not guaranteed identical font smoothing to
+  Obsidian's Electron. And a theme-only harness measures the fallback, not
+  the theme: `theme.css` does not paint prose, it hands `--text-normal` and
+  `--font-text` to `app.css`, and a page missing `app.css` renders Times at
+  pure black and reports coverage above 1.0 — impossible, and the first run's
+  tell that the harness was wrong.
+- **A mode that lives in three homes ships from none of them.** The writing
+  mode needed a plugin (`zen-toggle`) and a CSS snippet that lived only in the
+  vault, so only `theme.css` travelled with the repo. Folding the plugin into
+  `obsidian/plugins/zen-toggle` and absorbing the snippet into the theme made
+  it one artifact — and doing so exposed that three of its rules compensated
+  for a view header the app removes outright when Settings → Appearance →
+  Show view header is off, so zen mode was adding a header's worth of empty
+  space above every note and shifting the dot grid to match. Those three
+  rules are now gated on `.show-view-header`, measured in the app.css +
+  theme.css harness: with the header off, the note's first line sits at the
+  same position whether zen is on or off.
+- **A plugin that gets typography right can still get the grid wrong.**
+  `pretty-paragraphs` gave the caret's blank line `line-height: normal` so
+  the caret stays visible — about 16.8px at a 14px base, which is not a
+  multiple of 24, so the note stepped off the lattice whenever the caret
+  rested on an empty line. Its indent selector was also "the line after a
+  blank line," which is every heading in a real note. The theme now owns
+  paragraph rhythm directly: the caret's blank line opens to exactly one row
+  (24px) rather than `normal`, and indents are 2em on paragraphs only —
+  measured 0 on headings, list lines and blanks. Both defects were fixable
+  only by whoever owns the grid, which is the argument for the theme owning
+  it rather than delegating to a plugin that cannot see it.
+- **What was deliberately not changed, and why.** Leading — no experiment
+  separates 1.4 from 1.5 from 1.6, and the much-cited Chaparro result is a
+  null. Letter-spacing. Serif-vs-sans for the body face — unresolved, not a
+  proven null; the claim that it is settled was itself refuted. Revision and
+  look-back support, and everything around the note. Typewriter scrolling and
+  dimming — no evidence exists in either direction, and both were explicitly
+  declined. Paragraph indents moved IN, not because evidence appeared, but
+  because the plugin providing them broke the dot grid, and only the grid's
+  owner could fix that — see the bullet above.
 
 ## Cursor / VS Code notes
 

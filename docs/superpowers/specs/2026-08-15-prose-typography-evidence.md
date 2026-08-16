@@ -1,7 +1,7 @@
 # What the evidence actually supports for a writing surface
 
 **Date:** 2026-08-15
-**Status:** evidence review, not yet a design decision
+**Status:** evidence review — acted on in `docs/superpowers/plans/2026-08-15-prose-writing-surface.md`
 **Method:** 104-agent deep-research pass — 22 sources fetched, 103 claims
 extracted, 25 verified adversarially (3 votes each, 2 refutes kills). **12
 survived, 13 were killed.** The killed list is at the end and matters as much
