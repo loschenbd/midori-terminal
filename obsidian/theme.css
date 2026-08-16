@@ -1880,6 +1880,36 @@ body {
   color: var(--text-muted);
 }
 
+/* SUPERSCRIPT AND SUBSCRIPT: RAISED, BUT CONTRIBUTING NO HEIGHT.
+
+   Third instance of the strut problem, after code spans and tag pills, and the
+   only one app.css causes directly:
+
+       .footnote-ref { vertical-align: super; }
+
+   Full-size text, raised above the baseline, with nothing said about
+   line-height. The line box is max(strut, tallest inline box), so the raised
+   box wins and the line grows. MEASURED on the block reference note at a 16px
+   base: the line carrying a footnote marker came out 29.85px against a 24px
+   row, and because the error is a fraction of a row it does not stay local --
+   every block below it, all the way to the end of the note, sat 3.9px off the
+   dots. One marker, and the rest of the page leaves the lattice.
+
+   line-height: 0 is what makes it harmless: an inline box of zero height
+   cannot exceed the strut, so the line stays one row. The visual raise then
+   has to come from position/top instead of vertical-align, which is layout-free.
+   This is normalize.css's fix for the same defect, and it is here rather than
+   in a plugin for the same reason the paragraph rules are: only whoever owns
+   the lattice can see that the cost is measured in rows. */
+.markdown-rendered :is(sup, sub, .footnote-ref) {
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+.markdown-rendered :is(sup, .footnote-ref) { top: -0.45em; }
+.markdown-rendered sub { bottom: -0.2em; }
+
 /* Tag pills. The alias, not stock "M PLUS 1p": a tag sits inline in a
    paragraph, and a stock face there displaces the line box exactly the way it
    did in code blocks (see the strut note above), pushing any line that
