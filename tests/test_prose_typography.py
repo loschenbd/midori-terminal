@@ -48,8 +48,16 @@ def theme_var(name):
     one — which reads as a missing variable rather than as a regex that cannot
     see it. A `var(--x)` USE cannot match here, because a use has no colon
     after the name.
+
+    COMMENTS ARE STRIPPED FIRST. This file's comments quote CSS, whole
+    declarations included — the @supports block explains itself by quoting the
+    broken two-declaration form it replaces. A quoted declaration matches this
+    pattern exactly as well as a real one, so without the strip the answer
+    depends on where the prose happens to sit relative to the code, and a
+    failure prints comment text where a value should be.
     """
-    hits = re.findall(rf"{re.escape(name)}\s*:\s*([^;]+);", THEME)
+    hits = re.findall(rf"{re.escape(name)}\s*:\s*([^;]+);",
+                      re.sub(r"/\*.*?\*/", "", THEME, flags=re.S))
     return hits[-1].strip() if hits else None
 
 
@@ -127,6 +135,7 @@ def test_no_stray_grid_literals():
 
     ALLOWED = (
         "--midori-row",        # the row's own declaration
+        "--dotgrid-offset-y",  # was measured against 24px; now an offset from it
         "--midori-line-box",   # body.is-ios; the caret plugin's band constant,
                                # measured against the title's 22px box, not the row
     )
@@ -159,10 +168,68 @@ def test_no_stray_grid_literals():
         ok("  (except body.is-ios --midori-line-box: 24px, which is the caret plugin's constant)")
 
 
+def row_px(base):
+    """Mirror of the CSS: round(up, max(24px, base * 1.5), 2px)."""
+    return math.ceil(max(24, base * 1.5) / 2) * 2
+
+
+def test_leading_holds_across_the_slider():
+    raw = theme_var("--midori-row")
+    if raw is None or "--font-text-size" not in raw:
+        bad(f"--midori-row is {raw!r}: fixed, so leading falls below 1.5 "
+            "as soon as the reader raises their text size")
+        return
+    # A LOCAL flag, not the global FAIL: an unrelated earlier failure must not
+    # silently swallow this test's own ok line.
+    bad_here = False
+    worst = min(((base, row_px(base) / base) for base in BASES), key=lambda p: p[1])
+    for base in BASES:
+        ratio = row_px(base) / base
+        if ratio < 1.5 - 1e-9:
+            bad(f"base {base}px gives leading {ratio:.2f}, under the 1.5 policy floor")
+            bad_here = True
+    if not bad_here:
+        ok(f"leading >= 1.5 across {BASES[0]}-{BASES[-1]}px "
+           f"(worst {worst[1]:.2f} at {worst[0]}px)")
+
+
+def test_row_is_an_even_number_of_pixels():
+    """The row must be even, because --dotgrid-offset-y adds half of it.
+
+    row_px() returns even pixels by construction, so asserting on it proves
+    nothing. What can actually regress is the stylesheet dropping the rounding
+    — `max(24px, var(--font-text-size) * 1.5)` alone can be odd (e.g. 25.5px
+    at a 17px base), and an odd row makes half the row fractional. Chromium
+    rounds the half-leading to a whole pixel, leaving the baseline 0.5px off
+    the L/2 model that the offset formula assumes. Rounding to 2px keeps every
+    row in the 10-30px clamp even, and the measured baseline then matches L/2
+    exactly at all 21 of them.
+    """
+    raw = theme_var("--midori-row") or ""
+    if re.search(r"round\(\s*up\s*,.*,\s*2px\s*\)", raw):
+        ok("the row is rounded up to even pixels")
+    else:
+        bad(f"--midori-row is {raw!r}: no round(..., 2px), so an odd row makes "
+            "half of it fractional, and the baseline lands 0.5px off the L/2 "
+            "that --dotgrid-offset-y assumes")
+
+    # Every row across the clamp must be even for the offset formula to work.
+    bad_here = False
+    for base in BASES:
+        row = row_px(base)
+        if row % 2 != 0:
+            bad(f"base {base}px gives row {row}px, which is odd")
+            bad_here = True
+    if not bad_here:
+        ok(f"all rows across {BASES[0]}-{BASES[-1]}px are even")
+
+
 if __name__ == "__main__":
     print("== prose typography ==")
     test_measure()
     test_row_is_one_number()
     test_no_stray_grid_literals()
+    test_leading_holds_across_the_slider()
+    test_row_is_an_even_number_of_pixels()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)

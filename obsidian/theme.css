@@ -69,31 +69,46 @@ body {
      120%), and on WCAG 1.4.8's 1.5, which is a policy floor and not an
      experimental result. No study distinguishes 1.4 from 1.5 from 1.6, so this
      number is defensible rather than optimal, and it is not going to move on
-     evidence. It moves, if at all, because the READER's base size moved. */
+     evidence. It moves, if at all, because the READER's base size moved — see
+     the @supports block below, which is where that happens. */
   --midori-row: 24px;
 
-  /* Vertical nudge that lands the dot row on the text baseline.
+  /* Was a constant measured against a 24px row. With a row that follows the
+     reader's text size, the first baseline moves by half the row's growth —
+     the aliases seat every baseline at L/2 — so the constant becomes an
+     offset from the historical row. VERIFY BY MEASURING after changing this;
+     see the plan's baseline-vs-dot check. */
+  --dotgrid-offset-y: calc(10.98px + (var(--midori-row) - 24px) / 2);
+}
 
-     ONE value for every platform. That is only possible because the grid uses
-     background-origin: content-box (see the dot-grid rule below); with the
-     default padding-box origin this number is a function of
-     env(safe-area-inset-top) and therefore of which device and orientation
-     you happen to be holding, which is why this file previously carried a
-     separate body.is-mobile override that was really just a fit to one phone.
+/* THE ROW FOLLOWS THE READER, WHERE THE ENGINE CAN DO THE ARITHMETIC.
 
-     What is left is where the first baseline of a note falls relative to the
-     top of the scrolling surface — the sizer padding plus the header stack,
-     not font metrics, now that the aliases seat every baseline at L/2. It is
-     still a knob rather than a constant: changing the base font size, the
-     sizer padding or the inline title's line box moves it. More negative
-     moves the dots UP relative to the text.
+   This has to be a feature query and not the obvious two declarations in a
+   row. A custom property is parsed as a token stream, so
+   `--midori-row: 24px; --midori-row: round(...)` hands the second one to
+   every consumer whether or not the engine understands round(), and the
+   substitution then fails at each use site: measured in Chrome, the property
+   keeps the unparseable value and line-height computes to `normal`, not to
+   24px. A var() fallback at the use site does not save it either, because
+   var()'s fallback is for an UNDEFINED property, not a defined-but-unusable
+   one. Roughly 45 declarations read this variable, so getting that wrong
+   collapses the whole grid rather than degrading it. @supports asks the
+   question that the token stream cannot answer for itself.
 
-     Before re-tuning this, confirm the webfont actually loaded. If prose
-     renders serif on the phone the fault is the font, not this number, and
-     changing it will cement the wrong face. And re-tune it by MEASURING the
-     baseline-to-dot delta, not by deriving one platform's value from
-     another's. */
-  --dotgrid-offset-y: 10.98px;
+   round() landed in Chrome 125; Obsidian 1.12.4 is on Chromium 142. This is
+   for older builds, and it degrades to the historical fixed row.
+
+   TWO PIXELS, NOT ONE. --dotgrid-offset-y adds half the row's growth, so the
+   row has to be divisible by two or the half is fractional. Chromium rounds
+   the half-leading to a whole pixel, and measured against a real baseline the
+   result is 0.5px off the L/2 the offset assumes at every ODD row — 27px at
+   an 18px base, 45px at 30px. Rounding to 2px makes every row in the app's
+   10-30 clamp even, and the measured baseline then matches L/2 exactly at
+   all 21 of them. Leading runs 1.517-1.579 above the floor region. */
+@supports (line-height: round(up, 25px, 2px)) {
+  body {
+    --midori-row: round(up, max(24px, var(--font-text-size) * 1.5), 2px);
+  }
 }
 
 /* --------------------------------------------------------------------------
