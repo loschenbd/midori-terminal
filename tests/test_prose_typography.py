@@ -250,6 +250,48 @@ def test_heading_ladder_is_optical():
             bad(f"h{level} {raw} reads {visual:.2f}x body, intended {default:.2f}x")
 
 
+def rules():
+    """Every (selector, declarations) pair in theme.css, comments stripped.
+
+    SPLIT, DO NOT MATCH. The obvious regex for a CSS rule —
+    `([^{}]*KEYWORD[^{}]*)\{([^{}]*)\}` — has two unbounded quantifiers on
+    either side of a literal, which is polynomial: against this 90KB
+    stylesheet it does not finish. Splitting on braces is linear and needs no
+    cleverness. Nested at-rules degrade gracefully: the inner rule is found
+    and the wrapper is ignored, which is all any check here wants.
+    """
+    body = re.sub(r"/\*.*?\*/", "", THEME, flags=re.S)
+    out = []
+    for chunk in body.split("}"):
+        if "{" not in chunk:
+            continue
+        selector, _, decls = chunk.rpartition("{")
+        out.append((" ".join(selector.split()), decls))
+    return out
+
+
+def test_zen_header_rules_are_gated():
+    """A zen rule that compensates for the view header must check it exists.
+
+    app.css: `body:not(.show-view-header):not(.is-phone) .view-header
+    { display: none }`. With the setting off there is no header, so an
+    ungated `padding-top: var(--header-height)` adds a header's worth of
+    empty space above the note and shifts the dot grid to match.
+    """
+    ungated = []
+    for selector, decls in rules():
+        if "body.zen-mode" not in selector:
+            continue
+        if "--header-height" in decls and "show-view-header" not in selector:
+            ungated.append(selector[:70])
+    if ungated:
+        for sel in ungated:
+            bad(f"zen rule uses --header-height but is not gated on "
+                f".show-view-header: {sel}")
+    else:
+        ok("every zen rule that compensates for the view header checks it exists")
+
+
 if __name__ == "__main__":
     print("== prose typography ==")
     test_measure()
@@ -258,5 +300,6 @@ if __name__ == "__main__":
     test_leading_holds_across_the_slider()
     test_row_is_an_even_number_of_pixels()
     test_heading_ladder_is_optical()
+    test_zen_header_rules_are_gated()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)
