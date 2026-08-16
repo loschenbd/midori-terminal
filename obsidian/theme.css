@@ -1211,7 +1211,6 @@ body.is-ios .midori-title-selection {
 }
 
 /* Reading view block rhythm: spacing in whole grid rows */
-.markdown-preview-view p,
 .markdown-preview-view ul,
 .markdown-preview-view ol,
 .markdown-preview-view blockquote,
@@ -1219,6 +1218,66 @@ body.is-ios .midori-title-selection {
 .markdown-preview-view table {
   margin-block: 0 var(--midori-row);
 }
+
+/* PARAGRAPH RHYTHM: A NOVEL'S INDENTS, NOT A WEB PAGE'S GAPS.
+
+   Taken over from the pretty-paragraphs plugin, which did this well except for
+   the grid. Two defects came with it and are fixed here, both only fixable by
+   whoever owns the lattice:
+
+   1. It gave the blank line under the caret `line-height: normal` so the caret
+      stays visible. `normal` is ~16.8px at a 14px base — not a multiple of the
+      row — so the whole note below the caret stepped off the dots every time
+      the caret rested on an empty line. One full row does the same job and
+      lands where the dots are.
+   2. Its indent selector was "the line after a blank line", which is also every
+      heading in a real note, so headings were indented 2em.
+
+   The evidence review found nothing either way on indent-versus-blank-line.
+   This is a stated preference, and it is in the theme rather than a plugin
+   because the grid-correct version cannot live anywhere else. */
+body {
+  --midori-indent: 2em;
+}
+
+/* Reading view: the indent replaces the paragraph gap, which also gives the
+   grid a row back at every paragraph break. */
+.markdown-preview-view p {
+  text-indent: var(--midori-indent);
+  margin-block: 0;
+}
+/* Not inside quotes, lists, callouts or tables — those are their own blocks. */
+.markdown-preview-view :is(blockquote, li, .callout, table) p {
+  text-indent: 0;
+}
+
+/* Live Preview: a paragraph is ONE .cm-line (soft-wrapped), and the blank line
+   between paragraphs is its own .cm-line containing nothing but a <br>. */
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) {
+  line-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  color: transparent;
+}
+/* The blank line the caret is on, and a deliberate second blank line, each keep
+   a whole row — visible caret, intact lattice. */
+.markdown-source-view.mod-cm6 .cm-line.cm-active:has(> br:only-child),
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) + .cm-line:has(> br:only-child) {
+  line-height: var(--midori-row);
+}
+/* The line that starts a paragraph: the first line of the note, or the line
+   after a blank one — and prose only. */
+.markdown-source-view.mod-cm6 .cm-content > .cm-line:first-child:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout),
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) + .cm-line:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout) {
+  text-indent: var(--midori-indent);
+}
+
+/* Every paragraph is indented, including the first after a heading. That
+   departs from the book convention deliberately: the exception is expressible
+   in Reading view (h1 + p) and not in Live Preview, where a blank line stands
+   between the heading and the paragraph and the selector becomes positional
+   and fragile. The two panes matching matters more here, and this theme has
+   paid for pane divergence before. */
 
 /* Headings: line boxes AND margins in whole rows.
 
