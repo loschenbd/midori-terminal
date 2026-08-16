@@ -1880,6 +1880,46 @@ body {
   color: var(--text-muted);
 }
 
+/* LIVE PREVIEW: THE THINGS CODEMIRROR PUTS IN A LINE THAT ARE TALLER THAN IT.
+
+   Fourth and fifth instances of the strut problem, and the first two found by
+   measuring the RUNNING APP over CDP rather than a harness — which is how they
+   survived nine tasks and a whole-plan review. The harness reproduces the
+   theme's DOM; it does not reproduce CodeMirror's, and both offenders are
+   CodeMirror's own furniture:
+
+     img.cm-widgetBuffer   height: 1em, vertical-align: text-top. A REPLACED
+                           element, so height applies. At an h1's 29.92px that
+                           is a 29.91px inline box against a 24px strut, and
+                           the line box is max(strut, tallest inline box).
+     div.cm-fold-indicator inline-block, height 24px, on the baseline, so it
+                           adds its whole height ABOVE the baseline and the
+                           descender below. 97bf993 moved the chevron's ICON
+                           with a transform, which is visual and does not
+                           change what the box occupies.
+     span.cm-footref       raised, and tall enough to beat the strut on any
+                           line carrying a footnote marker.
+
+   MEASURED on the block reference note at a 16px base, before and after:
+   6 of 31 lines off the row -> 1. h1 53.91 -> 49.00, every h2 51.03 -> 48,
+   h3 49.36 -> 48, and the footnote line 53.00 -> 48. Zeroing the HEIGHT is
+   what works; display:none does not, because the buffer is not the only
+   contributor and hiding it just lets the next one win.
+
+   THE h1 IS STILL 1px OVER and this is the honest limit of the approach: its
+   content box floors at 25px and will not go below that at any line-height,
+   because 1.870em is 29.92px and the glyph box is 26px. That is a cost of the
+   x-height compensation above -- the correction that makes an h1 read at its
+   intended optical size also makes it unable to sit in one row here. Fixing it
+   means giving h1 a two-row box in live preview, which is a design decision,
+   not a patch. One pixel per h1, against 5.91 before. */
+.markdown-source-view.mod-cm6 .cm-line .cm-widgetBuffer { height: 0; }
+.markdown-source-view.mod-cm6 .cm-line .cm-fold-indicator {
+  height: 0;
+  overflow: visible;   /* the chevron still draws and still takes a click */
+}
+.markdown-source-view.mod-cm6 .cm-footref { line-height: 0; }
+
 /* SUPERSCRIPT AND SUBSCRIPT: RAISED, BUT CONTRIBUTING NO HEIGHT.
 
    Third instance of the strut problem, after code spans and tag pills, and the
