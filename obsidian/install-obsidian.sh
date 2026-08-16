@@ -60,6 +60,16 @@ while IFS= read -r vault <&3; do
   # Retire the pre-rename copy so it stops showing up in the theme picker.
   [ -d "$vault.obsidian/themes/$LEGACY" ] && rm -rf "$vault.obsidian/themes/$LEGACY"
 
+  # The zen rules now live in theme.css. A vault that still has the old snippet
+  # would apply both, and the snippet's copy is the ungated one. Rename it aside
+  # ONCE rather than deleting it: this script did not write that file, and a
+  # user's snippet is theirs.
+  SNIP="$vault.obsidian/snippets/zen-mode.css"
+  if [ -f "$SNIP" ]; then
+    mv "$SNIP" "$SNIP.superseded"
+    echo "  moved zen-mode.css aside (now in theme.css) -> zen-mode.css.superseded"
+  fi
+
   # Point the vault at the renamed theme. Obsidian holds appearance.json in
   # memory and rewrites it on any settings change, so an external edit only
   # sticks while the app is closed — hence the note printed at the end.

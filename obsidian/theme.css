@@ -601,17 +601,56 @@ body.zen-mode .workspace-split.mod-root .workspace-leaf-content[data-type="markd
    the text moves down, so the phase moves the same direction to follow it:
    PLUS var(--header-height), not minus. (Minus leaves a residual of exactly
    2 x header-height mod 24 — 8px here — which reads as a mystery offset rather
-   than an obvious sign error.) */
-body.zen-mode .markdown-source-view.mod-cm6 .cm-scroller,
-body.zen-mode .markdown-reading-view .markdown-preview-view {
+   than an obvious sign error.)
+
+   WHY .show-view-header IS PART OF THE SELECTOR. These three rules exist only
+   to compensate for a header this block floats out of flow. Obsidian removes
+   that header outright when Settings -> Appearance -> Show view header is off
+   (`body:not(.show-view-header):not(.is-phone) .view-header { display: none }`),
+   and with it gone the compensation becomes a header's worth of empty space
+   above the note plus a grid phase shifted to match it. Gating on the same
+   class app.css keys off makes the mode correct under both settings. */
+body.zen-mode.show-view-header .markdown-source-view.mod-cm6 .cm-scroller,
+body.zen-mode.show-view-header .markdown-reading-view .markdown-preview-view {
   background-position: 0 calc(var(--dotgrid-offset-y) + var(--header-height));
 }
-body.zen-mode .markdown-source-view.mod-cm6 .cm-sizer {
+body.zen-mode.show-view-header .markdown-source-view.mod-cm6 .cm-sizer {
   padding-top: var(--header-height);
 }
-body.zen-mode .markdown-reading-view .markdown-preview-sizer {
+body.zen-mode.show-view-header .markdown-reading-view .markdown-preview-sizer {
   padding-top: calc(var(--midori-row) + var(--header-height));   /* keeps the base grid row */
 }
+
+/* Breadcrumb title text ("Writing / 07-05-2026") — hide just the title,
+   the header row stays for its nav arrows and action buttons */
+body.zen-mode .view-header-title-container {
+  visibility: hidden;
+}
+
+/* Quiet the header row itself: no bar look, just floating controls */
+body.zen-mode .view-header {
+  background-color: transparent;
+  border-bottom: none;
+}
+
+/* Tab strip: hide only when a single tab is open, so multi-tab work,
+   tab switching, and the window drag area stay intact when you need them */
+body.zen-mode .mod-root .workspace-tab-header-container:not(:has(.workspace-tab-header:nth-child(2))) {
+  height: 12px; /* slim strip kept as a window-drag handle; 0 to remove */
+  background: transparent;
+  border-bottom: none;
+  box-shadow: none;
+}
+body.zen-mode .mod-root .workspace-tab-header-container:not(:has(.workspace-tab-header:nth-child(2))) .workspace-tab-header-container-inner,
+body.zen-mode .mod-root .workspace-tab-header-container:not(:has(.workspace-tab-header:nth-child(2))) .workspace-tab-header-new-tab,
+body.zen-mode .mod-root .workspace-tab-header-container:not(:has(.workspace-tab-header:nth-child(2))) .workspace-tab-header-tab-list,
+body.zen-mode .mod-root .workspace-tab-header-container:not(:has(.workspace-tab-header:nth-child(2))) .sidebar-toggle-button {
+  display: none;
+}
+
+/* Optional: hide the inline title too, for a completely bare page.
+body.zen-mode .inline-title { display: none; }
+*/
 
 /* --------------------------------------------------------------------------
    24px baseline grid — text sits in exact grid rows, like the site's
