@@ -290,19 +290,35 @@ def test_indent_excludes_non_prose():
 
     The obvious selector — the line after a blank one — also matches a heading
     that follows a blank line, which is every heading in a real note.
+
+    CHECK EACH SELECTOR, NOT THE RULE. rules() hands back everything before the
+    brace as one string, so a comma-separated list arrives joined, and asking
+    whether an exclusion appears in that string asks whether ANY selector
+    carries it. This rule has two selectors; dropping :not(.HyperMD-header)
+    from the "line after a blank line" half — the half that causes the bug —
+    left the earlier version of this test green. Measured, not assumed.
     """
+    EXCLUDE = ("HyperMD-header", "HyperMD-list-line", "HyperMD-codeblock",
+               "HyperMD-quote", "HyperMD-table-row", "HyperMD-callout")
     indented = [sel for sel, decls in rules()
                 if "text-indent: var(--midori-indent)" in decls and ".cm-line" in sel]
     if not indented:
         bad("no Live Preview rule applies --midori-indent")
         return
-    for sel in indented:
-        for kind in ("HyperMD-header", "HyperMD-list-line", "HyperMD-codeblock"):
-            if kind not in sel:
-                bad(f"the Live Preview indent does not exclude .{kind}: "
-                    f"{sel[:70]}")
-                return
-    ok("the Live Preview indent excludes headings, lists and code")
+    missing = []
+    for rule in indented:
+        for selector in rule.split(","):
+            if ".cm-line" not in selector:
+                continue
+            for kind in EXCLUDE:
+                if kind not in selector:
+                    missing.append((kind, " ".join(selector.split())[:60]))
+    if missing:
+        for kind, selector in missing:
+            bad(f"the Live Preview indent does not exclude .{kind}: {selector}")
+    else:
+        ok(f"every Live Preview indent selector excludes all "
+           f"{len(EXCLUDE)} non-prose kinds")
 
 
 def test_zen_header_rules_are_gated():
