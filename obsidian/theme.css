@@ -186,7 +186,7 @@ body {
   --text-highlight-bg: #e2d4b9;              /* ochre wash — --color-yellow @ 28% on paper */
 
   --hr-color: rgba(60, 58, 54, 0.1);
-  --blockquote-border-color: var(--midori-clay); /* --accent-warm */
+  --blockquote-border-color: var(--midori-sage); /* --accent (sage) */
   --code-background: #faf9f6;
   /* Syntax colours lifted straight from ghostty/themes/midori-paper so a fence
      in Obsidian reads the same as the same code in the terminal. Each token is
@@ -365,7 +365,7 @@ body {
   --text-highlight-bg: #483d2b;                /* ochre wash — --color-yellow @ 24% on paper */
 
   --hr-color: rgba(235, 232, 226, 0.1);
-  --blockquote-border-color: var(--midori-clay); /* --accent-warm */
+  --blockquote-border-color: var(--midori-sage); /* --accent (sage) */
   --code-background: #22211e;
   /* Same mapping as light, from ghostty/themes/midori-night. */
   --code-normal: #ebe8e2;                     /* fg — bone ink        */
@@ -1869,7 +1869,11 @@ body {
   font-size: 0.85em;
 }
 
-/* Blockquotes: warm rule, serif italic, like the site's pull quotes */
+/* Blockquotes: sage rule, serif italic. The site's pull quotes take the warm
+   accent and this one does not — a quote is the same kind of aside as a link
+   or a tag, and those are all sage here, so clay on this one bar was the odd
+   one out rather than a warm counterpoint. Clay keeps --code-important and
+   --color-orange, so it is still in the palette, just not on this rule. */
 .markdown-preview-view blockquote,
 .HyperMD-quote {
   font-style: italic;
