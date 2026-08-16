@@ -270,6 +270,41 @@ def rules():
     return out
 
 
+def test_blank_line_keeps_the_grid():
+    """The blank line the caret sits on must be a whole grid row.
+
+    pretty-paragraphs gives it `line-height: normal` — about 16.8px at a 14px
+    base, which is not a multiple of 24 — so every line below it leaves the
+    lattice whenever the caret rests on an empty line.
+    """
+    for selector, decls in rules():
+        if ".cm-line" in selector and re.search(r"line-height:\s*normal", decls):
+            bad(f"a .cm-line rule sets line-height: normal, which is not a "
+                f"grid row: {selector[:70]}")
+            return
+    ok("no .cm-line rule sets line-height: normal")
+
+
+def test_indent_excludes_non_prose():
+    """Only prose is indented.
+
+    The obvious selector — the line after a blank one — also matches a heading
+    that follows a blank line, which is every heading in a real note.
+    """
+    indented = [sel for sel, decls in rules()
+                if "text-indent: var(--midori-indent)" in decls and ".cm-line" in sel]
+    if not indented:
+        bad("no Live Preview rule applies --midori-indent")
+        return
+    for sel in indented:
+        for kind in ("HyperMD-header", "HyperMD-list-line", "HyperMD-codeblock"):
+            if kind not in sel:
+                bad(f"the Live Preview indent does not exclude .{kind}: "
+                    f"{sel[:70]}")
+                return
+    ok("the Live Preview indent excludes headings, lists and code")
+
+
 def test_zen_header_rules_are_gated():
     """A zen rule that compensates for the view header must check it exists.
 
@@ -300,6 +335,8 @@ if __name__ == "__main__":
     test_leading_holds_across_the_slider()
     test_row_is_an_even_number_of_pixels()
     test_heading_ladder_is_optical()
+    test_blank_line_keeps_the_grid()
+    test_indent_excludes_non_prose()
     test_zen_header_rules_are_gated()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)
