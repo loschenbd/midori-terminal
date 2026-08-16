@@ -95,6 +95,10 @@ PY
   #                    The optional status-bar readout is desktop only in practice
   #                    (Obsidian hides the status bar on phones); the caret and
   #                    the commands work everywhere.
+  #   zen-toggle       flips `zen-mode` on <body> from a status-bar dot or a
+  #                    command. The rules that respond live in theme.css, so
+  #                    the plugin is inert without the theme and the theme's
+  #                    zen block is inert without the plugin.
   #
   # All are enabled below but none is required by the theme; delete the
   # directory and re-run to drop one.
