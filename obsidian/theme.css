@@ -603,21 +603,28 @@ body.zen-mode .workspace-split.mod-root .workspace-leaf-content[data-type="markd
    2 x header-height mod 24 — 8px here — which reads as a mystery offset rather
    than an obvious sign error.)
 
-   WHY .show-view-header IS PART OF THE SELECTOR. These three rules exist only
-   to compensate for a header this block floats out of flow. Obsidian removes
-   that header outright when Settings -> Appearance -> Show view header is off
-   (`body:not(.show-view-header):not(.is-phone) .view-header { display: none }`),
-   and with it gone the compensation becomes a header's worth of empty space
-   above the note plus a grid phase shifted to match it. Gating on the same
-   class app.css keys off makes the mode correct under both settings. */
-body.zen-mode.show-view-header .markdown-source-view.mod-cm6 .cm-scroller,
-body.zen-mode.show-view-header .markdown-reading-view .markdown-preview-view {
+   WHY THE GATE IS A UNION, NOT ONE CLASS. These three rules exist only to
+   compensate for a header this block floats out of flow, so they have to run
+   exactly when the header is drawn. app.css removes it with
+   `body:not(.show-view-header):not(.is-phone) .view-header { display: none }`
+   — TWO negations, so the header survives if EITHER of them fails, and the
+   gate has to mirror both. Ungated, the desktop with the setting off gets a
+   header's worth of empty space above the note plus a grid phase shifted to
+   match it. Gated on .show-view-header alone, a PHONE with the setting off
+   still draws the header and no longer compensates for it, so the note's
+   first line sits --header-height too high — 40px there, under the controls.
+   :is() takes the specificity of its most specific argument and both are
+   classes, so the union weighs (0,2,1), the same as the two-class gate it
+   replaces; measured in Chrome against selectors of known weight rather than
+   assumed. */
+body.zen-mode:is(.show-view-header, .is-phone) .markdown-source-view.mod-cm6 .cm-scroller,
+body.zen-mode:is(.show-view-header, .is-phone) .markdown-reading-view .markdown-preview-view {
   background-position: 0 calc(var(--dotgrid-offset-y) + var(--header-height));
 }
-body.zen-mode.show-view-header .markdown-source-view.mod-cm6 .cm-sizer {
+body.zen-mode:is(.show-view-header, .is-phone) .markdown-source-view.mod-cm6 .cm-sizer {
   padding-top: var(--header-height);
 }
-body.zen-mode.show-view-header .markdown-reading-view .markdown-preview-sizer {
+body.zen-mode:is(.show-view-header, .is-phone) .markdown-reading-view .markdown-preview-sizer {
   padding-top: calc(var(--midori-row) + var(--header-height));   /* keeps the base grid row */
 }
 
@@ -653,8 +660,9 @@ body.zen-mode .inline-title { display: none; }
 */
 
 /* --------------------------------------------------------------------------
-   24px baseline grid — text sits in exact grid rows, like the site's
-   leading-6 rhythm. Assumes base font size 15–16px (Settings → Appearance).
+   Baseline grid — text sits in exact grid rows, like the site's leading-6
+   rhythm. The row is --midori-row, 24px at a 15–16px base and following the
+   reader from there (Settings → Appearance); not assuming a base is the point.
    -------------------------------------------------------------------------- */
 /* No leading row. This used to be a full grid row of air, on the reasoning that
    content should "start on a row" — but the phase comes from the background
@@ -863,7 +871,8 @@ body.midori-drawn .midori-title-caret {
    A = D centres everything the browser derives on the baseline.
 
    EM HERE, PX IN THE EDITOR, and the contrast is the point. The prose band is
-   sized against the 24px ROW, which does not move with Appearance → Font size.
+   sized against the ink sitting in the ROW, and the row is --midori-row, one
+   number the whole file shares that follows Appearance → Font size.
    The title has no fixed row to sit in — its line box is one row but its
    glyphs overflow it — so this one is sized against the GLYPHS and has to
    track the title's font size. The plugin makes that expressible by setting
@@ -977,13 +986,21 @@ body.midori-drawn .midori-selectionLayer {
    still leaves 5px of the row between consecutive selected lines so they read
    as separate lines rather than one column of colour.
 
-   px, NOT em — and this is the trap. The row is an absolute 24px, set by
-   `.cm-line { line-height: var(--midori-row) }` near the top of this file, and it does NOT
-   move with Appearance → Font size. An em band tracks the font while the row
-   it lives in does not, so `1.5em` was one row only by the coincidence of a
-   16px base. Anything sized against the ROW belongs in px; only things sized
-   against the GLYPHS belong in em. (The title's pair is the mirror case — it
-   is in em precisely because the title has no fixed row.)
+   px, NOT em, AND NOT THE ROW — and the three-way choice is the trap. 14/5 are
+   measured against the GLYPHS, which is why they are a fixed length: the ink
+   does not care what the row does. The `1.5em` they replaced was reaching for
+   one ROW instead, and it hit one only by the coincidence of a 16px base.
+
+   The row is --midori-row, set by `.cm-line { line-height: var(--midori-row) }`
+   near the top of this file. It was an absolute 24px when these numbers were
+   derived, and it now follows Appearance → Font size, so the rule that
+   paragraph licensed has to be restated: anything sized against the ROW
+   belongs in var(--midori-row), not in px. A px literal was the right answer
+   only while the row could not move; left standing, it is a band that stays
+   24px inside a line box that grew to 30. Things sized against the GLYPHS
+   still belong in px, or in em where they have to track a font-size that is
+   not their own. (The title's pair is the mirror case — it is in em precisely
+   because the title has no fixed row.)
 
    SAME PAIR AS THE CARET. --midori-sel-rise / --midori-sel-drop default to the
    caret's --midori-slot-rise / --midori-slot-drop, which is the point: the
@@ -1156,17 +1173,30 @@ body.is-ios.midori-drawn .midori-selection-handle-end::after {
    settled is which of the two the measurement says each surface does, and that
    is what these two pairs now carry.
 
-   AND ITS BOX IS 22px, NOT THE 24px OF --inline-title-line-height. The same
-   measurement fixes the height: a centred scrim 11px either side of the
-   baseline IS a 22px line box, because a symmetric face puts half the box on
-   each side whatever the leading. The variable says 24. The plugin therefore
-   measures the element instead of trusting the variable and hands the answer
-   in as --midori-title-line-box; see titleLineBox in main.js. The fallback
-   here keeps a build that predates that measurement at 12/12 — 1px proud of
-   the scrim rather than 9px above it. */
+   AND THE TITLE'S BOX IS 22px, NOT THE ROW --inline-title-line-height CLAIMS
+   FOR IT. The same measurement fixes the height: a centred scrim 11px either
+   side of the baseline IS a 22px line box, because a symmetric face puts half
+   the box on each side whatever the leading. The variable says the row — 24px
+   at the 16px base this was measured at, and whatever the row is elsewhere.
+   The plugin therefore measures the element instead of trusting the variable
+   and hands the answer in as --midori-title-line-box; see titleLineBox in
+   main.js. The fallback here keeps a build that predates that measurement at
+   half the row either side — 1px proud of the scrim rather than 9px above it.
+
+   TWO BANDS, TWO VARIABLES, AND THEY ARE NOT THE SAME MEASUREMENT. Everything
+   above is about the TITLE, whose box is measured in JS and arrives as
+   --midori-title-line-box, consumed by the --midori-title-sel-* pair below.
+   --midori-line-box declared here is the PROSE band's box, consumed by the
+   --midori-sel-* pair immediately below it and drawn on .midori-selection and
+   the iOS drag handles. Nothing else in the theme or the plugin sets it. It
+   was written as a literal 24px when the row was a flat 24px at every base,
+   so the two agreed by construction; with the row following the reader's text
+   size they only agree at a 16px base, and the drawn band would stay 24px
+   against a 30px line box at a 20px base. It follows the row because it IS
+   the row. */
 body.is-ios {
   --midori-scrim-lean: 0.357em;
-  --midori-line-box: 24px;
+  --midori-line-box: var(--midori-row);
   --midori-title-scrim-lean: 0px;
   --midori-sel-rise: calc(var(--midori-line-box) / 2 + var(--midori-scrim-lean));
   --midori-sel-drop: calc(var(--midori-line-box) / 2 - var(--midori-scrim-lean));
@@ -1482,9 +1512,12 @@ body {
     no-repeat;
 }
 
-/* Code blocks: 24px lines, and vertical padding a whole row so the block
+/* Code blocks: lines on the row, and vertical padding a whole row so the block
    totals a multiple. min-height must be a multiple too — the stock 38px is
-   the kind of value that silently adds 14px to a short block.
+   the kind of value that silently adds 14px to a short block. Three rows, not
+   a literal 72px: the natural height is already two rows of padding plus at
+   least one row of content, so this floor never binds, but a literal one stops
+   being three rows the moment the reader raises their text size.
 
    THE STRUT HAS TO CARRY THE ALIAS TOO. Every block contributes a strut — an
    invisible inline box in the BLOCK's own font at the block's line-height —
@@ -1515,7 +1548,7 @@ body {
 }
 .markdown-rendered pre {
   padding-block: var(--midori-row);
-  min-height: 72px;
+  min-height: calc(var(--midori-row) * 3);
 }
 .markdown-rendered pre code {
   line-height: var(--midori-row);
@@ -2108,12 +2141,16 @@ body:not(.is-grabbing)
 /* --------------------------------------------------------------------------
    Sidebar structure: a manuscript page, not a control panel.
 
-   Rhythm. The file list runs on the same 24px lattice as the prose: 18px line
-   box plus 3px of padding either side, no bottom margin. Obsidian's stock
-   figures (4px padding + a 2px margin on a ~17px line) land on a 27px row —
-   close enough to look accidental rather than composed. Both platforms are
-   pinned to the same 24px here, so the sidebar and the note agree even though
-   their font sizes differ.
+   Rhythm. The file list runs on a hard 24px lattice: 18px line box plus 3px of
+   padding either side, no bottom margin. Obsidian's stock figures (4px padding
+   + a 2px margin on a ~17px line) land on a 27px row — close enough to look
+   accidental rather than composed. Both platforms are pinned to the same 24px
+   here, so at the default base the sidebar and the note agree even though
+   their font sizes differ. Above it they diverge: the note's row is
+   --midori-row and follows Appearance → Font size, so at a 20px base the note
+   is on 30 and the sidebar is still on 24. That is deliberate for now —
+   whether a file list should grow with the reader's PROSE size is a design
+   question, not a grid bug, and it is not answered here.
 
    Typography carries the hierarchy instead of chrome. Folders take the
    semibold weight and full-strength ink; files sit one step back in muted;
