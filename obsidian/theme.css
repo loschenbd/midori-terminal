@@ -1709,6 +1709,22 @@ body {
   --h4-weight: 500;
   --h1-letter-spacing: -0.01em;
   --h2-letter-spacing: -0.01em;
+
+  /* AND THE LINE HEIGHT, WHICH IS WHERE THE MISSED SELECTOR WAS. app.css
+     applies line-height: var(--hN-line-height) in the same rule that styles
+     .HyperMD-list-line .cm-header-N -- a heading inside a LIST. The theme's
+     own grid rule names .markdown-preview-view h1-h6 and .HyperMD-header-N
+     and does not name .cm-header-N, so those headings kept app.css's 1.2
+     default and sat off the dots: measured at a 16px base, 35.9px for a list
+     h1, 32.4px for an h2, 31.7px for an h3, against a 24px row. Setting the
+     variable reaches every consumer of it at once, which is the whole point
+     of this block. All six levels, because h5 and h6 occur in lists too. */
+  --h1-line-height: var(--midori-row);
+  --h2-line-height: var(--midori-row);
+  --h3-line-height: var(--midori-row);
+  --h4-line-height: var(--midori-row);
+  --h5-line-height: var(--midori-row);
+  --h6-line-height: var(--midori-row);
 }
 
 /* Eyebrow-style H5/H6: small caps tracking like .type-eyebrow on the site */
