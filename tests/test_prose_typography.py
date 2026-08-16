@@ -111,9 +111,58 @@ def test_row_is_one_number():
         ok("the dot grid is expressed in --midori-row")
 
 
+def test_no_stray_grid_literals():
+    """Grid-derived dimensions must use the row variable, not a literal.
+
+    When the row becomes a function of the reader's text size (Task 3), any
+    literal 24px or 48px that measures vertical space or padding will break:
+    the row will grow and the literal won't, pushing lines off the grid.
+
+    Allowances are explicit: --midori-row's own declaration, and
+    body.is-ios --midori-line-box, which is the caret plugin's band constant,
+    measured separately against the title's 22px box, not the row.
+    """
+    # Strip comments: the design record mentions 24px in prose, which is fine.
+    body = re.sub(r"/\*.*?\*/", "", THEME, flags=re.S)
+
+    ALLOWED = (
+        "--midori-row",        # the row's own declaration
+        "--midori-line-box",   # body.is-ios; the caret plugin's band constant,
+                               # measured against the title's 22px box, not the row
+    )
+
+    # SPLIT, DO NOT MATCH. A regex over whole declarations has to guess where
+    # a property name starts, and the obvious guess -- a leading hyphen for
+    # custom properties -- silently skips every unhyphenated name, so
+    # `height: 24px` and `margin: 24px 0 0` slip through. Splitting on the
+    # delimiters CSS actually uses cannot miss one.
+    non_allowed = []
+    for chunk in body.split("}"):
+        if "{" not in chunk:
+            continue
+        _, _, decls = chunk.rpartition("{")
+        for decl in decls.split(";"):
+            prop, sep, value = decl.partition(":")
+            if not sep or prop.strip() in ALLOWED:
+                continue
+            if re.search(r"\b(?:24|48)px\b", value):
+                non_allowed.append(f"{prop.strip()}: {value.strip()}")
+
+    if non_allowed:
+        bad(f"{len(non_allowed)} properties still use literal 24px/48px")
+        for decl in non_allowed[:5]:
+            bad(f"  {decl}")
+        if len(non_allowed) > 5:
+            bad(f"  ... and {len(non_allowed) - 5} more")
+    else:
+        ok("all grid dimensions use var(--midori-row) or calc(...var(--midori-row)...)")
+        ok("  (except body.is-ios --midori-line-box: 24px, which is the caret plugin's constant)")
+
+
 if __name__ == "__main__":
     print("== prose typography ==")
     test_measure()
     test_row_is_one_number()
+    test_no_stray_grid_literals()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)
