@@ -1783,12 +1783,23 @@ a.tag, .cm-hashtag {
   padding-bottom: 0;
 }
 
-/* Inline title matches H1 treatment.
-   Set via --inline-title-font as well as the direct declaration: with a
-   per-vault Font override in Settings → Appearance (textFontFamily), Obsidian
-   drives the title off --font-text and the plain rule alone loses. */
+/* Inline title matches H1 treatment — and now takes it FROM h1.
+
+   The !important is gone. It was there because a per-vault Font override
+   (Settings → Appearance → textFontFamily) drives the title off --font-text,
+   and a plain rule lost. With --h1-font set (see the heading variables above)
+   the title resolves through --inline-title-font -> var(--h1-font) instead, a
+   chain that never reads --font-text. Verified with the override actually set
+   the way app.js sets it, written inline on body: body prose changes face and
+   the title does not, with the !important and without it.
+
+   All three declarations here lose to app.css's .inline-title:not([data-level])
+   at (0,2,0) in the ordinary case — which is why the title rendered at weight
+   700 while this rule said 600, until --h1-weight was set. They are kept as the
+   fallback for the one case that selector excludes: a title carrying
+   data-level, which is how it renders inside embeds and hover popovers. */
 .inline-title {
-  font-family: var(--inline-title-font) !important;
+  font-family: var(--inline-title-font);
   font-weight: 600;
   letter-spacing: -0.01em;
 }
