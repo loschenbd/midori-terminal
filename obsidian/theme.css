@@ -1188,15 +1188,21 @@ body.is-ios .midori-title-selection {
    short of a multiple, so every line after the first heading in a note sat
    half a row off the dots. (h2 at 24+36+12 = 72 happened to work, which is
    what made the bug look intermittent.) Whole rows throughout instead. */
-/* h1–h4 get a 48px line box, h5–h6 a 24px one. That split is forced, not
-   chosen: a line box is max(strut, tallest inline box), and line-height only
-   sets the strut. Measured natural boxes at baseFontSize 14 are h3 26px and
-   h4 24.5px, so `line-height: var(--midori-row)` could never shrink them — proved by
-   setting h3 to 40px (box became exactly 40) and h4 to 16px (box stayed
-   24.5). Only a strut ABOVE the natural box wins, so 48 is the nearest whole
-   row that actually takes. h5/h6 sit under 24 naturally and stay at one row.
-   This is also why the values are safe if the base font size changes: 48 has
-   headroom, where a compensating padding constant would not. */
+/* EVERY HEADING IS ONE ROW OF LINE BOX, h5/h6 included. The second row of
+   vertical space above a heading is margin in reading view and padding in live
+   preview, so a heading block is two whole rows in both panes. Measured at
+   base sizes 14, 16, 20 and 30: exactly 2 rows every time.
+
+   An earlier version of this comment described a 48px LINE BOX for h1-h4 and
+   a 24px one for h5/h6, forced because a line box is max(strut, tallest
+   inline box) and only a strut above the natural box wins. The historical
+   measurement behind it was real — setting h3 to 40px made the box exactly 40,
+   setting h4 to 16px left it at 24.5 — but it does not describe this file any
+   more. line-height here resolves to a LENGTH, and a length inherits, so every
+   inner span of a live-preview heading takes the row as well and the natural
+   box never gets the chance to win. The 48 was true as a BLOCK total at a 16px
+   base: one 24px line box plus 24px of padding. It is 2 rows at every other
+   base, which is the thing that actually needs to hold. */
 .markdown-preview-view :is(h1, h2, h3, h4, h5, h6),
 .HyperMD-header-1, .HyperMD-header-2, .HyperMD-header-3,
 .HyperMD-header-4, .HyperMD-header-5, .HyperMD-header-6 { line-height: var(--midori-row); }
@@ -1645,11 +1651,10 @@ mark,
   fill: var(--background-secondary) !important;
   stroke: var(--divider-color) !important;
 }
-/* Title sits close to the prose: the 24px padding-top on .cm-content /
-   .markdown-preview-sizer above already supplies one full grid row of air,
-   so the title adds none of its own. */
-.inline-title {
-  margin-bottom: 0;
+body {
+  /* Undocumented but consumed by app.css on .inline-title. The sizer's own
+     top padding is already one full grid row of air, so the title adds none. */
+  --inline-title-margin-bottom: 0;
 }
 
 /* HEADING SIZES COMPENSATED FOR SPECTRAL'S X-HEIGHT.
@@ -1682,17 +1687,28 @@ body {
   --h4-size: 1.373em;   /* app.css 1.188 x 1.1556 */
 }
 
-/* Headings in Spectral with the site's display weights */
-.markdown-preview-view h1, .HyperMD-header-1,
-.markdown-preview-view h2, .HyperMD-header-2 {
-  font-family: "Midori Display", ui-serif, Georgia, serif;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-.markdown-preview-view h3, .HyperMD-header-3,
-.markdown-preview-view h4, .HyperMD-header-4 {
-  font-family: "Midori Display", ui-serif, Georgia, serif;
-  font-weight: 500;
+/* HEADINGS THROUGH OBSIDIAN'S OWN VARIABLES, NOT AROUND THEM.
+
+   app.css already reads --hN-font, --hN-weight and --hN-letter-spacing on
+   every heading, in BOTH panes: .HyperMD-header-N in Live Preview and h1-h6 in
+   Reading view are the same declaration block. Setting the variables therefore
+   replaces two rules per level with one, and it is the supported path rather
+   than a specificity fight that has to be re-won every time app.css changes.
+
+   The inline title comes free: app.css defaults --inline-title-font,
+   --inline-title-size and --inline-title-weight to their --h1-* counterparts,
+   so the title follows h1 without a rule of its own. */
+body {
+  --h1-font: "Midori Display", ui-serif, Georgia, serif;
+  --h2-font: "Midori Display", ui-serif, Georgia, serif;
+  --h3-font: "Midori Display", ui-serif, Georgia, serif;
+  --h4-font: "Midori Display", ui-serif, Georgia, serif;
+  --h1-weight: 600;
+  --h2-weight: 600;
+  --h3-weight: 500;
+  --h4-weight: 500;
+  --h1-letter-spacing: -0.01em;
+  --h2-letter-spacing: -0.01em;
 }
 
 /* Eyebrow-style H5/H6: small caps tracking like .type-eyebrow on the site */
@@ -1755,9 +1771,6 @@ a.tag, .cm-hashtag {
    Set via --inline-title-font as well as the direct declaration: with a
    per-vault Font override in Settings → Appearance (textFontFamily), Obsidian
    drives the title off --font-text and the plain rule alone loses. */
-body {
-  --inline-title-font: "Midori Display", ui-serif, Georgia, serif;
-}
 .inline-title {
   font-family: var(--inline-title-font) !important;
   font-weight: 600;
