@@ -1652,6 +1652,36 @@ mark,
   margin-bottom: 0;
 }
 
+/* HEADING SIZES COMPENSATED FOR SPECTRAL'S X-HEIGHT.
+
+   Headings are "Midori Display" (Spectral, x-height 0.450em); body is
+   "Midori Text" (M PLUS 1p, 0.520em). Apparent size follows x-height, not em
+   — which is why every print-size result in the vision literature is stated in
+   x-height rather than points. Set at Obsidian's default em ladder, an h4
+   lands 1.03x body to the eye instead of the 1.19x it claims, and the bottom
+   of the hierarchy stops reading as hierarchy.
+
+   x 1.1556 = 0.520 / 0.450 restores the intended ladder optically. The em
+   numbers now look large; that is the correction, not a mistake.
+
+   Only h1-h4 — h5/h6 are Midori Text and already correct, and are uppercase,
+   where cap-height rather than x-height carries the size.
+
+   THE LINE BOX IS ONE ROW, AND THE COMPENSATION DOES NOT CHANGE IT. Every
+   heading takes line-height: var(--midori-row); the second row of air above a
+   heading is margin (padding, in Live Preview), not line box. Measured at
+   bases 14, 16, 20, 24 and 30, every heading's box stays exactly one row after
+   this change, so nothing here moves the grid. What does change is how far an
+   h1's ink reaches up into the row of air above it: 1.2px before the
+   compensation, 7.1px after, at a 16px base with 24px of margin to absorb it.
+   h2-h4 stay inside their own line box at every base in the clamp. */
+body {
+  --h1-size: 1.870em;   /* app.css 1.618 x 1.1556 */
+  --h2-size: 1.690em;   /* app.css 1.462 x 1.1556 */
+  --h3-size: 1.523em;   /* app.css 1.318 x 1.1556 */
+  --h4-size: 1.373em;   /* app.css 1.188 x 1.1556 */
+}
+
 /* Headings in Spectral with the site's display weights */
 .markdown-preview-view h1, .HyperMD-header-1,
 .markdown-preview-view h2, .HyperMD-header-2 {

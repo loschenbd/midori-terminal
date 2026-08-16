@@ -224,6 +224,32 @@ def test_row_is_an_even_number_of_pixels():
         ok(f"all rows across {BASES[0]}-{BASES[-1]}px are even")
 
 
+# Obsidian's defaults, in em of the base size.
+OBSIDIAN_H = {1: 1.618, 2: 1.462, 3: 1.318, 4: 1.188}
+
+
+def test_heading_ladder_is_optical():
+    """Each heading should be as much BIGGER TO THE EYE as its em says.
+
+    Spectral carries 0.450 of x-height per em against Midori Text's 0.520, so
+    a heading set at the app's default em is 13.5% smaller optically than the
+    ladder claims. The test is on x-height ratio, not on em.
+    """
+    for level, default in OBSIDIAN_H.items():
+        raw = theme_var(f"--h{level}-size")
+        em = em_value(raw)
+        if em is None:
+            bad(f"--h{level}-size is {raw!r}; at Obsidian's default {default}em "
+                f"the visual step is {default * X_SPECTRAL / X_MPLUS:.2f}x body, "
+                f"not {default:.2f}x")
+            continue
+        visual = em * X_SPECTRAL / X_MPLUS
+        if abs(visual - default) <= 0.02:
+            ok(f"h{level} {raw} reads {visual:.2f}x body (intended {default:.2f}x)")
+        else:
+            bad(f"h{level} {raw} reads {visual:.2f}x body, intended {default:.2f}x")
+
+
 if __name__ == "__main__":
     print("== prose typography ==")
     test_measure()
@@ -231,5 +257,6 @@ if __name__ == "__main__":
     test_no_stray_grid_literals()
     test_leading_holds_across_the_slider()
     test_row_is_an_even_number_of_pixels()
+    test_heading_ladder_is_optical()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)
