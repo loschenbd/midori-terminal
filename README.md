@@ -702,7 +702,7 @@ Residual gotchas:
   rested on an empty line. Its indent selector was also "the line after a
   blank line," which is every heading in a real note. The theme now owns
   paragraph rhythm directly: the caret's blank line opens to exactly one row
-  (24px) rather than `normal`, and indents are 2em on paragraphs only —
+  rather than `normal`, and indents are 2em on paragraphs only —
   measured 0 on headings, list lines and blanks. Both defects were fixable
   only by whoever owns the grid, which is the argument for the theme owning
   it rather than delegating to a plugin that cannot see it.

@@ -122,13 +122,20 @@ def test_row_is_one_number():
 def test_no_stray_grid_literals():
     """Grid-derived dimensions must use the row variable, not a literal.
 
-    When the row becomes a function of the reader's text size (Task 3), any
-    literal 24px or 48px that measures vertical space or padding will break:
-    the row will grow and the literal won't, pushing lines off the grid.
+    Now that the row is a function of the reader's text size, any literal
+    multiple of 24px that measures vertical space or padding will break: the
+    row grows and the literal does not, pushing lines off the grid.
 
-    Allowances are explicit: --midori-row's own declaration, and
-    body.is-ios --midori-line-box, which is the caret plugin's band constant,
-    measured separately against the title's 22px box, not the row.
+    THIS CHECKS THE MULTIPLES IT NAMES, NOT ALL px. The stylesheet is full of
+    legitimate px — hairlines, glyph measurements, knob diameters — so the
+    pattern is the specific values a 24px grid produces (24, 48, 72, 96) and
+    nothing else. A grid literal at some other multiple would still slip
+    through; widening this to every px literal would drown in false positives.
+
+    Allowances are explicit: --midori-row's own declaration, which is the
+    fallback the @supports block refines (see test_row_has_a_plain_fallback),
+    and --dotgrid-offset-y, which is an offset FROM the historical row rather
+    than a length on the grid.
     """
     # Strip comments: the design record mentions 24px in prose, which is fine.
     body = re.sub(r"/\*.*?\*/", "", THEME, flags=re.S)
@@ -136,8 +143,6 @@ def test_no_stray_grid_literals():
     ALLOWED = (
         "--midori-row",        # the row's own declaration
         "--dotgrid-offset-y",  # was measured against 24px; now an offset from it
-        "--midori-line-box",   # body.is-ios; the caret plugin's band constant,
-                               # measured against the title's 22px box, not the row
     )
 
     # SPLIT, DO NOT MATCH. A regex over whole declarations has to guess where
@@ -154,18 +159,80 @@ def test_no_stray_grid_literals():
             prop, sep, value = decl.partition(":")
             if not sep or prop.strip() in ALLOWED:
                 continue
-            if re.search(r"\b(?:24|48)px\b", value):
+            if re.search(r"\b(?:24|48|72|96)px\b", value):
                 non_allowed.append(f"{prop.strip()}: {value.strip()}")
 
     if non_allowed:
-        bad(f"{len(non_allowed)} properties still use literal 24px/48px")
+        bad(f"{len(non_allowed)} properties still use a literal 24/48/72/96px")
         for decl in non_allowed[:5]:
             bad(f"  {decl}")
         if len(non_allowed) > 5:
             bad(f"  ... and {len(non_allowed) - 5} more")
     else:
-        ok("all grid dimensions use var(--midori-row) or calc(...var(--midori-row)...)")
-        ok("  (except body.is-ios --midori-line-box: 24px, which is the caret plugin's constant)")
+        ok("no declaration outside the two allowances uses a literal "
+           "24/48/72/96px")
+
+
+def test_row_has_a_plain_fallback():
+    """A plain --midori-row must exist OUTSIDE the @supports block.
+
+    The whole reason the row is written as one plain declaration refined by a
+    feature query, rather than two declarations in a row, is that a custom
+    property is a token stream: an engine that cannot parse round() would keep
+    the unparseable value and hand it to all ~45 consumers, and line-height
+    would compute to `normal` rather than to 24px. The @supports form degrades
+    instead — but only because the plain declaration is there to degrade TO.
+
+    NOTHING ELSE IN THIS FILE CAN SEE IT GO. theme_var() returns the LAST
+    match, which is the copy inside @supports, so deleting the base
+    declaration leaves every other assertion here green while an engine
+    without round() loses the grid entirely. Deleting the @supports block is
+    already caught; this is the other half.
+
+    So: excise the @supports block from the source and check what is left.
+    """
+    body = re.sub(r"/\*.*?\*/", "", THEME, flags=re.S)
+
+    # Excise @supports blocks by brace-counting from the at-rule. A regex
+    # cannot do this: the block contains nested {} of its own.
+    out, i = [], 0
+    while True:
+        at = body.find("@supports", i)
+        if at == -1:
+            out.append(body[i:])
+            break
+        out.append(body[i:at])
+        depth, j = 0, body.find("{", at)
+        if j == -1:
+            break
+        while j < len(body):
+            if body[j] == "{":
+                depth += 1
+            elif body[j] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        i = j + 1
+    outside = "".join(out)
+
+    hits = re.findall(r"--midori-row\s*:\s*([^;]+);", outside)
+    if not hits:
+        bad("no --midori-row declaration outside @supports: an engine without "
+            "round() gets an undefined row, and ~45 consumers fall back to "
+            "their initial values instead of to the historical 24px grid")
+        return
+    plain = [h.strip() for h in hits if re.fullmatch(r"\d+px", h.strip())]
+    if not plain:
+        bad(f"--midori-row outside @supports is {hits[-1].strip()!r}: the "
+            "fallback has to be a plain px literal, or the engine that cannot "
+            "parse round() cannot parse the fallback either")
+        return
+    if int(plain[-1][:-2]) % 2 != 0:
+        bad(f"the --midori-row fallback is {plain[-1]}, which is odd; "
+            "--dotgrid-offset-y adds half the row")
+        return
+    ok(f"--midori-row falls back to a plain {plain[-1]} outside @supports")
 
 
 def row_px(base):
@@ -322,25 +389,40 @@ def test_indent_excludes_non_prose():
 
 
 def test_zen_header_rules_are_gated():
-    """A zen rule that compensates for the view header must check it exists.
+    """A zen rule compensating for the view header must check BOTH conditions.
 
     app.css: `body:not(.show-view-header):not(.is-phone) .view-header
-    { display: none }`. With the setting off there is no header, so an
-    ungated `padding-top: var(--header-height)` adds a header's worth of
-    empty space above the note and shifts the dot grid to match.
+    { display: none }`. TWO negations, so the header is drawn whenever
+    .show-view-header OR .is-phone holds, and a gate has to name both.
+
+    One class is not enough, and each half fails on a different platform.
+    Ungated, the desktop with the setting off gets a header's worth of empty
+    space above the note plus a dot grid shifted to match it. Gated on
+    .show-view-header alone, a PHONE with the setting off still draws the
+    header and no longer compensates, so the note's first line sits
+    --header-height (40px there) too high, under the controls — the same
+    defect inverted. An earlier version of this test asked only that
+    "show-view-header" was PRESENT, which `body.zen-mode.show-view-header`
+    satisfies, so it could not tell the correct gate from the half of it that
+    regressed phones. Both names, or it is not a gate.
     """
     ungated = []
     for selector, decls in rules():
         if "body.zen-mode" not in selector:
             continue
-        if "--header-height" in decls and "show-view-header" not in selector:
-            ungated.append(selector[:70])
+        if "--header-height" not in decls:
+            continue
+        missing = [cls for cls in ("show-view-header", "is-phone")
+                   if cls not in selector]
+        if missing:
+            ungated.append((", ".join("." + c for c in missing), selector[:70]))
     if ungated:
-        for sel in ungated:
-            bad(f"zen rule uses --header-height but is not gated on "
-                f".show-view-header: {sel}")
+        for missing, sel in ungated:
+            bad(f"zen rule uses --header-height but its gate omits "
+                f"{missing}: {sel}")
     else:
-        ok("every zen rule that compensates for the view header checks it exists")
+        ok("every zen rule that compensates for the view header names both "
+           "conditions app.css negates")
 
 
 if __name__ == "__main__":
@@ -348,6 +430,7 @@ if __name__ == "__main__":
     test_measure()
     test_row_is_one_number()
     test_no_stray_grid_literals()
+    test_row_has_a_plain_fallback()
     test_leading_holds_across_the_slider()
     test_row_is_an_even_number_of_pixels()
     test_heading_ladder_is_optical()
