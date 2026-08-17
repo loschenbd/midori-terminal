@@ -81,6 +81,24 @@ settings:
         max: 1.5
         step: 0.05
     -
+        id: midori-set-leading
+        title: Leading
+        description: A multiple of the text size. The row is rounded up to an even number of pixels whatever you pick, so the dot grid holds. No experiment distinguishes 1.4 from 1.5 from 1.6.
+        type: variable-number-slider
+        default: 1.5
+        min: 1.4
+        max: 2
+        step: 0.05
+    -
+        id: midori-set-heading-scale
+        title: Heading scale
+        description: Multiplies the heading ladder. Capped at 1.1 because an h1's Live Preview line box already floors 1px over a row at the shipped size.
+        type: variable-number-slider
+        default: 1
+        min: 0.85
+        max: 1.1
+        step: 0.05
+    -
         id: midori-accent
         title: Accent
         description: The eight tokens the palette already has. It is a select rather than a picker because the palette is closed; see the README for the argument.
@@ -185,6 +203,8 @@ body {
      number is defensible rather than optimal, and it is not going to move on
      evidence. It moves, if at all, because the READER's base size moved — see
      the @supports block below, which is where that happens. */
+  --midori-set-leading: 1.5;
+  --midori-set-heading-scale: 1;
   --midori-row: 24px;
 
   /* Was a constant measured against a 24px row. With a row that follows the
@@ -221,7 +241,7 @@ body {
    all 21 of them. Leading runs 1.517-1.579 above the floor region. */
 @supports (line-height: round(up, 25px, 2px)) {
   body {
-    --midori-row: round(up, max(24px, var(--font-text-size) * 1.5), 2px);
+    --midori-row: round(up, max(24px, var(--font-text-size) * var(--midori-set-leading)), 2px);
   }
 }
 
@@ -2040,10 +2060,10 @@ body {
    compensation, 7.1px after, at a 16px base with 24px of margin to absorb it.
    h2-h4 stay inside their own line box at every base in the clamp. */
 body {
-  --h1-size: 1.870em;   /* app.css 1.618 x 1.1556 */
-  --h2-size: 1.690em;   /* app.css 1.462 x 1.1556 */
-  --h3-size: 1.523em;   /* app.css 1.318 x 1.1556 */
-  --h4-size: 1.373em;   /* app.css 1.188 x 1.1556 */
+  --h1-size: calc(1.870em * var(--midori-set-heading-scale));   /* app.css 1.618 x 1.1556 */
+  --h2-size: calc(1.690em * var(--midori-set-heading-scale));   /* app.css 1.462 x 1.1556 */
+  --h3-size: calc(1.523em * var(--midori-set-heading-scale));   /* app.css 1.318 x 1.1556 */
+  --h4-size: calc(1.373em * var(--midori-set-heading-scale));   /* app.css 1.188 x 1.1556 */
 }
 
 /* HEADINGS THROUGH OBSIDIAN'S OWN VARIABLES, NOT AROUND THEM.
