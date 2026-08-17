@@ -149,6 +149,11 @@ def test_measure():
         bad(f"--file-line-width is {raw!r}: must be a multiple of "
             "--font-text-size so it tracks the reader's text size")
         return
+    css_adv = theme_var("--midori-avg-advance")
+    if css_adv is None or abs(float(css_adv) - AVG_ADVANCE_EM) > 1e-9:
+        bad(f"--midori-avg-advance is {css_adv!r} but the suite measured "
+            f"{AVG_ADVANCE_EM}; the cpl conversion and the CSS disagree")
+        return
     b = settings_block()
     s = next((x for x in (b or {}).get("settings", [])
               if x["id"] == "midori-set-measure"), None)
@@ -569,6 +574,46 @@ def test_settings_ids_are_real():
         ok("every @settings control maps to a real variable or class")
 
 
+def test_settings_defaults_match_the_css():
+    """Every variable control's `default:` equals the value the CSS ships.
+
+    Style Settings persists only DEVIATIONS from the shipped stylesheet, so
+    these two numbers are one fact written twice: the block's `default:` is
+    what the panel shows and what "reset" restores, and the CSS declaration is
+    what a reader who never opens settings actually gets. Let them drift and
+    the panel confidently reports a value the theme is not using -- with no
+    error anywhere, because each is internally consistent.
+    """
+    b = settings_block()
+    if b is None:
+        bad("no @settings block to check")
+        return
+    mismatched = []
+    for s in b["settings"]:
+        if not s["type"].startswith("variable-") or "default" not in s:
+            continue
+        css = theme_var(f"--{s['id']}")
+        if css is None:
+            mismatched.append(f"--{s['id']} is declared nowhere in the theme")
+            continue
+        # A control can declare `format: em` etc., in which case the CSS
+        # carries the unit and the block's default is the bare number -- strip
+        # it before comparing rather than let a future unit-bearing control
+        # (Task 3's line-height, e.g.) false-positive here.
+        css_cmp = css.strip()
+        fmt = s.get("format")
+        if fmt and css_cmp.endswith(fmt):
+            css_cmp = css_cmp[: -len(fmt)]
+        if css_cmp != s["default"].strip():
+            mismatched.append(f"--{s['id']} ships {css.strip()!r} but the "
+                              f"@settings block advertises {s['default']!r}")
+    if mismatched:
+        for m in mismatched:
+            bad(m)
+    else:
+        ok("every control's default matches the value the CSS ships")
+
+
 def test_inputs_are_never_read_by_a_real_property():
     """An input may only be read by another custom property.
 
@@ -598,6 +643,7 @@ if __name__ == "__main__":
     test_measure()
     test_settings_block_parses()
     test_settings_ids_are_real()
+    test_settings_defaults_match_the_css()
     test_inputs_are_never_read_by_a_real_property()
     test_row_is_one_number()
     test_no_stray_grid_literals()
