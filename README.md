@@ -604,12 +604,18 @@ Residual gotchas:
   its bottom edge tracks the descender depth to within 0.6px) and the only way
   it can enclose the descenders it sits beside. Text hangs from the bottom of
   its cell, so nothing sized to the ink can also be dot-aligned.
-- **px in the editor, em in the title, and the distinction is load-bearing.**
-  `.cm-line` has an absolute `line-height: 24px` that does *not* move with
-  Appearance → Font size, so anything sized against the ROW is px. The title
-  has no fixed row and its size *is* a user setting, so its slot is em. The
-  plugin makes that expressible by copying the title's font size onto the
-  elements it draws, which live outside `.inline-title`.
+- **The row was fixed, then it wasn't, and a px literal copied from it is now
+  the trap.** `.cm-line`'s `line-height` used to be an absolute `24px`; it is
+  now `var(--midori-row)`, which follows both Appearance → Font size and the
+  Leading setting. A px literal sized against the row was the right answer
+  only while the row could not move — left standing, it is a band that stays
+  24px inside a line box that has grown to 30, or further still at a high
+  Leading and a large font size. Anything sized against the ROW has to
+  reference `var(--midori-row)` itself, never a px number copied from what it
+  once resolved to. The title has no row at all, fixed or otherwise, and its
+  size *is* a user setting, so its slot is em. The plugin makes that
+  expressible by copying the title's font size onto the elements it draws,
+  which live outside `.inline-title`.
 - **The properties widget opts out, onto its own paper.** Its rows are flex
   boxes full of inputs, icons and pills whose heights Obsidian derives from
   content the theme never sees. The block's *outer* box is a whole number of
@@ -630,19 +636,24 @@ Residual gotchas:
   real is the speed/preference split — longer lines are read faster, moderate
   lines are preferred, and subjective ratings do not track performance — and a
   writing surface, sat at for hours, takes the preference side. `theme.css`
-  sets `--file-line-width: calc(var(--font-text-size) * 34)`: 34 times
-  `--font-text-size`, the variable Obsidian's own `updateFontSize()` writes on
-  `<body>` from the reader's text-size slider, so the line grows and shrinks
-  with the reader's setting rather than staying pinned to the size one person
-  happened to use.
+  sets `--file-line-width: calc(var(--font-text-size) * var(--midori-set-measure)
+  * var(--midori-avg-advance))`: `--font-text-size` — the variable Obsidian's
+  own `updateFontSize()` writes on `<body>` from the reader's text-size slider
+  — times the reader's chosen measure (the Line length setting, 40–100,
+  defaulting to 70) times `--midori-avg-advance` (0.4818, M PLUS 1p's average
+  glyph advance, which converts characters to em). So the line grows and
+  shrinks with the reader's font size AND their chosen measure now, rather
+  than staying pinned to the single `34em` constant (≈70.6 characters) one
+  person happened to use.
 - **A grid tuned to one base size is tuned to one person.** 24px is exactly
   1.5 leading at a 16px base and 1.33 at 18px — under the WCAG 1.4.8 policy
   floor as soon as a reader raises their text size, with no signal that the
-  theme had an opinion. The row now follows `--font-text-size` via
-  `round(up, max(24px, var(--font-text-size) * 1.5), 2px)`, gated behind
-  `@supports` because a custom property parses as a token stream and a plain
-  second declaration hands every consumer an unparseable value rather than
-  degrading gracefully. The dot offset became
+  theme had an opinion. The row now follows `--font-text-size` — and, since
+  Leading itself later became a setting, the reader's chosen leading too —
+  via `round(up, max(24px, var(--font-text-size) * var(--midori-set-leading)),
+  2px)`, gated behind `@supports` because a custom property parses as a token
+  stream and a plain second declaration hands every consumer an unparseable
+  value rather than degrading gracefully. The dot offset became
   `calc(10.98px + (var(--midori-row) - 24px) / 2)` — an offset from the
   historical row rather than a constant measured against it — and the
   baseline-vs-dot phase was measured across the app's full 10–30px clamp: one
@@ -656,11 +667,15 @@ Residual gotchas:
   stopped reading as hierarchy. `x1.1556 = 0.520 / 0.450` restores it:
   `--h1-size` through `--h4-size` now ship 1.870/1.690/1.523/1.373em; h5/h6
   stay untouched — already Midori Text, and uppercase, where cap-height
-  carries the size, not x-height. The line box does not move: every heading
+  carries the size, not x-height. The strut does not move: every heading
   keeps `line-height: var(--midori-row)`, one row at every base tested
-  (14/16/20/24/30px) in both panes. What moves is how far the ink reaches into
-  the row of air above — an h1 at a 16px base now reaches 7.1px into its
-  24px margin, against 1.2px before.
+  (14/16/20/24/30px). h2–h4 stay inside it there, in both panes, so for them
+  nothing here moves the grid. **h1 does not** — it is the largest size this
+  compensation produces, and a live sweep found its glyph box overflowing the
+  strut in Live Preview at the shipped scale; see the known open item under
+  Heading scale in the Settings section. What moves for every heading is how
+  far the ink reaches into the row of air above — an h1 at a 16px base now
+  reaches 7.1px into its 24px margin, against 1.2px before.
 - **A nominal contrast ratio overstates legibility at 1x, but less than the
   premise assumed.** At 81 ppi a stem is about a pixel wide, and the
   antialiaser spends most of a glyph's pixels on partial coverage — the
@@ -719,6 +734,104 @@ Residual gotchas:
   declined. Paragraph indents moved IN, not because evidence appeared, but
   because the plugin providing them broke the dot grid, and only the grid's
   owner could fix that — see the bullet above.
+
+### Settings
+
+Install the **Style Settings** community plugin and the theme's controls appear
+under Settings → Style Settings → Midori. Without it the block is an inert CSS
+comment and the theme behaves exactly as it does with every setting at its
+default — nothing is required.
+
+The line the settings draw: **what the evidence review called preference is
+exposed; what it called evidence is derived and is not.** Paragraph rhythm is a
+setting because the review found nothing either way. The ×1.1556 heading
+compensation is not, because it is M PLUS 1p's x-height over Spectral's.
+
+| Setting | Default | Range |
+|---|---|---|
+| Line length | 70 characters | 40–100 |
+| Paragraph rhythm | Indent | Indent / Space between / Both |
+| Paragraph indent | 2em | 0–4em |
+| Dot grid visibility | 100% | 0–150%, 0 turns it off |
+| Accent | Sage | the eight palette tokens |
+| Leading | 1.5 | 1.4–2 |
+| Heading scale | 1 | 0.85–1.1 |
+
+**Known open item, under Heading scale.** A sweep against a running Obsidian
+measured the Live Preview h1's line box at 49px against a 24px row — two rows
+plus one, not one row plus a pixel. `line-height` only sets the strut (one
+row, 24px at the shipped base), but a line box is `max(strut, tallest inline
+box)`, and at heading scale 1 the h1's own 29.92px font produces a glyph box
+that overflows the strut, so the box grows to fill two rows and spills one
+pixel past. It clears at heading scale ≤ 0.9 (font ≤ 26.928px) and fails at
+≥ 0.95 — which brackets the shipped default of 1 on the failing side, so this
+is live at the theme's own defaults, not just at the slider's top end.
+`line-height: calc(var(--midori-row) * 2)` would seat it on two rows exactly,
+at the cost of making every h1 two rows tall; that is a real design decision
+and it has not been taken here. Reproduce it with the sweep in "Checking the
+grid in the running app" below.
+
+**Not every setting is caught, and one of them is not caught at all.** Line
+length, paragraph indent and dot grid visibility have no path to a row-sized
+property — they change wrap width, horizontal indent and opacity
+respectively — so no value a reader picks can move the grid. Paragraph
+rhythm does move content vertically (`space`/`both` open a
+`margin-block: 0 var(--midori-row)` gap after each paragraph), but the three
+modes only ever select between 0 and one whole row; no reader-chosen number
+reaches that property, so there is nothing for a rounding function to catch.
+Leading is the one input that flows into a row-sized property as a
+continuous value, and it is caught: it reaches the page only through
+`round(up, max(24px, …), 2px)`. Two pixels rather than one because the dot
+offset adds half the row's growth, so an odd row lands the baseline 0.50px
+off.
+
+**Heading scale is the exception, and the note above is what it costs.** It
+multiplies a font-size, not a row, and a line box is
+`max(strut, tallest inline box)` — a glyph box large enough overflows the
+strut no matter what the row is doing, and nothing between the slider and
+the font-size passes through a `round()` to stop it. That is why the h1
+sits a pixel over two rows at the shipped default rather than exactly one,
+and why the slider is capped at 1.1 rather than something larger — the cap
+narrows the exposure; it does not close it.
+
+Line length is in characters because that is the unit a writer thinks in and
+the unit the research is reported in — not because characters is established as
+what the eye responds to. That claim was refuted 0–3 in the review and the
+question is open. The range spans the two ends of the one finding that
+survived: 40 is under every proposed preference band, 100 covers the ~95 cpl
+speed peak and Obsidian's stock ~91.
+
+The settings are swept across their range against a running app the same way
+the grid itself is checked — see the next section rather than a second set of
+instructions here.
+
+### Checking the grid in the running app
+
+Static tests read the stylesheet; they cannot see what the browser laid out.
+Two real defects survived nine tasks and a whole-plan review because the
+offenders were CodeMirror's own elements, which a theme-only harness does not
+build. **Open a note with headings, a list, a code block and a footnote
+reference in Live Preview first** — the sweep measures what is on screen, and
+an empty or trivial note proves nothing. To sweep the settings against the
+live app:
+
+    open -a Obsidian --args --remote-debugging-port=9222
+    python3 -m venv /tmp/cdpenv && /tmp/cdpenv/bin/pip install websocket-client
+    /tmp/cdpenv/bin/python tests/check_rendered_grid.py
+
+It walks leading x base size — 63 combinations — and asserts the row is always
+an even number of pixels and every line box is a whole number of rows. It is
+not part of `tests/lint.sh` because it needs a running app.
+
+On its first live run this tool reported a confident all-clear while
+measuring a twelve-line note in one window, and a second window with a
+31-line note found 25 of 63 combinations off the lattice — a false green
+driven entirely by which of several open windows CDP's target list happened
+to list first. It now enumerates every open Obsidian window, prints a table
+of each one's title and `.cm-line` count, measures whichever has the most
+lines, and refuses to run at all — exiting non-zero — if that window has
+fewer than 15 lines. Watch that table: it is how you confirm the note that
+got graded is the one you meant.
 
 ## Cursor / VS Code notes
 

@@ -15,6 +15,118 @@
    See build-fonts.py for why 45%, and why the interface keeps the stock faces.
    ========================================================================== */
 
+/* THE SETTING AND THE VALUE ARE NEVER THE SAME VARIABLE.
+
+   Style Settings writes `--<id>` on body from the block below. Those are
+   INPUTS, named --midori-set-*. The theme never reads one directly; it reads a
+   DERIVED variable computed from it, and
+   test_inputs_are_never_read_by_a_real_property holds that line. For the
+   row-controlling values that derivation is where clamping and round() live --
+   --midori-row's is round(up, max(24px, var(--font-text-size) *
+   var(--midori-set-leading)), 2px).
+
+   INDIRECTION ALONE DOES NOT MEAN QUANTISATION. --midori-set-heading-scale is
+   DERIVED too -- it feeds --h1-size through a plain calc(), never a round() --
+   and a large enough glyph box overflows its strut regardless: a line box is
+   max(strut, tallest inline box), font-size is not a row-sized property, and
+   nothing here clamps it into one. See the h1 note in the README's Settings
+   section for the measured cost. The guard is specific to the properties
+   round() was written to protect, not a property every derived variable gets
+   for free.
+
+   The block is a CSS comment, so with the plugin absent it is inert and the
+   theme behaves exactly as it did before any of this existed. Defaults live in
+   the CSS below, never only in the block -- Style Settings persists deviations
+   only, so a reader who never opens settings gets the shipped design, and
+   uninstalling the plugin restores it rather than orphaning state. */
+
+/* @settings
+
+name: Midori
+id: midori
+settings:
+    -
+        id: midori-measure-heading
+        title: Measure and rhythm
+        type: heading
+        level: 2
+        description: What the evidence review calls preference. What it calls evidence is derived and not exposed.
+    -
+        id: midori-set-measure
+        title: Line length
+        description: Characters per line. Longer lines are read faster; moderate lines are preferred; ratings do not track performance. 70 is the preference end, 95 the speed peak.
+        type: variable-number-slider
+        default: 70
+        min: 40
+        max: 100
+        step: 1
+    -
+        id: midori-set-indent
+        title: Paragraph indent
+        description: The first-line indent, in em. 0 turns it off without changing the rhythm mode.
+        type: variable-number-slider
+        default: 2
+        min: 0
+        max: 4
+        step: 0.5
+        format: em
+    -
+        id: midori-rhythm
+        title: Paragraph rhythm
+        description: Indent is a novel's; space is the web's; both marks the boundary twice. The evidence review found nothing either way, which is why this is a setting.
+        type: class-select
+        allowEmpty: false
+        default: midori-rhythm-indent
+        options:
+            - midori-rhythm-indent
+            - midori-rhythm-space
+            - midori-rhythm-both
+    -
+        id: midori-set-dot-alpha
+        title: Dot grid visibility
+        description: A multiplier on each mode's tuned opacity, so light and dark keep their relationship. 0 turns the grid off.
+        type: variable-number-slider
+        default: 1
+        min: 0
+        max: 1.5
+        step: 0.05
+    -
+        id: midori-set-leading
+        title: Leading
+        description: A multiple of the text size. The row is rounded up to an even number of pixels whatever you pick, so the dot grid holds. No experiment distinguishes 1.4 from 1.5 from 1.6.
+        type: variable-number-slider
+        default: 1.5
+        min: 1.4
+        max: 2
+        step: 0.05
+    -
+        id: midori-set-heading-scale
+        title: Heading scale
+        description: Multiplies the heading ladder. Capped at 1.1 because at the shipped default the h1's glyph box already overflows its strut into a second row; nothing here quantises that.
+        type: variable-number-slider
+        default: 1
+        min: 0.85
+        max: 1.1
+        step: 0.05
+    -
+        id: midori-accent
+        title: Accent
+        description: The eight tokens the palette already has. It is a select rather than a picker because the palette is closed; see the README for the argument.
+        type: class-select
+        allowEmpty: false
+        default: midori-accent-sage
+        options:
+            - midori-accent-sage
+            - midori-accent-mint
+            - midori-accent-olive
+            - midori-accent-ochre
+            - midori-accent-clay
+            - midori-accent-wine
+            - midori-accent-indigo
+            - midori-accent-purple
+
+*/
+
 body {
   /* Prose is the SANS face and the interface is the SERIF one — that is not a
      transposition. Note titles are Spectral (see --inline-title-font) against
@@ -61,7 +173,37 @@ body {
      before it ever reaches a consumer. 34 / 0.4818 average advance = 70
      characters, at any base size. See
      docs/superpowers/specs/2026-08-15-prose-typography-evidence.md */
-  --file-line-width: calc(var(--font-text-size) * 34);
+
+  /* THE MEASURE IS A SETTING, IN CHARACTERS, HELD IN EM.
+
+     34em was 70.6 cpl: cpl = em / 0.4818, where 0.4818 is M PLUS 1p's average
+     advance measured with a BoundsPen over a prose sample (not a pangram --
+     pangrams over-weight rare letters and run ~4% narrow). The slider is in
+     characters because that is what a writer thinks in and what the research
+     is reported in. It is NOT a claim that characters is the variable the eye
+     responds to: the evidence review refuted characters-over-visual-angle 0-3
+     and lists the question as open.
+
+     The advance constant is font-specific and is only valid because the body
+     font is fixed. If fonts are ever exposed, measure it from the chosen face.
+
+     Numeric, not em: an em here resolves against .cm-line's own font-size, and
+     .cm-line is also the heading element, so an em measure hands an h1 an 880px
+     column against a body line's 544px. */
+  --midori-avg-advance: 0.4818;
+  --midori-set-measure: 70;
+  --file-line-width: calc(var(--font-text-size)
+                          * var(--midori-set-measure)
+                          * var(--midori-avg-advance));
+
+  /* DOT VISIBILITY, AS A MULTIPLIER AND NOT A VALUE. 0.46 on paper against
+     0.1748 on dark paper is not an accident -- each was tuned against its own
+     ground and against the halation around light text on dark. One flat alpha
+     slider would flatten that. 0 turns the grid off, which is the single
+     largest lever for anyone who wants this typography without visible dots. */
+  --midori-set-dot-alpha: 1;
+  --dotgrid-dot: rgba(var(--dotgrid-dot-rgb),
+                      calc(var(--dotgrid-dot-alpha) * var(--midori-set-dot-alpha)));
 
   /* THE GRID ROW. 24px at a 16px base is a leading of exactly 1.50 — above the
      CSS ~1.2 floor that Rello et al. actually measured (their harmful
@@ -71,6 +213,8 @@ body {
      number is defensible rather than optimal, and it is not going to move on
      evidence. It moves, if at all, because the READER's base size moved — see
      the @supports block below, which is where that happens. */
+  --midori-set-leading: 1.5;
+  --midori-set-heading-scale: 1;
   --midori-row: 24px;
 
   /* Was a constant measured against a 24px row. With a row that follows the
@@ -107,7 +251,9 @@ body {
    all 21 of them. Leading runs 1.517-1.579 above the floor region. */
 @supports (line-height: round(up, 25px, 2px)) {
   body {
-    --midori-row: round(up, max(24px, var(--font-text-size) * 1.5), 2px);
+    --midori-row: round(up,
+                        max(24px, var(--font-text-size) * var(--midori-set-leading)),
+                        2px);
   }
 }
 
@@ -142,6 +288,14 @@ body {
 
   --midori-indigo-deep: #2d4259;        /* --link-color-hover */
   --midori-sage-hover: #4a5749;         /* --accent-hover */
+
+  /* THE ACCENT ROLE, ONE STEP BACK FROM THE TOKEN. Roles pointed straight at
+     --midori-sage, so switching accent meant rewriting a dozen assignments.
+     They point here instead, and the class-select below moves this one
+     variable. Nothing about the palette changes -- the options are the tokens
+     that already exist. */
+  --midori-accent: var(--midori-sage);
+  --midori-accent-hover: var(--midori-sage-hover);
   --midori-mythic: #6b5f52;             /* --accent-mythic */
   --midori-wine-lift: #9d6161;          /* ANSI 9; Obsidian's "pink" hue slot */
 
@@ -171,22 +325,27 @@ body {
   --text-muted: #524d46;  /* --muted */
   --text-faint: #8a847b;
 
-  --text-accent: var(--midori-sage);             /* --accent (sage) */
-  --text-accent-hover: var(--midori-sage-hover); /* --accent-hover */
-  --interactive-accent: var(--midori-sage);
-  --interactive-accent-hover: var(--midori-sage-hover);
+  --text-accent: var(--midori-accent);             /* --accent (sage) */
+  --text-accent-hover: var(--midori-accent-hover); /* --accent-hover */
+  --interactive-accent: var(--midori-accent);
+  --interactive-accent-hover: var(--midori-accent-hover);
 
   --link-color: var(--midori-indigo);                    /* indigo — internal links */
   --link-color-hover: var(--midori-indigo-deep);         /* indigo deep */
-  --link-external-color: var(--midori-sage);             /* --accent (sage) — external links */
-  --link-external-color-hover: var(--midori-sage-hover); /* --accent-hover */
+  --link-external-color: var(--midori-accent);             /* --accent (sage) — external links */
+  --link-external-color-hover: var(--midori-accent-hover); /* --accent-hover */
   --link-unresolved-color: var(--midori-mythic);         /* --accent-mythic */
 
-  --text-selection: rgba(95, 111, 94, 0.25); /* --accent (sage) @ 25% */
+  /* THE SELECTION BAND FOLLOWS THE ACCENT, with the same fallback discipline as
+     --midori-accent-hover. A custom property has no two-declaration fallback, so
+     the plain rgba() below is not a leftover -- it is what an engine without
+     color-mix actually lands on. Delete it and the band computes to its initial
+     value rather than to sage. */
+  --text-selection: rgba(95, 111, 94, 0.25);
   --text-highlight-bg: #e2d4b9;              /* ochre wash — --color-yellow @ 28% on paper */
 
   --hr-color: rgba(60, 58, 54, 0.1);
-  --blockquote-border-color: var(--midori-clay); /* --accent-warm */
+  --blockquote-border-color: var(--midori-accent); /* --accent (sage) */
   --code-background: #faf9f6;
   /* Syntax colours lifted straight from ghostty/themes/midori-paper so a fence
      in Obsidian reads the same as the same code in the terminal. Each token is
@@ -231,11 +390,11 @@ body {
   --callout-quote: 82, 77, 70;
   --text-highlight-bg-rgb: 184, 138, 58; /* ochre, not highlighter yellow */
 
-  --tag-color: var(--midori-sage);
+  --tag-color: var(--midori-accent);
   --tag-background: rgba(95, 111, 94, 0.1);
 
-  --checkbox-color: var(--midori-sage);
-  --checkbox-color-hover: var(--midori-sage-hover);
+  --checkbox-color: var(--midori-accent);
+  --checkbox-color-hover: var(--midori-accent-hover);
   --checkbox-border-color: #8a847b;
   --checklist-done-color: #8a847b;
 
@@ -268,7 +427,8 @@ body {
   /* Mint dots on cream, as on benjaminloschen.com (--page-dot #9ebfb4). The
      site applies opacity 0.46 to the whole overlay layer; folded into the
      alpha here since this theme has no separate overlay element. */
-  --dotgrid-dot: rgba(158, 191, 180, 0.46);
+  --dotgrid-dot-rgb: 158, 191, 180;
+  --dotgrid-dot-alpha: 0.46;
 
   /* Selected-row wash: the site's `bg-accent/10` on a sage accent. */
   --dotgrid-accent-wash: rgba(95, 111, 94, 0.10);
@@ -305,6 +465,14 @@ body {
   --midori-mint: #7fae9c;               /* site parity only — see page-dot */
 
   --midori-sage-hover: #b4c0b0;         /* --accent-hover — LIGHTER here */
+
+  /* THE ACCENT ROLE, ONE STEP BACK FROM THE TOKEN. Roles pointed straight at
+     --midori-sage, so switching accent meant rewriting a dozen assignments.
+     They point here instead, and the class-select below moves this one
+     variable. Nothing about the palette changes -- the options are the tokens
+     that already exist. */
+  --midori-accent: var(--midori-sage);
+  --midori-accent-hover: var(--midori-sage-hover);
   --midori-mythic: #c4b8a8;             /* --accent-mythic */
   --midori-wine-lift: #d0a2a6;          /* ANSI 9; Obsidian's "pink" hue slot */
 
@@ -343,15 +511,15 @@ body {
   --text-muted: #9c958a;  /* --muted */
   --text-faint: #6e685f;
 
-  --text-accent: var(--midori-sage);             /* --accent (sage) */
-  --text-accent-hover: var(--midori-sage-hover); /* --accent-hover */
-  --interactive-accent: var(--midori-sage);
-  --interactive-accent-hover: var(--midori-sage-hover);
+  --text-accent: var(--midori-accent);             /* --accent (sage) */
+  --text-accent-hover: var(--midori-accent-hover); /* --accent-hover */
+  --interactive-accent: var(--midori-accent);
+  --interactive-accent-hover: var(--midori-accent-hover);
 
   --link-color: var(--midori-indigo);                    /* indigo — internal links */
   --link-color-hover: var(--midori-indigo-lift);         /* indigo lifted */
-  --link-external-color: var(--midori-sage);             /* --accent (sage) — external links */
-  --link-external-color-hover: var(--midori-sage-hover); /* --accent-hover */
+  --link-external-color: var(--midori-accent);             /* --accent (sage) — external links */
+  --link-external-color-hover: var(--midori-accent-hover); /* --accent-hover */
   --link-unresolved-color: var(--midori-mythic);         /* --accent-mythic */
 
   /* 38%, not the 25% light mode uses. Equal alpha does NOT read as equal
@@ -361,11 +529,16 @@ body {
      weaker to look at, because down here the band also has to out-read the dot
      grid and the halation around light text on dark. 38% puts it at 24.6,
      which is where it stops looking like a smudge. */
-  --text-selection: rgba(154, 171, 151, 0.38); /* --accent (sage) @ 38% */
+  /* THE SELECTION BAND FOLLOWS THE ACCENT, with the same fallback discipline as
+     --midori-accent-hover. A custom property has no two-declaration fallback, so
+     the plain rgba() below is not a leftover -- it is what an engine without
+     color-mix actually lands on. Delete it and the band computes to its initial
+     value rather than to sage. */
+  --text-selection: rgba(154, 171, 151, 0.38);
   --text-highlight-bg: #483d2b;                /* ochre wash — --color-yellow @ 24% on paper */
 
   --hr-color: rgba(235, 232, 226, 0.1);
-  --blockquote-border-color: var(--midori-clay); /* --accent-warm */
+  --blockquote-border-color: var(--midori-accent); /* --accent (sage) */
   --code-background: #22211e;
   /* Same mapping as light, from ghostty/themes/midori-night. */
   --code-normal: #ebe8e2;                     /* fg — bone ink        */
@@ -396,11 +569,11 @@ body {
   --callout-quote: 156, 149, 138;
   --text-highlight-bg-rgb: 216, 176, 106;
 
-  --tag-color: var(--midori-sage);
+  --tag-color: var(--midori-accent);
   --tag-background: rgba(154, 171, 151, 0.12);
 
-  --checkbox-color: var(--midori-sage);
-  --checkbox-color-hover: var(--midori-sage-hover);
+  --checkbox-color: var(--midori-accent);
+  --checkbox-color-hover: var(--midori-accent-hover);
   --checkbox-border-color: #6e685f;
   --checklist-done-color: #6e685f;
 
@@ -427,7 +600,8 @@ body {
 
   /* Softer mint on dark paper. Site dark dot is rgb(154 189 179 / 0.38);
      x the 0.46 overlay opacity = 0.1748. */
-  --dotgrid-dot: rgba(154, 189, 179, 0.1748);
+  --dotgrid-dot-rgb: 154, 189, 179;
+  --dotgrid-dot-alpha: 0.1748;
 
   --dotgrid-accent-wash: rgba(154, 171, 151, 0.12);
 
@@ -435,6 +609,73 @@ body {
     radial-gradient(ellipse 100% 55% at 50% -15%, rgb(45 44 40 / 0.9), transparent 52%),
     radial-gradient(ellipse 55% 40% at 0% 100%, rgb(55 52 46 / 0.45), transparent 50%),
     radial-gradient(ellipse 45% 45% at 100% 60%, rgb(48 52 46 / 0.35), transparent 48%);
+}
+
+/* ACCENT SELECTION. Eight options, all existing tokens; see "The palette is
+   closed" in the README for why this is a select and not a picker.
+
+   HOVER IS DERIVED, WITH A FALLBACK, because only some tokens ship a hand-tuned
+   hover variant (sage has one; mint and ochre do not). color-mix gives every
+   accent the same treatment, and the plain declaration outside @supports is
+   what an engine without color-mix lands on -- without it, the second
+   declaration would hand every consumer an unparseable token stream and the
+   hover colour would compute to its initial value, not to the accent. */
+body.midori-accent-sage    { --midori-accent: var(--midori-sage); }
+body.midori-accent-mint    { --midori-accent: var(--midori-mint); }
+body.midori-accent-olive   { --midori-accent: var(--midori-olive); }
+body.midori-accent-ochre   { --midori-accent: var(--midori-ochre); }
+body.midori-accent-clay    { --midori-accent: var(--midori-clay); }
+body.midori-accent-wine    { --midori-accent: var(--midori-wine); }
+body.midori-accent-indigo  { --midori-accent: var(--midori-indigo); }
+body.midori-accent-purple  { --midori-accent: var(--midori-purple); }
+
+body[class*="midori-accent-"] {
+  --midori-accent-hover: var(--midori-accent);
+}
+@supports (color: color-mix(in oklab, red, blue)) {
+  body[class*="midori-accent-"] {
+    --midori-accent-hover: color-mix(in oklab, var(--midori-accent) 82%, var(--text-normal));
+  }
+  /* Selected on body.theme-light / body.theme-dark, NOT gated behind an
+     explicit accent class the way hover is. Hover mixes toward --text-normal,
+     an opaque colour, so its derived value never exactly reproduces the
+     hand-tuned --midori-sage-hover -- gating it behind the class is what keeps
+     a reader who has never opened settings on the exact shipped hover.
+     Selection mixes toward `transparent` instead, and that reduces exactly:
+     at the shipped default (--midori-accent = var(--midori-sage)),
+     color-mix(in srgb, var(--midori-accent) 25%, transparent) computes to the
+     same rgba(95, 111, 94, 0.25) the plain declaration above already ships --
+     not merely close to it. Nothing changes for a reader who never touches
+     the accent setting, so there is no reason to wait for a class to land.
+     Split by mode because the tuned alpha differs (25% light, 38% dark; see
+     the rationale above the dark-mode declaration) -- one shared percentage
+     would silently flatten that relationship back to a single number.
+
+     THREE MORE ROLES, same discipline: --tag-background, --raised-edge and
+     --dotgrid-accent-wash shipped as sage rgba() literals too, so a wine
+     reader got sage behind wine tag text, a sage rule around the mobile bars,
+     and a sage active-row wash in the file explorer (--nav-item-background-
+     active reads --dotgrid-accent-wash directly, so fixing the wash fixes the
+     active row too -- it needs no declaration of its own). Each reduces
+     exactly the same way -- color-mix(in srgb, C, transparent) leaves the RGB
+     channels unshifted and sets alpha to the mix percentage, so
+     color-mix(in srgb, var(--midori-accent) N%, transparent) is
+     rgba(<accent>, N/100) -- verified against each mode's own plain literal:
+       --tag-background:      rgba(95,111,94,.1)  / rgba(154,171,151,.12) -> 10% / 12%
+       --raised-edge:         rgba(95,111,94,.3)  / rgba(154,171,151,.28) -> 30% / 28%
+       --dotgrid-accent-wash: rgba(95,111,94,.10) / rgba(154,171,151,.12) -> 10% / 12% */
+  body.theme-light {
+    --text-selection: color-mix(in srgb, var(--midori-accent) 25%, transparent);
+    --tag-background: color-mix(in srgb, var(--midori-accent) 10%, transparent);
+    --raised-edge: color-mix(in srgb, var(--midori-accent) 30%, transparent);
+    --dotgrid-accent-wash: color-mix(in srgb, var(--midori-accent) 10%, transparent);
+  }
+  body.theme-dark {
+    --text-selection: color-mix(in srgb, var(--midori-accent) 38%, transparent);
+    --tag-background: color-mix(in srgb, var(--midori-accent) 12%, transparent);
+    --raised-edge: color-mix(in srgb, var(--midori-accent) 28%, transparent);
+    --dotgrid-accent-wash: color-mix(in srgb, var(--midori-accent) 12%, transparent);
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -1268,7 +1509,8 @@ body.is-ios .midori-title-selection {
    This is a stated preference, and it is in the theme rather than a plugin
    because the grid-correct version cannot live anywhere else. */
 body {
-  --midori-indent: 2em;
+  --midori-set-indent: 2em;
+  --midori-indent: var(--midori-set-indent);
 }
 
 /* Reading view: the indent replaces the paragraph gap, which also gives the
@@ -1301,6 +1543,43 @@ body {
 .markdown-source-view.mod-cm6 .cm-content > .cm-line:first-child:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout),
 .markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) + .cm-line:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout) {
   text-indent: var(--midori-indent);
+}
+
+/* RHYTHM MODES. The default is 'indent': the indent replaces the gap, which is
+   also what gives the grid a row back at every paragraph break. 'space' is the
+   web convention -- one whole row between paragraphs, no indent. 'both' marks
+   the boundary twice, which typographers generally call wrong; it is here
+   because some readers want it, and a setting that only offers the tasteful
+   options is a lecture rather than a setting.
+
+   A GAP IS ONE ROW OR IT IS NOTHING. Any other value is a fraction of the
+   lattice and every block below the paragraph leaves it.
+
+   The default carries an explicit rule rather than relying on the base styles,
+   so all three modes are addressable and switching away and back lands
+   somewhere defined. */
+body.midori-rhythm-indent .markdown-preview-view p {
+  margin-block: 0;
+  text-indent: var(--midori-indent);
+}
+body.midori-rhythm-space .markdown-preview-view p,
+body.midori-rhythm-both .markdown-preview-view p {
+  margin-block: 0 var(--midori-row);
+}
+
+/* A variable override, not a text-indent rule: the Live Preview indent
+   selector above (.cm-content > .cm-line:first-child:not(...), and the
+   blank-line + .cm-line:not(...) sibling) carries eleven class-level
+   components apiece, from :first-child/:has() plus five :not() clauses.
+   No body-class selector beats that honestly, and `body.midori-rhythm-space
+   .markdown-source-view.mod-cm6 .cm-line { text-indent: 0; }` shipped once
+   and silently lost the contest -- 'space' kept indenting in the editor
+   while every test stayed green. Zeroing --midori-indent instead resolves
+   before any consumer's selector is even considered, so reading view and
+   Live Preview both go to zero from one declaration, and no future
+   selector on either side can out-specify it back into indenting. */
+body.midori-rhythm-space {
+  --midori-indent: 0;
 }
 
 /* Every paragraph is indented, including the first after a heading. That
@@ -1804,19 +2083,29 @@ body {
    Only h1-h4 — h5/h6 are Midori Text and already correct, and are uppercase,
    where cap-height rather than x-height carries the size.
 
-   THE LINE BOX IS ONE ROW, AND THE COMPENSATION DOES NOT CHANGE IT. Every
+   THE STRUT IS ONE ROW, AND THE COMPENSATION DOES NOT CHANGE IT. Every
    heading takes line-height: var(--midori-row); the second row of air above a
-   heading is margin (padding, in Live Preview), not line box. Measured at
-   bases 14, 16, 20, 24 and 30, every heading's box stays exactly one row after
-   this change, so nothing here moves the grid. What does change is how far an
-   h1's ink reaches up into the row of air above it: 1.2px before the
-   compensation, 7.1px after, at a 16px base with 24px of margin to absorb it.
-   h2-h4 stay inside their own line box at every base in the clamp. */
+   heading is margin (padding, in Live Preview), not line box. h2-h4 stay
+   inside that strut at every base in the clamp, in both panes, so for them
+   nothing here moves the grid. What changes for them is how far an h1's ink
+   reaches up into the row of air above it: 1.2px before the compensation,
+   7.1px after, at a 16px base with 24px of margin to absorb it.
+
+   h1 IS NOT INSIDE ITS OWN STRUT, AND THIS COMMENT USED TO CLAIM IT WAS. It
+   is the largest size the compensation produces, and a line box is
+   max(strut, tallest inline box) -- a live sweep against a running app
+   (tests/check_rendered_grid.py) measured h1's Live Preview box at 49px
+   against a 24px row at heading-scale 1 (two rows plus one, not one row plus
+   a pixel), clearing to a whole-row 48px only at heading-scale <= 0.9 and
+   failing again at >= 0.95. That brackets the shipped default of 1 on the
+   failing side, so this is live today, not only at the slider's top end.
+   Known and deliberately not fixed here -- see the README's Settings
+   section, "Known open item, under Heading scale". */
 body {
-  --h1-size: 1.870em;   /* app.css 1.618 x 1.1556 */
-  --h2-size: 1.690em;   /* app.css 1.462 x 1.1556 */
-  --h3-size: 1.523em;   /* app.css 1.318 x 1.1556 */
-  --h4-size: 1.373em;   /* app.css 1.188 x 1.1556 */
+  --h1-size: calc(1.870em * var(--midori-set-heading-scale));   /* app.css 1.618 x 1.1556 */
+  --h2-size: calc(1.690em * var(--midori-set-heading-scale));   /* app.css 1.462 x 1.1556 */
+  --h3-size: calc(1.523em * var(--midori-set-heading-scale));   /* app.css 1.318 x 1.1556 */
+  --h4-size: calc(1.373em * var(--midori-set-heading-scale));   /* app.css 1.188 x 1.1556 */
 }
 
 /* HEADINGS THROUGH OBSIDIAN'S OWN VARIABLES, NOT AROUND THEM.
@@ -1869,12 +2158,86 @@ body {
   font-size: 0.85em;
 }
 
-/* Blockquotes: warm rule, serif italic, like the site's pull quotes */
+/* Blockquotes: sage rule, serif italic. The site's pull quotes take the warm
+   accent and this one does not — a quote is the same kind of aside as a link
+   or a tag, and those are all sage here, so clay on this one bar was the odd
+   one out rather than a warm counterpoint. Clay keeps --code-important and
+   --color-orange, so it is still in the palette, just not on this rule. */
 .markdown-preview-view blockquote,
 .HyperMD-quote {
   font-style: italic;
   color: var(--text-muted);
 }
+
+/* LIVE PREVIEW: THE THINGS CODEMIRROR PUTS IN A LINE THAT ARE TALLER THAN IT.
+
+   Fourth and fifth instances of the strut problem, and the first two found by
+   measuring the RUNNING APP over CDP rather than a harness — which is how they
+   survived nine tasks and a whole-plan review. The harness reproduces the
+   theme's DOM; it does not reproduce CodeMirror's, and both offenders are
+   CodeMirror's own furniture:
+
+     img.cm-widgetBuffer   height: 1em, vertical-align: text-top. A REPLACED
+                           element, so height applies. At an h1's 29.92px that
+                           is a 29.91px inline box against a 24px strut, and
+                           the line box is max(strut, tallest inline box).
+     div.cm-fold-indicator inline-block, height 24px, on the baseline, so it
+                           adds its whole height ABOVE the baseline and the
+                           descender below. 97bf993 moved the chevron's ICON
+                           with a transform, which is visual and does not
+                           change what the box occupies.
+     span.cm-footref       raised, and tall enough to beat the strut on any
+                           line carrying a footnote marker.
+
+   MEASURED on the block reference note at a 16px base, before and after:
+   6 of 31 lines off the row -> 1. h1 53.91 -> 49.00, every h2 51.03 -> 48,
+   h3 49.36 -> 48, and the footnote line 53.00 -> 48. Zeroing the HEIGHT is
+   what works; display:none does not, because the buffer is not the only
+   contributor and hiding it just lets the next one win.
+
+   THE h1 IS STILL 1px OVER and this is the honest limit of the approach: its
+   content box floors at 25px and will not go below that at any line-height,
+   because 1.870em is 29.92px and the glyph box is 26px. That is a cost of the
+   x-height compensation above -- the correction that makes an h1 read at its
+   intended optical size also makes it unable to sit in one row here. Fixing it
+   means giving h1 a two-row box in live preview, which is a design decision,
+   not a patch. One pixel per h1, against 5.91 before. */
+.markdown-source-view.mod-cm6 .cm-line .cm-widgetBuffer { height: 0; }
+.markdown-source-view.mod-cm6 .cm-line .cm-fold-indicator {
+  height: 0;
+  overflow: visible;   /* the chevron still draws and still takes a click */
+}
+.markdown-source-view.mod-cm6 .cm-footref { line-height: 0; }
+
+/* SUPERSCRIPT AND SUBSCRIPT: RAISED, BUT CONTRIBUTING NO HEIGHT.
+
+   Third instance of the strut problem, after code spans and tag pills, and the
+   only one app.css causes directly:
+
+       .footnote-ref { vertical-align: super; }
+
+   Full-size text, raised above the baseline, with nothing said about
+   line-height. The line box is max(strut, tallest inline box), so the raised
+   box wins and the line grows. MEASURED on the block reference note at a 16px
+   base: the line carrying a footnote marker came out 29.85px against a 24px
+   row, and because the error is a fraction of a row it does not stay local --
+   every block below it, all the way to the end of the note, sat 3.9px off the
+   dots. One marker, and the rest of the page leaves the lattice.
+
+   line-height: 0 is what makes it harmless: an inline box of zero height
+   cannot exceed the strut, so the line stays one row. The visual raise then
+   has to come from position/top instead of vertical-align, which is layout-free.
+   This is normalize.css's fix for the same defect, and it is here rather than
+   in a plugin for the same reason the paragraph rules are: only whoever owns
+   the lattice can see that the cost is measured in rows. */
+.markdown-rendered :is(sup, sub, .footnote-ref) {
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+.markdown-rendered :is(sup, .footnote-ref) { top: -0.45em; }
+.markdown-rendered sub { bottom: -0.2em; }
 
 /* Tag pills. The alias, not stock "M PLUS 1p": a tag sits inline in a
    paragraph, and a stock face there displaces the line box exactly the way it
