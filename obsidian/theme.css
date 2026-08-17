@@ -19,10 +19,20 @@
 
    Style Settings writes `--<id>` on body from the block below. Those are
    INPUTS, named --midori-set-*. The theme never reads one directly; it reads a
-   DERIVED variable computed from it, and the derivation is where clamping and
-   round() live. That indirection is the whole reason a slider cannot break the
-   dot grid: there is no path from a user value to a rule that skips the
-   quantisation. test_inputs_are_never_read_by_a_real_property holds the line.
+   DERIVED variable computed from it, and
+   test_inputs_are_never_read_by_a_real_property holds that line. For the
+   row-controlling values that derivation is where clamping and round() live --
+   --midori-row's is round(up, max(24px, var(--font-text-size) *
+   var(--midori-set-leading)), 2px).
+
+   INDIRECTION ALONE DOES NOT MEAN QUANTISATION. --midori-set-heading-scale is
+   DERIVED too -- it feeds --h1-size through a plain calc(), never a round() --
+   and a large enough glyph box overflows its strut regardless: a line box is
+   max(strut, tallest inline box), font-size is not a row-sized property, and
+   nothing here clamps it into one. See the h1 note in the README's Settings
+   section for the measured cost. The guard is specific to the properties
+   round() was written to protect, not a property every derived variable gets
+   for free.
 
    The block is a CSS comment, so with the plugin absent it is inert and the
    theme behaves exactly as it did before any of this existed. Defaults live in

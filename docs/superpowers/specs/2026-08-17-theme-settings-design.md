@@ -29,8 +29,18 @@ divided by Spectral's (0.450em) — not a matter of taste, and meaningless as a
 slider.
 
 A second rule, decided explicitly: **no setting may put the note off the dot
-grid.** Values that cannot affect vertical rhythm move freely. Values that can
-are quantised in CSS, so no input reaches a rule without passing a `round()`.
+grid.** Values that cannot affect vertical rhythm move freely. Values that
+flow into a row-sized property as a continuous number are quantised in CSS,
+so no such input reaches a rule without passing a `round()` — Leading is the
+one setting this actually governs.
+
+**The rule does not reach heading scale, and that was found after this plan
+shipped rather than designed around.** It feeds a font-size, not a row,
+through a plain `calc()`, and a line box is `max(strut, tallest inline box)`
+— a glyph box large enough overflows the strut no matter what the row is
+doing, so nothing quantises it. See the README's Settings section for the
+measured cost (the h1 at the shipped default) and why the slider is capped
+at 1.1 rather than closed.
 
 ## Mechanism: a Style Settings block
 
@@ -154,11 +164,17 @@ Notes:
 | setting | variable | default | how it is made safe |
 |---|---|---|---|
 | Leading | `--midori-set-leading` | `1.5` | `round(up, max(24px, fs x mult), 2px)` — always an even pixel, never below 24 |
-| Heading scale | `--midori-set-heading-scale` | `1` | multiplies the ladder only; the x-height compensation and the one-row line box stay automatic |
+| Heading scale | `--midori-set-heading-scale` | `1` | multiplies the ladder only; the x-height compensation stays automatic, but the one-row line box does **not** — nothing quantises it |
 
 **Rounding is to 2px, not 1px.** `--dotgrid-offset-y` adds *half* the row's
 growth, so an odd row puts the baseline 0.50px off. Measured at every base in
 the 10–30 clamp: exact at even rows, -0.50px at odd ones.
+
+**Heading scale is in this tier by exposure, not by safety.** It is the one
+row-adjacent setting with no `round()` anywhere in its path: a glyph box
+large enough overflows its strut regardless of the row, which is exactly
+what the shipped default already does to the h1. See "The principle" above
+and the README's Settings section for the measured numbers.
 
 ### Tier 3 — not exposed
 
