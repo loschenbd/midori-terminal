@@ -649,12 +649,32 @@ body[class*="midori-accent-"] {
      the accent setting, so there is no reason to wait for a class to land.
      Split by mode because the tuned alpha differs (25% light, 38% dark; see
      the rationale above the dark-mode declaration) -- one shared percentage
-     would silently flatten that relationship back to a single number. */
+     would silently flatten that relationship back to a single number.
+
+     THREE MORE ROLES, same discipline: --tag-background, --raised-edge and
+     --dotgrid-accent-wash shipped as sage rgba() literals too, so a wine
+     reader got sage behind wine tag text, a sage rule around the mobile bars,
+     and a sage active-row wash in the file explorer (--nav-item-background-
+     active reads --dotgrid-accent-wash directly, so fixing the wash fixes the
+     active row too -- it needs no declaration of its own). Each reduces
+     exactly the same way -- color-mix(in srgb, C, transparent) leaves the RGB
+     channels unshifted and sets alpha to the mix percentage, so
+     color-mix(in srgb, var(--midori-accent) N%, transparent) is
+     rgba(<accent>, N/100) -- verified against each mode's own plain literal:
+       --tag-background:      rgba(95,111,94,.1)  / rgba(154,171,151,.12) -> 10% / 12%
+       --raised-edge:         rgba(95,111,94,.3)  / rgba(154,171,151,.28) -> 30% / 28%
+       --dotgrid-accent-wash: rgba(95,111,94,.10) / rgba(154,171,151,.12) -> 10% / 12% */
   body.theme-light {
     --text-selection: color-mix(in srgb, var(--midori-accent) 25%, transparent);
+    --tag-background: color-mix(in srgb, var(--midori-accent) 10%, transparent);
+    --raised-edge: color-mix(in srgb, var(--midori-accent) 30%, transparent);
+    --dotgrid-accent-wash: color-mix(in srgb, var(--midori-accent) 10%, transparent);
   }
   body.theme-dark {
     --text-selection: color-mix(in srgb, var(--midori-accent) 38%, transparent);
+    --tag-background: color-mix(in srgb, var(--midori-accent) 12%, transparent);
+    --raised-edge: color-mix(in srgb, var(--midori-accent) 28%, transparent);
+    --dotgrid-accent-wash: color-mix(in srgb, var(--midori-accent) 12%, transparent);
   }
 }
 
