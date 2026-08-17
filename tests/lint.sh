@@ -14,7 +14,17 @@ bad()  { printf '  FAIL %s\n' "$*"; FAIL=1; }
 # with ~2000 .py files in site-packages, and py_compiling third-party code we
 # did not write turned a two-second lint into a several-minute one. Anything
 # hidden is either vendored or machinery; neither is ours to check.
-FILES() { find . -name '.*' -prune -o -name "$1" -print; }
+#
+# MINDEPTH 1 IS LOAD-BEARING. Without it, `find .` visits `.` itself first,
+# whose own basename is `.` -- which matches the `-name '.*'` glob -- so
+# `-prune` pruned the repo root before find ever descended into it, and
+# nothing below was traversed. This silently matched zero files from the day
+# this helper was written until 2026-08-17: `FILES '*.py'` returned 0 files
+# and `FILES '*.sh'` returned 0 files; with `-mindepth 1` they return 17 and
+# 11. Every "python compiles" and "shell scripts" line below had been passing
+# by checking nothing, and every task in this plan that cited "lint all
+# green" as evidence was citing a check that had never run.
+FILES() { find . -mindepth 1 -name '.*' -prune -o -name "$1" -print; }
 
 echo "== python compiles =="
 for py in $(FILES '*.py'); do

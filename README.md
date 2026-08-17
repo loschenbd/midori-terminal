@@ -725,7 +725,10 @@ Residual gotchas:
 Static tests read the stylesheet; they cannot see what the browser laid out.
 Two real defects survived nine tasks and a whole-plan review because the
 offenders were CodeMirror's own elements, which a theme-only harness does not
-build. To sweep the settings against the live app:
+build. **Open a note with headings, a list, a code block and a footnote
+reference in Live Preview first** — the sweep measures what is on screen, and
+an empty or trivial note proves nothing. To sweep the settings against the
+live app:
 
     open -a Obsidian --args --remote-debugging-port=9222
     python3 -m venv /tmp/cdpenv && /tmp/cdpenv/bin/pip install websocket-client
@@ -734,6 +737,16 @@ build. To sweep the settings against the live app:
 It walks leading x base size — 63 combinations — and asserts the row is always
 an even number of pixels and every line box is a whole number of rows. It is
 not part of `tests/lint.sh` because it needs a running app.
+
+On its first live run this tool reported a confident all-clear while
+measuring a twelve-line note in one window, and a second window with a
+31-line note found 25 of 63 combinations off the lattice — a false green
+driven entirely by which of several open windows CDP's target list happened
+to list first. It now enumerates every open Obsidian window, prints a table
+of each one's title and `.cm-line` count, measures whichever has the most
+lines, and refuses to run at all — exiting non-zero — if that window has
+fewer than 15 lines. Watch that table: it is how you confirm the note that
+got graded is the one you meant.
 
 ## Cursor / VS Code notes
 
