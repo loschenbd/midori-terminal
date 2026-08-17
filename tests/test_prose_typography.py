@@ -774,6 +774,38 @@ def test_dot_alpha_is_split_in_both_modes():
     ok("the dot alpha is a multiplier on both modes' shipped values")
 
 
+def test_accent_options_are_palette_tokens():
+    """Every accent option is an existing token, and none is a new hue.
+
+    'The palette is closed' is a documented decision with an argument behind it:
+    the ANSI-16 seam has six chromatic slots and all six are filled, and below
+    C 12 hue does almost no work at body size, so an eighth accent would share
+    a lightness rung with an existing role and read as a duplicate of it. A
+    colour picker here would reopen that silently. A select over the existing
+    tokens cannot.
+    """
+    b = settings_block()
+    s = next((x for x in (b or {}).get("settings", [])
+              if x["id"] == "midori-accent"), None)
+    if s is None:
+        bad("no midori-accent control in the @settings block")
+        return
+    if s["type"] != "class-select":
+        bad(f"midori-accent is {s['type']}; a variable-select writes a STRING, "
+            f"which cannot name a colour, and a variable-color reopens the "
+            f"closed palette")
+        return
+    for opt in s.get("options", []):
+        token = opt.replace("midori-accent-", "")
+        if f"--midori-{token}:" not in THEME:
+            bad(f"accent option {opt} has no --midori-{token} token")
+            return
+        if f"body.{opt}" not in THEME:
+            bad(f"accent option {opt} has no body.{opt} rule")
+            return
+    ok(f"all {len(s.get('options', []))} accent options are existing palette tokens")
+
+
 if __name__ == "__main__":
     print("== prose typography ==")
     test_measure()
@@ -793,5 +825,6 @@ if __name__ == "__main__":
     test_rhythm_modes_all_exist()
     test_space_rhythm_zeroes_the_indent_variable()
     test_dot_alpha_is_split_in_both_modes()
+    test_accent_options_are_palette_tokens()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)
