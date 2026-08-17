@@ -604,12 +604,18 @@ Residual gotchas:
   its bottom edge tracks the descender depth to within 0.6px) and the only way
   it can enclose the descenders it sits beside. Text hangs from the bottom of
   its cell, so nothing sized to the ink can also be dot-aligned.
-- **px in the editor, em in the title, and the distinction is load-bearing.**
-  `.cm-line` has an absolute `line-height: 24px` that does *not* move with
-  Appearance → Font size, so anything sized against the ROW is px. The title
-  has no fixed row and its size *is* a user setting, so its slot is em. The
-  plugin makes that expressible by copying the title's font size onto the
-  elements it draws, which live outside `.inline-title`.
+- **The row was fixed, then it wasn't, and a px literal copied from it is now
+  the trap.** `.cm-line`'s `line-height` used to be an absolute `24px`; it is
+  now `var(--midori-row)`, which follows both Appearance → Font size and the
+  Leading setting. A px literal sized against the row was the right answer
+  only while the row could not move — left standing, it is a band that stays
+  24px inside a line box that has grown to 30, or further still at a high
+  Leading and a large font size. Anything sized against the ROW has to
+  reference `var(--midori-row)` itself, never a px number copied from what it
+  once resolved to. The title has no row at all, fixed or otherwise, and its
+  size *is* a user setting, so its slot is em. The plugin makes that
+  expressible by copying the title's font size onto the elements it draws,
+  which live outside `.inline-title`.
 - **The properties widget opts out, onto its own paper.** Its rows are flex
   boxes full of inputs, icons and pills whose heights Obsidian derives from
   content the theme never sees. The block's *outer* box is a whole number of
@@ -630,19 +636,24 @@ Residual gotchas:
   real is the speed/preference split — longer lines are read faster, moderate
   lines are preferred, and subjective ratings do not track performance — and a
   writing surface, sat at for hours, takes the preference side. `theme.css`
-  sets `--file-line-width: calc(var(--font-text-size) * 34)`: 34 times
-  `--font-text-size`, the variable Obsidian's own `updateFontSize()` writes on
-  `<body>` from the reader's text-size slider, so the line grows and shrinks
-  with the reader's setting rather than staying pinned to the size one person
-  happened to use.
+  sets `--file-line-width: calc(var(--font-text-size) * var(--midori-set-measure)
+  * var(--midori-avg-advance))`: `--font-text-size` — the variable Obsidian's
+  own `updateFontSize()` writes on `<body>` from the reader's text-size slider
+  — times the reader's chosen measure (the Line length setting, 40–100,
+  defaulting to 70) times `--midori-avg-advance` (0.4818, M PLUS 1p's average
+  glyph advance, which converts characters to em). So the line grows and
+  shrinks with the reader's font size AND their chosen measure now, rather
+  than staying pinned to the single `34em` constant (≈70.6 characters) one
+  person happened to use.
 - **A grid tuned to one base size is tuned to one person.** 24px is exactly
   1.5 leading at a 16px base and 1.33 at 18px — under the WCAG 1.4.8 policy
   floor as soon as a reader raises their text size, with no signal that the
-  theme had an opinion. The row now follows `--font-text-size` via
-  `round(up, max(24px, var(--font-text-size) * 1.5), 2px)`, gated behind
-  `@supports` because a custom property parses as a token stream and a plain
-  second declaration hands every consumer an unparseable value rather than
-  degrading gracefully. The dot offset became
+  theme had an opinion. The row now follows `--font-text-size` — and, since
+  Leading itself later became a setting, the reader's chosen leading too —
+  via `round(up, max(24px, var(--font-text-size) * var(--midori-set-leading)),
+  2px)`, gated behind `@supports` because a custom property parses as a token
+  stream and a plain second declaration hands every consumer an unparseable
+  value rather than degrading gracefully. The dot offset became
   `calc(10.98px + (var(--midori-row) - 24px) / 2)` — an offset from the
   historical row rather than a constant measured against it — and the
   baseline-vs-dot phase was measured across the app's full 10–30px clamp: one
@@ -656,11 +667,15 @@ Residual gotchas:
   stopped reading as hierarchy. `x1.1556 = 0.520 / 0.450` restores it:
   `--h1-size` through `--h4-size` now ship 1.870/1.690/1.523/1.373em; h5/h6
   stay untouched — already Midori Text, and uppercase, where cap-height
-  carries the size, not x-height. The line box does not move: every heading
+  carries the size, not x-height. The strut does not move: every heading
   keeps `line-height: var(--midori-row)`, one row at every base tested
-  (14/16/20/24/30px) in both panes. What moves is how far the ink reaches into
-  the row of air above — an h1 at a 16px base now reaches 7.1px into its
-  24px margin, against 1.2px before.
+  (14/16/20/24/30px). h2–h4 stay inside it there, in both panes, so for them
+  nothing here moves the grid. **h1 does not** — it is the largest size this
+  compensation produces, and a live sweep found its glyph box overflowing the
+  strut in Live Preview at the shipped scale; see the known open item under
+  Heading scale in the Settings section. What moves for every heading is how
+  far the ink reaches into the row of air above — an h1 at a 16px base now
+  reaches 7.1px into its 24px margin, against 1.2px before.
 - **A nominal contrast ratio overstates legibility at 1x, but less than the
   premise assumed.** At 81 ppi a stem is about a pixel wide, and the
   antialiaser spends most of a glyph's pixels on partial coverage — the
@@ -730,7 +745,7 @@ default — nothing is required.
 The line the settings draw: **what the evidence review called preference is
 exposed; what it called evidence is derived and is not.** Paragraph rhythm is a
 setting because the review found nothing either way. The ×1.1556 heading
-compensation is not, because it is Spectral's x-height over M PLUS 1p's.
+compensation is not, because it is M PLUS 1p's x-height over Spectral's.
 
 | Setting | Default | Range |
 |---|---|---|
