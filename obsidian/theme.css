@@ -80,6 +80,22 @@ settings:
         min: 0
         max: 1.5
         step: 0.05
+    -
+        id: midori-accent
+        title: Accent
+        description: The eight tokens the palette already has. It is a select rather than a picker because the palette is closed; see the README for the argument.
+        type: class-select
+        allowEmpty: false
+        default: midori-accent-sage
+        options:
+            - midori-accent-sage
+            - midori-accent-mint
+            - midori-accent-olive
+            - midori-accent-ochre
+            - midori-accent-clay
+            - midori-accent-wine
+            - midori-accent-indigo
+            - midori-accent-purple
 
 */
 
@@ -240,6 +256,14 @@ body {
 
   --midori-indigo-deep: #2d4259;        /* --link-color-hover */
   --midori-sage-hover: #4a5749;         /* --accent-hover */
+
+  /* THE ACCENT ROLE, ONE STEP BACK FROM THE TOKEN. Roles pointed straight at
+     --midori-sage, so switching accent meant rewriting a dozen assignments.
+     They point here instead, and the class-select below moves this one
+     variable. Nothing about the palette changes -- the options are the tokens
+     that already exist. */
+  --midori-accent: var(--midori-sage);
+  --midori-accent-hover: var(--midori-sage-hover);
   --midori-mythic: #6b5f52;             /* --accent-mythic */
   --midori-wine-lift: #9d6161;          /* ANSI 9; Obsidian's "pink" hue slot */
 
@@ -269,22 +293,22 @@ body {
   --text-muted: #524d46;  /* --muted */
   --text-faint: #8a847b;
 
-  --text-accent: var(--midori-sage);             /* --accent (sage) */
-  --text-accent-hover: var(--midori-sage-hover); /* --accent-hover */
-  --interactive-accent: var(--midori-sage);
-  --interactive-accent-hover: var(--midori-sage-hover);
+  --text-accent: var(--midori-accent);             /* --accent (sage) */
+  --text-accent-hover: var(--midori-accent-hover); /* --accent-hover */
+  --interactive-accent: var(--midori-accent);
+  --interactive-accent-hover: var(--midori-accent-hover);
 
   --link-color: var(--midori-indigo);                    /* indigo — internal links */
   --link-color-hover: var(--midori-indigo-deep);         /* indigo deep */
-  --link-external-color: var(--midori-sage);             /* --accent (sage) — external links */
-  --link-external-color-hover: var(--midori-sage-hover); /* --accent-hover */
+  --link-external-color: var(--midori-accent);             /* --accent (sage) — external links */
+  --link-external-color-hover: var(--midori-accent-hover); /* --accent-hover */
   --link-unresolved-color: var(--midori-mythic);         /* --accent-mythic */
 
   --text-selection: rgba(95, 111, 94, 0.25); /* --accent (sage) @ 25% */
   --text-highlight-bg: #e2d4b9;              /* ochre wash — --color-yellow @ 28% on paper */
 
   --hr-color: rgba(60, 58, 54, 0.1);
-  --blockquote-border-color: var(--midori-sage); /* --accent (sage) */
+  --blockquote-border-color: var(--midori-accent); /* --accent (sage) */
   --code-background: #faf9f6;
   /* Syntax colours lifted straight from ghostty/themes/midori-paper so a fence
      in Obsidian reads the same as the same code in the terminal. Each token is
@@ -329,11 +353,11 @@ body {
   --callout-quote: 82, 77, 70;
   --text-highlight-bg-rgb: 184, 138, 58; /* ochre, not highlighter yellow */
 
-  --tag-color: var(--midori-sage);
+  --tag-color: var(--midori-accent);
   --tag-background: rgba(95, 111, 94, 0.1);
 
-  --checkbox-color: var(--midori-sage);
-  --checkbox-color-hover: var(--midori-sage-hover);
+  --checkbox-color: var(--midori-accent);
+  --checkbox-color-hover: var(--midori-accent-hover);
   --checkbox-border-color: #8a847b;
   --checklist-done-color: #8a847b;
 
@@ -404,6 +428,14 @@ body {
   --midori-mint: #7fae9c;               /* site parity only — see page-dot */
 
   --midori-sage-hover: #b4c0b0;         /* --accent-hover — LIGHTER here */
+
+  /* THE ACCENT ROLE, ONE STEP BACK FROM THE TOKEN. Roles pointed straight at
+     --midori-sage, so switching accent meant rewriting a dozen assignments.
+     They point here instead, and the class-select below moves this one
+     variable. Nothing about the palette changes -- the options are the tokens
+     that already exist. */
+  --midori-accent: var(--midori-sage);
+  --midori-accent-hover: var(--midori-sage-hover);
   --midori-mythic: #c4b8a8;             /* --accent-mythic */
   --midori-wine-lift: #d0a2a6;          /* ANSI 9; Obsidian's "pink" hue slot */
 
@@ -442,15 +474,15 @@ body {
   --text-muted: #9c958a;  /* --muted */
   --text-faint: #6e685f;
 
-  --text-accent: var(--midori-sage);             /* --accent (sage) */
-  --text-accent-hover: var(--midori-sage-hover); /* --accent-hover */
-  --interactive-accent: var(--midori-sage);
-  --interactive-accent-hover: var(--midori-sage-hover);
+  --text-accent: var(--midori-accent);             /* --accent (sage) */
+  --text-accent-hover: var(--midori-accent-hover); /* --accent-hover */
+  --interactive-accent: var(--midori-accent);
+  --interactive-accent-hover: var(--midori-accent-hover);
 
   --link-color: var(--midori-indigo);                    /* indigo — internal links */
   --link-color-hover: var(--midori-indigo-lift);         /* indigo lifted */
-  --link-external-color: var(--midori-sage);             /* --accent (sage) — external links */
-  --link-external-color-hover: var(--midori-sage-hover); /* --accent-hover */
+  --link-external-color: var(--midori-accent);             /* --accent (sage) — external links */
+  --link-external-color-hover: var(--midori-accent-hover); /* --accent-hover */
   --link-unresolved-color: var(--midori-mythic);         /* --accent-mythic */
 
   /* 38%, not the 25% light mode uses. Equal alpha does NOT read as equal
@@ -464,7 +496,7 @@ body {
   --text-highlight-bg: #483d2b;                /* ochre wash — --color-yellow @ 24% on paper */
 
   --hr-color: rgba(235, 232, 226, 0.1);
-  --blockquote-border-color: var(--midori-sage); /* --accent (sage) */
+  --blockquote-border-color: var(--midori-accent); /* --accent (sage) */
   --code-background: #22211e;
   /* Same mapping as light, from ghostty/themes/midori-night. */
   --code-normal: #ebe8e2;                     /* fg — bone ink        */
@@ -495,11 +527,11 @@ body {
   --callout-quote: 156, 149, 138;
   --text-highlight-bg-rgb: 216, 176, 106;
 
-  --tag-color: var(--midori-sage);
+  --tag-color: var(--midori-accent);
   --tag-background: rgba(154, 171, 151, 0.12);
 
-  --checkbox-color: var(--midori-sage);
-  --checkbox-color-hover: var(--midori-sage-hover);
+  --checkbox-color: var(--midori-accent);
+  --checkbox-color-hover: var(--midori-accent-hover);
   --checkbox-border-color: #6e685f;
   --checklist-done-color: #6e685f;
 
@@ -535,6 +567,33 @@ body {
     radial-gradient(ellipse 100% 55% at 50% -15%, rgb(45 44 40 / 0.9), transparent 52%),
     radial-gradient(ellipse 55% 40% at 0% 100%, rgb(55 52 46 / 0.45), transparent 50%),
     radial-gradient(ellipse 45% 45% at 100% 60%, rgb(48 52 46 / 0.35), transparent 48%);
+}
+
+/* ACCENT SELECTION. Eight options, all existing tokens; see "The palette is
+   closed" in the README for why this is a select and not a picker.
+
+   HOVER IS DERIVED, WITH A FALLBACK, because only some tokens ship a hand-tuned
+   hover variant (sage has one; mint and ochre do not). color-mix gives every
+   accent the same treatment, and the plain declaration outside @supports is
+   what an engine without color-mix lands on -- without it, the second
+   declaration would hand every consumer an unparseable token stream and the
+   hover colour would compute to its initial value, not to the accent. */
+body.midori-accent-sage    { --midori-accent: var(--midori-sage); }
+body.midori-accent-mint    { --midori-accent: var(--midori-mint); }
+body.midori-accent-olive   { --midori-accent: var(--midori-olive); }
+body.midori-accent-ochre   { --midori-accent: var(--midori-ochre); }
+body.midori-accent-clay    { --midori-accent: var(--midori-clay); }
+body.midori-accent-wine    { --midori-accent: var(--midori-wine); }
+body.midori-accent-indigo  { --midori-accent: var(--midori-indigo); }
+body.midori-accent-purple  { --midori-accent: var(--midori-purple); }
+
+body[class*="midori-accent-"] {
+  --midori-accent-hover: var(--midori-accent);
+}
+@supports (color: color-mix(in oklab, red, blue)) {
+  body[class*="midori-accent-"] {
+    --midori-accent-hover: color-mix(in oklab, var(--midori-accent) 82%, var(--text-normal));
+  }
 }
 
 /* --------------------------------------------------------------------------
