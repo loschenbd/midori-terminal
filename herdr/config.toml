@@ -1,0 +1,135 @@
+# herdr — Midori
+#
+# herdr is the ONE component of midori-terminal that does not wear the Midori
+# palette. That is deliberate, and it is a workaround — see below.
+#
+# The obvious setup is name = "terminal", which derives herdr's UI from the host
+# terminal so Ghostty's light:midori-paper,dark:midori-night pair stays the
+# single source of truth. It produces exactly correct Midori colors. It is also
+# unusable, because herdr hardcodes ANSI index 8 for two UI roles:
+#
+#   * selected sidebar row BACKGROUND   -> emitted as [100m
+#   * active tab label FOREGROUND       -> emitted as [90m
+#
+# herdr assumes index 8 is a dark surface gray, as it is in Catppuccin, one-dark
+# and friends. Midori maps index 8 to --muted: #9c958a on night, #524d46 on
+# paper — a mid/light warm gray, because Midori uses that slot for dim TEXT.
+# Surface-vs-text mismatch, so under "terminal" you get a glaring light slab on
+# the selected workspace and an active tab number at 1.22:1 (sage on sage).
+#
+# Not fixable from config. Verified by setting sentinel colors: selection,
+# surface and muted all leave the row at [100m; black and dim are not valid
+# [theme.custom] keys at all; panel_bg = "reset" changes nothing; and per-mode
+# blocks ([theme.custom.dark]) are rejected as unknown keys, so one override set
+# cannot serve both appearances.
+#
+# So: use built-in themes, which carry their own palette and therefore render
+# the index-8 role as a proper dark surface. Measured under vesper — selected
+# row #101010 bg with #ffffff bold text (17.9:1) instead of the slab.
+#
+# COST: herdr's chrome is vesper/solarized-light, not Midori. Pane *contents*
+# are unaffected — those are the terminal, and stay exactly Midori.
+# REVERT: when herdr stops hardcoding index 8, set all three names back to
+# "terminal" and delete this comment.
+
+[theme]
+# There is no "midori" theme name to set, and there is no way to add one.
+# herdr 0.8.0 has a FIXED built-in theme list (catppuccin, catppuccin-latte,
+# terminal, tokyo-night, tokyo-night-day, dracula, nord, gruvbox,
+# gruvbox-light, one-dark, one-light, solarized, solarized-light, kanagawa,
+# rose-pine, vesper) and no themes directory or theme-file loader.
+#
+# An unrecognized name does NOT error. `herdr config check` prints "config: ok"
+# and `herdr server reload-config` reports applied with zero diagnostics — and
+# herdr silently renders Catppuccin Mocha. Verified: name = "midori" produced
+# #1e1e2e / #cdd6f4 / #a6e3a1 / #cba6f7. So `dark_name = "midori-night"` would
+# look like it worked and quietly be wrong. Always confirm a theme change by
+# capturing a render; neither check nor reload can tell you the name took.
+name = "vesper"
+
+# Follow macOS appearance. vesper is the near-black dark side; solarized-light
+# (#eee8d5) is the warm cream light side, the closest built-in to midori-paper's
+# #f3f1eb. No Midori *hex* overrides below — [theme.custom] is global, so a hex
+# tuned for night would follow you into paper and wreck it. NAMED colors are
+# fine and are used: they emit ANSI, which the terminal resolves per appearance.
+auto_switch = true
+dark_name = "vesper"
+light_name = "solarized-light"
+
+[theme.custom]
+# Let Ghostty's baked dot-grid + glow background image show through herdr's
+# chrome. Without this, the sidebar and tab row paint an opaque fill over the
+# 24pt mint dot grid and the top halo — the single most Midori thing on screen.
+panel_bg = "reset"
+
+# Midori's accent is the sage at ANSI 2/10 (--accent: #5f6f5e paper,
+# #9aab97 night). NAMED, not hex — and this is the one place Midori survives
+# the switch to a built-in base: a named color is emitted as a raw ANSI code
+# ([42m), which the terminal resolves against the Ghostty palette. So the
+# accent is real Midori sage in both appearances even though the surrounding
+# chrome is vesper. A hex here would freeze it and lose that.
+accent = "green"
+
+# Every remaining token, named. The reasoning that used to sit here said these
+# were unnecessary because "under theme terminal they already resolve to ANSI
+# 1/2/3" — true, but this file stopped using theme "terminal" when it moved to
+# vesper, so they were coming from VESPER's palette instead. Naming them puts
+# them back on the Ghostty palette in both appearances, same trick as accent.
+#
+# ANSI 1/2/3/4 are wine / sage / ochre / indigo — already the roles the design
+# language assigns: ochre is the "needs you" warm (blocked), sage is progress
+# (working), wine is failure.
+red    = "red"
+green  = "green"
+yellow = "yellow"
+blue   = "blue"
+
+# text = "reset" is the terminal's DEFAULT foreground, which is Midori's
+# --foreground in both appearances (#2a2825 paper, #ebe8e2 night). "white"
+# would pin ANSI 7 — a light warm gray that is right on night and far too
+# light on cream — which is the auto_switch trap this file avoids everywhere
+# else. Measured: reset gives 125 terminal-resolved emissions against 122 for
+# both "white" and leaving it unset, and drops vesper's #ffffff.
+text   = "reset"
+
+# These seven are the COMPLETE [theme.custom] surface in 0.8.0 — panel_bg,
+# accent, red, green, yellow, blue, text. Enumerated by feeding candidate keys
+# to `herdr config check`, which reports "unknown config key theme.custom.<k>"
+# for anything else; magenta, cyan, white, black, fg, bg, border, selection,
+# surface, muted, warning, error and success are all rejected. So the vesper
+# greys and surfaces that remain are simply not addressable.
+
+[ui]
+# Highlights, borders and navigation UI on the same sage accent.
+accent = "green"
+
+# Midori is a monochrome-stroke system: keep the chrome quiet and let the
+# paper texture and the agent-state color carry the signal.
+pane_borders = true
+pane_gaps = true
+
+# The sidebar IS the reason to run herdr — the agent-status rollup. Give it
+# room and keep it expanded.
+#
+# 30, not 26. herdr auto-scales this "based on workspace names" — which does not
+# count the AGENT rows, and those are the longest strings in the panel because
+# they carry a `· agent-N` suffix. At 26 the longest one rendered
+# `○ benjaminlo… · agent-2`; at 30 it renders `○ benjaminloschen · agent-2` in
+# full. Captured at 120 columns, both ways, and diffed.
+sidebar_width = 30
+sidebar_start_collapsed = false
+
+# Group agent rows by workspace (project), matching the tmux-session-per-project
+# mental model the workspaces were migrated from.
+agent_panel_sort = "spaces"
+
+show_agent_labels_on_pane_borders = true
+# Midori keeps chrome quiet and lets the paper carry the surface, and both of
+# these hand pixels back to the Ghostty dot grid showing through panel_bg.
+# Turning scrollbars off also keeps the scrollbar column out of terminal-native
+# selections, so mouse-copy from a pane stops picking it up.
+pane_scrollbars = false
+hide_tab_bar_when_single_tab = true
+
+[ui.toast]
+delivery = "system"

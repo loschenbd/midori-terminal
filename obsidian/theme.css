@@ -15,6 +15,118 @@
    See build-fonts.py for why 45%, and why the interface keeps the stock faces.
    ========================================================================== */
 
+/* THE SETTING AND THE VALUE ARE NEVER THE SAME VARIABLE.
+
+   Style Settings writes `--<id>` on body from the block below. Those are
+   INPUTS, named --midori-set-*. The theme never reads one directly; it reads a
+   DERIVED variable computed from it, and
+   test_inputs_are_never_read_by_a_real_property holds that line. For the
+   row-controlling values that derivation is where clamping and round() live --
+   --midori-row's is round(up, max(24px, var(--font-text-size) *
+   var(--midori-set-leading)), 2px).
+
+   INDIRECTION ALONE DOES NOT MEAN QUANTISATION. --midori-set-heading-scale is
+   DERIVED too -- it feeds --h1-size through a plain calc(), never a round() --
+   and a large enough glyph box overflows its strut regardless: a line box is
+   max(strut, tallest inline box), font-size is not a row-sized property, and
+   nothing here clamps it into one. See the h1 note in the README's Settings
+   section for the measured cost. The guard is specific to the properties
+   round() was written to protect, not a property every derived variable gets
+   for free.
+
+   The block is a CSS comment, so with the plugin absent it is inert and the
+   theme behaves exactly as it did before any of this existed. Defaults live in
+   the CSS below, never only in the block -- Style Settings persists deviations
+   only, so a reader who never opens settings gets the shipped design, and
+   uninstalling the plugin restores it rather than orphaning state. */
+
+/* @settings
+
+name: Midori
+id: midori
+settings:
+    -
+        id: midori-measure-heading
+        title: Measure and rhythm
+        type: heading
+        level: 2
+        description: What the evidence review calls preference. What it calls evidence is derived and not exposed.
+    -
+        id: midori-set-measure
+        title: Line length
+        description: Characters per line. Longer lines are read faster; moderate lines are preferred; ratings do not track performance. 70 is the preference end, 95 the speed peak.
+        type: variable-number-slider
+        default: 70
+        min: 40
+        max: 100
+        step: 1
+    -
+        id: midori-set-indent
+        title: Paragraph indent
+        description: The first-line indent, in em. 0 turns it off without changing the rhythm mode.
+        type: variable-number-slider
+        default: 2
+        min: 0
+        max: 4
+        step: 0.5
+        format: em
+    -
+        id: midori-rhythm
+        title: Paragraph rhythm
+        description: Indent is a novel's; space is the web's; both marks the boundary twice. The evidence review found nothing either way, which is why this is a setting.
+        type: class-select
+        allowEmpty: false
+        default: midori-rhythm-indent
+        options:
+            - midori-rhythm-indent
+            - midori-rhythm-space
+            - midori-rhythm-both
+    -
+        id: midori-set-dot-alpha
+        title: Dot grid visibility
+        description: A multiplier on each mode's tuned opacity, so light and dark keep their relationship. 0 turns the grid off.
+        type: variable-number-slider
+        default: 1
+        min: 0
+        max: 1.5
+        step: 0.05
+    -
+        id: midori-set-leading
+        title: Leading
+        description: A multiple of the text size. The row is rounded up to an even number of pixels whatever you pick, so the dot grid holds. No experiment distinguishes 1.4 from 1.5 from 1.6.
+        type: variable-number-slider
+        default: 1.5
+        min: 1.4
+        max: 2
+        step: 0.05
+    -
+        id: midori-set-heading-scale
+        title: Heading scale
+        description: Multiplies the heading ladder. Capped at 1.1 because at the shipped default the h1's glyph box already overflows its strut into a second row; nothing here quantises that.
+        type: variable-number-slider
+        default: 1
+        min: 0.85
+        max: 1.1
+        step: 0.05
+    -
+        id: midori-accent
+        title: Accent
+        description: The eight tokens the palette already has. It is a select rather than a picker because the palette is closed; see the README for the argument.
+        type: class-select
+        allowEmpty: false
+        default: midori-accent-sage
+        options:
+            - midori-accent-sage
+            - midori-accent-mint
+            - midori-accent-olive
+            - midori-accent-ochre
+            - midori-accent-clay
+            - midori-accent-wine
+            - midori-accent-indigo
+            - midori-accent-purple
+
+*/
+
 body {
   /* Prose is the SANS face and the interface is the SERIF one — that is not a
      transposition. Note titles are Spectral (see --inline-title-font) against
@@ -34,66 +146,206 @@ body {
   --font-monospace-theme: "Midori Mono", ui-monospace, SFMono-Regular, monospace;
   --bold-weight: 600;
 
-  /* Vertical nudge that lands the dot row on the text baseline.
+  /* THE MEASURE FOLLOWS THE READER'S TEXT SIZE, WHICH IS THE WHOLE POINT.
 
-     ONE value for every platform. That is only possible because the grid uses
-     background-origin: content-box (see the dot-grid rule below); with the
-     default padding-box origin this number is a function of
-     env(safe-area-inset-top) and therefore of which device and orientation
-     you happen to be holding, which is why this file previously carried a
-     separate body.is-mobile override that was really just a fit to one phone.
+     Obsidian's default is 700px, which with "Midori Text" is ~91 characters
+     per line at a 16px base and ~97 at 15px — outside every band anyone has
+     proposed. The band itself has no experiment behind it (Spencer 1968
+     asserts ~70; Rayner & Pollatsek deduce 52 from Tinker's PRINT data; no
+     screen study produced the range), so this is not a correction toward a
+     finding. It is the preference side of the one result that IS solid: longer
+     lines are read faster, moderate lines are preferred, and subjective
+     ratings do not track performance. A writing surface is chosen, sat at for
+     hours, and not a speed-reading task.
 
-     What is left is where the first baseline of a note falls relative to the
-     top of the scrolling surface — the sizer padding plus the header stack,
-     not font metrics, now that the aliases seat every baseline at L/2. It is
-     still a knob rather than a constant: changing the base font size, the
-     sizer padding or the inline title's line box moves it. More negative
-     moves the dots UP relative to the text.
+     Proportional to the text size because characters-per-line depends on
+     BOTH width and size: a px constant silently becomes a different measure
+     the moment the reader moves Settings -> Appearance -> Font size, and
+     this theme now ships to people whose slider is not where mine is
+     (the app clamps it to 10-30px).
 
-     Before re-tuning this, confirm the webfont actually loaded. If prose
-     renders serif on the phone the fault is the font, not this number, and
-     changing it will cement the wrong face. And re-tune it by MEASURING the
-     baseline-to-dot delta, not by deriving one platform's value from
-     another's. */
-  --dotgrid-offset-y: 10.98px;
+     NOT em, which is the version of this that looks right and is not. app.css
+     applies this variable as max-width on .cm-line -- and .cm-line is also the
+     heading element, carrying font-size: var(--h1-size). An em resolves
+     against the element's OWN font-size, so an em measure hands heading lines
+     a wider column than body lines: measured, 34em is 544px on a body line and
+     880px on an h1. A calc against --font-text-size resolves numerically
+     before it ever reaches a consumer. 34 / 0.4818 average advance = 70
+     characters, at any base size. See
+     docs/superpowers/specs/2026-08-15-prose-typography-evidence.md */
+
+  /* THE MEASURE IS A SETTING, IN CHARACTERS, HELD IN EM.
+
+     34em was 70.6 cpl: cpl = em / 0.4818, where 0.4818 is M PLUS 1p's average
+     advance measured with a BoundsPen over a prose sample (not a pangram --
+     pangrams over-weight rare letters and run ~4% narrow). The slider is in
+     characters because that is what a writer thinks in and what the research
+     is reported in. It is NOT a claim that characters is the variable the eye
+     responds to: the evidence review refuted characters-over-visual-angle 0-3
+     and lists the question as open.
+
+     The advance constant is font-specific and is only valid because the body
+     font is fixed. If fonts are ever exposed, measure it from the chosen face.
+
+     Numeric, not em: an em here resolves against .cm-line's own font-size, and
+     .cm-line is also the heading element, so an em measure hands an h1 an 880px
+     column against a body line's 544px. */
+  --midori-avg-advance: 0.4818;
+  --midori-set-measure: 70;
+  --file-line-width: calc(var(--font-text-size)
+                          * var(--midori-set-measure)
+                          * var(--midori-avg-advance));
+
+  /* DOT VISIBILITY, AS A MULTIPLIER AND NOT A VALUE. 0.46 on paper against
+     0.1748 on dark paper is not an accident -- each was tuned against its own
+     ground and against the halation around light text on dark. One flat alpha
+     slider would flatten that. 0 turns the grid off, which is the single
+     largest lever for anyone who wants this typography without visible dots. */
+  --midori-set-dot-alpha: 1;
+  --dotgrid-dot: rgba(var(--dotgrid-dot-rgb),
+                      calc(var(--dotgrid-dot-alpha) * var(--midori-set-dot-alpha)));
+
+  /* THE GRID ROW. 24px at a 16px base is a leading of exactly 1.50 — above the
+     CSS ~1.2 floor that Rello et al. actually measured (their harmful
+     condition was CSS ~0.96; the "1.0" in that paper is Firefox's default of
+     120%), and on WCAG 1.4.8's 1.5, which is a policy floor and not an
+     experimental result. No study distinguishes 1.4 from 1.5 from 1.6, so this
+     number is defensible rather than optimal, and it is not going to move on
+     evidence. It moves, if at all, because the READER's base size moved — see
+     the @supports block below, which is where that happens. */
+  --midori-set-leading: 1.5;
+  --midori-set-heading-scale: 1;
+  --midori-row: 24px;
+
+  /* Was a constant measured against a 24px row. With a row that follows the
+     reader's text size, the first baseline moves by half the row's growth —
+     the aliases seat every baseline at L/2 — so the constant becomes an
+     offset from the historical row. VERIFY BY MEASURING after changing this;
+     see the plan's baseline-vs-dot check. */
+  --dotgrid-offset-y: calc(10.98px + (var(--midori-row) - 24px) / 2);
+}
+
+/* THE ROW FOLLOWS THE READER, WHERE THE ENGINE CAN DO THE ARITHMETIC.
+
+   This has to be a feature query and not the obvious two declarations in a
+   row. A custom property is parsed as a token stream, so
+   `--midori-row: 24px; --midori-row: round(...)` hands the second one to
+   every consumer whether or not the engine understands round(), and the
+   substitution then fails at each use site: measured in Chrome, the property
+   keeps the unparseable value and line-height computes to `normal`, not to
+   24px. A var() fallback at the use site does not save it either, because
+   var()'s fallback is for an UNDEFINED property, not a defined-but-unusable
+   one. Roughly 45 declarations read this variable, so getting that wrong
+   collapses the whole grid rather than degrading it. @supports asks the
+   question that the token stream cannot answer for itself.
+
+   round() landed in Chrome 125; Obsidian 1.12.4 is on Chromium 142. This is
+   for older builds, and it degrades to the historical fixed row.
+
+   TWO PIXELS, NOT ONE. --dotgrid-offset-y adds half the row's growth, so the
+   row has to be divisible by two or the half is fractional. Chromium rounds
+   the half-leading to a whole pixel, and measured against a real baseline the
+   result is 0.5px off the L/2 the offset assumes at every ODD row — 27px at
+   an 18px base, 45px at 30px. Rounding to 2px makes every row in the app's
+   10-30 clamp even, and the measured baseline then matches L/2 exactly at
+   all 21 of them. Leading runs 1.517-1.579 above the floor region. */
+@supports (line-height: round(up, 25px, 2px)) {
+  body {
+    --midori-row: round(up,
+                        max(24px, var(--font-text-size) * var(--midori-set-leading)),
+                        2px);
+  }
 }
 
 /* --------------------------------------------------------------------------
    Light — benjaminloschen.com light palette
    -------------------------------------------------------------------------- */
 .theme-light {
+  /* ---- Accent tokens ------------------------------------------------------
+     One named copy of benjaminloschen.com's palette, so the rules below read
+     as roles rather than as hexes, and a palette change is one edit instead of
+     forty. Names match `app/globals.css` exactly — that file is the source of
+     truth and the site is what these are mirroring. (The brand guide used to
+     call indigo/olive/wine "slate/moss/brick"; the CSS names won, and the
+     guide was updated to match.)
+
+     PURPLE IS NEW. Until Aug 2026 the site had no purple token, so this repo
+     derived a plum (#664f63) for the ANSI magenta slot and it spread to seven
+     surfaces, drifting to #7f5a74 in one of them. Measured in OKLCh, the old
+     plum sat 0.6 lightness and 2.2 chroma from wine — under the C 12 mark
+     where hue stops doing work at body size, so `keyword` and `operator` read
+     as ONE colour in a code fence. The replacement is chroma ~11, which is not
+     a lift above the palette but a lift UP TO it: ochre is 11.1, terracotta
+     9.9, and the old plum was the outlier at 4.3. Hue 310 is ~70° off wine and
+     ~59° off indigo, the two neighbours it has to clear. */
+  --midori-indigo: #3a5572;
+  --midori-olive: #6c7d52;
+  --midori-wine: #7a4a4a;
+  --midori-ochre: #b88a3a;
+  --midori-sage: #5f6f5e;
+  --midori-purple: #653f7f;
+  --midori-mint: #548373;               /* --page-dot deepened to hold as ink */
+
+  --midori-indigo-deep: #2d4259;        /* --link-color-hover */
+  --midori-sage-hover: #4a5749;         /* --accent-hover */
+
+  /* THE ACCENT ROLE, ONE STEP BACK FROM THE TOKEN. Roles pointed straight at
+     --midori-sage, so switching accent meant rewriting a dozen assignments.
+     They point here instead, and the class-select below moves this one
+     variable. Nothing about the palette changes -- the options are the tokens
+     that already exist. */
+  --midori-accent: var(--midori-sage);
+  --midori-accent-hover: var(--midori-sage-hover);
+  --midori-mythic: #6b5f52;             /* --accent-mythic */
+  --midori-wine-lift: #9d6161;          /* ANSI 9; Obsidian's "pink" hue slot */
+
+  /* Warm ramp — the site's terracotta/clay family, wash through deep. */
+  --midori-warm-wash: #f0e0d4;
+  --midori-warm-light: #e4c4a8;
+  --midori-clay: #c9916b;               /* --accent-warm */
+  --midori-terracotta: #b06d4a;         /* --accent-warm-strong */
+  --midori-warm-deep: #8f4f38;
+  --midori-warm-bridge: #d4a574;
+
+  --midori-page-dot: #9ebfb4;           /* grid texture only, never a fill */
+
   --accent-h: 117;
   --accent-s: 8%;
   --accent-l: 40%;
 
-  --background-primary: #f3f1eb;          /* --background */
-  --background-primary-alt: #faf9f6;      /* --card */
+  --background-primary: #f3f1eb;     /* --background */
+  --background-primary-alt: #faf9f6; /* --card */
   --background-secondary: #edeae2;        /* modals/popovers; the sidebar itself
                                              is transparent — see "one sheet" */
   --background-secondary-alt: #faf9f6;
-  --background-modifier-border: rgba(60, 58, 54, 0.1);   /* --border */
+  --background-modifier-border: rgba(60, 58, 54, 0.1); /* --border */
   --background-modifier-hover: rgba(60, 58, 54, 0.05);
 
-  --text-normal: #3d3933;                 /* body: --foreground lifted a step */
-  --text-muted: #524d46;                  /* --muted */
+  --text-normal: #3d3933; /* body: --foreground lifted a step */
+  --text-muted: #524d46;  /* --muted */
   --text-faint: #8a847b;
 
-  --text-accent: #5f6f5e;                 /* --accent (sage) */
-  --text-accent-hover: #4a5749;           /* --accent-hover */
-  --interactive-accent: #5f6f5e;
-  --interactive-accent-hover: #4a5749;
+  --text-accent: var(--midori-accent);             /* --accent (sage) */
+  --text-accent-hover: var(--midori-accent-hover); /* --accent-hover */
+  --interactive-accent: var(--midori-accent);
+  --interactive-accent-hover: var(--midori-accent-hover);
 
-  --link-color: #3a5572;                  /* indigo — internal links */
-  --link-color-hover: #2d4259;            /* indigo deep */
-  --link-external-color: #5f6f5e;         /* --accent (sage) — external links */
-  --link-external-color-hover: #4a5749;   /* --accent-hover */
-  --link-unresolved-color: #6b5f52;       /* --accent-mythic */
+  --link-color: var(--midori-indigo);                    /* indigo — internal links */
+  --link-color-hover: var(--midori-indigo-deep);         /* indigo deep */
+  --link-external-color: var(--midori-accent);             /* --accent (sage) — external links */
+  --link-external-color-hover: var(--midori-accent-hover); /* --accent-hover */
+  --link-unresolved-color: var(--midori-mythic);         /* --accent-mythic */
 
-  --text-selection: rgba(95, 111, 94, 0.25);    /* --accent (sage) @ 25% */
-  --text-highlight-bg: #e2d4b9;                 /* ochre wash — --color-yellow @ 28% on paper */
+  /* THE SELECTION BAND FOLLOWS THE ACCENT, with the same fallback discipline as
+     --midori-accent-hover. A custom property has no two-declaration fallback, so
+     the plain rgba() below is not a leftover -- it is what an engine without
+     color-mix actually lands on. Delete it and the band computes to its initial
+     value rather than to sage. */
+  --text-selection: rgba(95, 111, 94, 0.25);
+  --text-highlight-bg: #e2d4b9;              /* ochre wash — --color-yellow @ 28% on paper */
 
   --hr-color: rgba(60, 58, 54, 0.1);
-  --blockquote-border-color: #c9916b;     /* --accent-warm */
+  --blockquote-border-color: var(--midori-accent); /* --accent (sage) */
   --code-background: #faf9f6;
   /* Syntax colours lifted straight from ghostty/themes/midori-paper so a fence
      in Obsidian reads the same as the same code in the terminal. Each token is
@@ -104,17 +356,17 @@ body {
      These variables feed BOTH renderers: Prism's .token.* classes in reading
      view and CodeMirror's .cm-* classes in live preview. Setting them once
      covers both; styling .token.* directly would leave the editor untouched. */
-  --code-normal: #2a2825;                 /* fg — ink              */
-  --code-comment: #8a8378;                /* subtle               */
-  --code-punctuation: #524d46;            /* 8  — muted ink       */
-  --code-keyword: #664f63;                /* 5  — plum            */
-  --code-string: #6c7d52;                 /* 10 — olive           */
-  --code-function: #3a5572;               /* 4  — indigo          */
-  --code-property: #548373;               /* 6  — mint            */
-  --code-value: #b88a3a;                  /* 3  — ochre           */
-  --code-operator: #7a4a4a;               /* 1  — wine            */
-  --code-tag: #7a4a4a;                    /* 1  — wine            */
-  --code-important: #b06d4a;              /* terracotta           */
+  --code-normal: #2a2825;                     /* fg — ink              */
+  --code-comment: #8a8378;                    /* subtle               */
+  --code-punctuation: #524d46;                /* 8  — muted ink       */
+  --code-keyword: var(--midori-purple);       /* 5  — purple          */
+  --code-string: var(--midori-olive);         /* 10 — olive           */
+  --code-function: var(--midori-indigo);      /* 4  — indigo          */
+  --code-property: var(--midori-mint);        /* 6  — mint            */
+  --code-value: var(--midori-ochre);          /* 3  — ochre           */
+  --code-operator: var(--midori-wine);        /* 1  — wine            */
+  --code-tag: var(--midori-wine);             /* 1  — wine            */
+  --code-important: var(--midori-terracotta); /* terracotta           */
 
   /* Obsidian's eight base hues, retinted to the Midori palette. Callouts,
      highlights, graph nodes and tags all DERIVE from these, so retinting here
@@ -122,31 +374,35 @@ body {
      friends individually would be a dozen rules that still miss whatever ships
      next release. Both the hex and the -rgb triplet are needed: callouts
      compose their tints with rgba(var(--callout-x), <alpha>). */
-  --color-red-rgb: 122, 74, 74;           --color-red: #7a4a4a;      /* wine       */
-  --color-orange-rgb: 176, 109, 74;       --color-orange: #b06d4a;   /* terracotta */
-  --color-yellow-rgb: 184, 138, 58;       --color-yellow: #b88a3a;   /* ochre      */
-  --color-green-rgb: 108, 125, 82;        --color-green: #6c7d52;    /* olive      */
-  --color-cyan-rgb: 84, 131, 115;         --color-cyan: #548373;     /* mint       */
-  --color-blue-rgb: 58, 85, 114;          --color-blue: #3a5572;     /* indigo     */
-  --color-purple-rgb: 102, 79, 99;        --color-purple: #664f63;   /* plum       */
-  --color-pink-rgb: 157, 97, 97;          --color-pink: #9d6161;     /* wine lift  */
+  --color-red-rgb: 122, 74, 74;           --color-red: var(--midori-wine);          /* wine       */
+  --color-orange-rgb: 176, 109, 74;       --color-orange: var(--midori-terracotta); /* terracotta */
+  --color-yellow-rgb: 184, 138, 58;       --color-yellow: var(--midori-ochre);      /* ochre      */
+  --color-green-rgb: 108, 125, 82;        --color-green: var(--midori-olive);       /* olive      */
+  --color-cyan-rgb: 84, 131, 115;         --color-cyan: var(--midori-mint);         /* mint       */
+  --color-blue-rgb: 58, 85, 114;          --color-blue: var(--midori-indigo);       /* indigo     */
+  --color-purple-rgb: 101, 63, 127;       --color-purple: var(--midori-purple);     /* purple     */
+  /* "pink" is Obsidian's slot name, not a description: wine-lift is hue 20
+     (light) / 13 (dark) — the wine family, not pink. The palette has no pink
+     and there is no rung free for one; see the README's "the palette is
+     closed". Keeping Obsidian's name so callouts resolve. */
+  --color-pink-rgb: 157, 97, 97;          --color-pink: var(--midori-wine-lift);    /* wine lift  */
   /* Quote callouts hardcode a neutral grey rather than deriving from a hue. */
   --callout-quote: 82, 77, 70;
-  --text-highlight-bg-rgb: 184, 138, 58;  /* ochre, not highlighter yellow */
+  --text-highlight-bg-rgb: 184, 138, 58; /* ochre, not highlighter yellow */
 
-  --tag-color: #5f6f5e;
+  --tag-color: var(--midori-accent);
   --tag-background: rgba(95, 111, 94, 0.1);
 
-  --checkbox-color: #5f6f5e;
-  --checkbox-color-hover: #4a5749;
+  --checkbox-color: var(--midori-accent);
+  --checkbox-color-hover: var(--midori-accent-hover);
   --checkbox-border-color: #8a847b;
   --checklist-done-color: #8a847b;
 
   --h1-color: #2a2825;
   --h2-color: #2a2825;
   --h3-color: #524d46;
-  --h4-color: #6b5f52;                    /* --accent-mythic */
-  --h5-color: #6b5f52;
+  --h4-color: var(--midori-mythic); /* --accent-mythic */
+  --h5-color: var(--midori-mythic);
   --h6-color: #8a847b;
 
   --scrollbar-thumb-bg: rgba(60, 58, 54, 0.15);
@@ -171,7 +427,8 @@ body {
   /* Mint dots on cream, as on benjaminloschen.com (--page-dot #9ebfb4). The
      site applies opacity 0.46 to the whole overlay layer; folded into the
      alpha here since this theme has no separate overlay element. */
-  --dotgrid-dot: rgba(158, 191, 180, 0.46);
+  --dotgrid-dot-rgb: 158, 191, 180;
+  --dotgrid-dot-alpha: 0.46;
 
   /* Selected-row wash: the site's `bg-accent/10` on a sage accent. */
   --dotgrid-accent-wash: rgba(95, 111, 94, 0.10);
@@ -188,32 +445,82 @@ body {
    Dark — benjaminloschen.com dark palette
    -------------------------------------------------------------------------- */
 .theme-dark {
+  /* ---- Accent tokens ------------------------------------------------------
+     Same set as the light block, at the site's dark values (`app/globals.css`,
+     `.dark`) — lifted so they stay luminous on near-black rather than merely
+     inverted.
+
+     Purple is L 64, not the 65 that mirroring light would give. On this ground
+     terracotta rises to L 70 and every close neighbour — terracotta, wine,
+     indigo-lift, olive — sits ABOVE purple, so dropping a point widens all
+     four gaps at once and is the only move that clears the whole fence. It
+     still reads 5.00:1 on the charcoal ground. */
+  --midori-indigo: #6c87a4;
+  --midori-indigo-lift: #8ba3bd;        /* --link-color-hover; also `function` */
+  --midori-olive: #9eaf85;
+  --midori-wine: #b8868a;
+  --midori-ochre: #d8b06a;
+  --midori-sage: #9aab97;
+  --midori-purple: #a079be;
+  --midori-mint: #7fae9c;               /* site parity only — see page-dot */
+
+  --midori-sage-hover: #b4c0b0;         /* --accent-hover — LIGHTER here */
+
+  /* THE ACCENT ROLE, ONE STEP BACK FROM THE TOKEN. Roles pointed straight at
+     --midori-sage, so switching accent meant rewriting a dozen assignments.
+     They point here instead, and the class-select below moves this one
+     variable. Nothing about the palette changes -- the options are the tokens
+     that already exist. */
+  --midori-accent: var(--midori-sage);
+  --midori-accent-hover: var(--midori-sage-hover);
+  --midori-mythic: #c4b8a8;             /* --accent-mythic */
+  --midori-wine-lift: #d0a2a6;          /* ANSI 9; Obsidian's "pink" hue slot */
+
+  /* Warm ramp. Note the two ends inverted with the ground: wash and light are
+     now the darkest rungs, because on charcoal a warm *wash* has to sit under
+     the text, not over it. */
+  --midori-warm-wash: #2c2520;
+  --midori-warm-light: #3e3530;
+  --midori-clay: #d4a07a;               /* --accent-warm */
+  --midori-terracotta: #e0b899;         /* --accent-warm-strong */
+  --midori-warm-deep: #b87d5c;
+  --midori-warm-bridge: #ccb08c;
+
+  /* Dark is the one place the dot hue is also used as INK — `property` and
+     --color-cyan take this, not --midori-mint above. The site's dark mint
+     lands at L 71.2 C 5.7 and indigo-lift at L 70.6 C 6.3: 0.6 apart on both
+     axes, which is the exact collision this palette keeps having. The dot
+     value sits 6.5 lighter and clears it. Light has no such problem — mint
+     there is 2.17 clear of indigo — so light uses the real mint and keeps this
+     token as texture. */
+  --midori-page-dot: #9ebfb4;
+
   --accent-h: 111;
   --accent-s: 11%;
   --accent-l: 63%;
 
-  --background-primary: #1a1917;          /* --background */
-  --background-primary-alt: #22211e;      /* --card */
+  --background-primary: #1a1917;     /* --background */
+  --background-primary-alt: #22211e; /* --card */
   --background-secondary: #161513;        /* modals/popovers; the sidebar itself
                                              is transparent — see "one sheet" */
   --background-secondary-alt: #22211e;
-  --background-modifier-border: rgba(235, 232, 226, 0.1);  /* --border */
+  --background-modifier-border: rgba(235, 232, 226, 0.1); /* --border */
   --background-modifier-hover: rgba(235, 232, 226, 0.05);
 
-  --text-normal: #ebe8e2;                 /* --foreground */
-  --text-muted: #9c958a;                  /* --muted */
+  --text-normal: #ebe8e2; /* --foreground */
+  --text-muted: #9c958a;  /* --muted */
   --text-faint: #6e685f;
 
-  --text-accent: #9aab97;                 /* --accent (sage) */
-  --text-accent-hover: #b4c0b0;           /* --accent-hover */
-  --interactive-accent: #9aab97;
-  --interactive-accent-hover: #b4c0b0;
+  --text-accent: var(--midori-accent);             /* --accent (sage) */
+  --text-accent-hover: var(--midori-accent-hover); /* --accent-hover */
+  --interactive-accent: var(--midori-accent);
+  --interactive-accent-hover: var(--midori-accent-hover);
 
-  --link-color: #6c87a4;                  /* indigo — internal links */
-  --link-color-hover: #8ba3bd;            /* indigo lifted */
-  --link-external-color: #9aab97;         /* --accent (sage) — external links */
-  --link-external-color-hover: #b4c0b0;   /* --accent-hover */
-  --link-unresolved-color: #c4b8a8;       /* --accent-mythic */
+  --link-color: var(--midori-indigo);                    /* indigo — internal links */
+  --link-color-hover: var(--midori-indigo-lift);         /* indigo lifted */
+  --link-external-color: var(--midori-accent);             /* --accent (sage) — external links */
+  --link-external-color-hover: var(--midori-accent-hover); /* --accent-hover */
+  --link-unresolved-color: var(--midori-mythic);         /* --accent-mythic */
 
   /* 38%, not the 25% light mode uses. Equal alpha does NOT read as equal
      strength on the two grounds. Screenshotted and measured: sage @ 25% on the
@@ -222,50 +529,59 @@ body {
      weaker to look at, because down here the band also has to out-read the dot
      grid and the halation around light text on dark. 38% puts it at 24.6,
      which is where it stops looking like a smudge. */
-  --text-selection: rgba(154, 171, 151, 0.38); /* --accent (sage) @ 38% */
+  /* THE SELECTION BAND FOLLOWS THE ACCENT, with the same fallback discipline as
+     --midori-accent-hover. A custom property has no two-declaration fallback, so
+     the plain rgba() below is not a leftover -- it is what an engine without
+     color-mix actually lands on. Delete it and the band computes to its initial
+     value rather than to sage. */
+  --text-selection: rgba(154, 171, 151, 0.38);
   --text-highlight-bg: #483d2b;                /* ochre wash — --color-yellow @ 24% on paper */
 
   --hr-color: rgba(235, 232, 226, 0.1);
-  --blockquote-border-color: #d4a07a;     /* --accent-warm */
+  --blockquote-border-color: var(--midori-accent); /* --accent (sage) */
   --code-background: #22211e;
   /* Same mapping as light, from ghostty/themes/midori-night. */
-  --code-normal: #ebe8e2;                 /* fg — bone ink        */
-  --code-comment: #9c958a;                /* 8  — muted ink       */
-  --code-punctuation: #c5bfb4;            /* 7  — warm light grey */
-  --code-keyword: #a48ba3;                /* 5  — plum            */
-  --code-string: #9eaf85;                 /* 10 — olive           */
-  --code-function: #8ba3bd;               /* 12 — indigo lifted   */
-  --code-property: #9ebfb4;               /* 6  — mint            */
-  --code-value: #d8b06a;                  /* 3  — ochre           */
-  --code-operator: #b8868a;               /* 1  — wine            */
-  --code-tag: #b8868a;                    /* 1  — wine            */
-  --code-important: #c9916b;              /* terracotta lifted    */
+  --code-normal: #ebe8e2;                     /* fg — bone ink        */
+  --code-comment: #9c958a;                    /* 8  — muted ink       */
+  --code-punctuation: #c5bfb4;                /* 7  — warm light grey */
+  --code-keyword: var(--midori-purple);       /* 5  — purple          */
+  --code-string: var(--midori-olive);         /* 10 — olive           */
+  --code-function: var(--midori-indigo-lift); /* 12 — indigo lifted   */
+  --code-property: var(--midori-page-dot);    /* 6  — mint            */
+  --code-value: var(--midori-ochre);          /* 3  — ochre           */
+  --code-operator: var(--midori-wine);        /* 1  — wine            */
+  --code-tag: var(--midori-wine);             /* 1  — wine            */
+  --code-important: var(--midori-clay);       /* clay — the dark ramp */
 
   /* Base hues, lifted variants — see the light block for why these matter. */
-  --color-red-rgb: 184, 134, 138;         --color-red: #b8868a;      /* wine       */
-  --color-orange-rgb: 201, 145, 107;      --color-orange: #c9916b;   /* terracotta */
-  --color-yellow-rgb: 216, 176, 106;      --color-yellow: #d8b06a;   /* ochre      */
-  --color-green-rgb: 158, 175, 133;       --color-green: #9eaf85;    /* olive      */
-  --color-cyan-rgb: 158, 191, 180;        --color-cyan: #9ebfb4;     /* mint       */
-  --color-blue-rgb: 108, 135, 164;        --color-blue: #6c87a4;     /* indigo     */
-  --color-purple-rgb: 164, 139, 163;      --color-purple: #a48ba3;   /* plum       */
-  --color-pink-rgb: 208, 162, 166;        --color-pink: #d0a2a6;     /* wine lift  */
+  --color-red-rgb: 184, 134, 138;         --color-red: var(--midori-wine);       /* wine       */
+  --color-orange-rgb: 212, 160, 122;      --color-orange: var(--midori-clay);    /* clay       */
+  --color-yellow-rgb: 216, 176, 106;      --color-yellow: var(--midori-ochre);   /* ochre      */
+  --color-green-rgb: 158, 175, 133;       --color-green: var(--midori-olive);    /* olive      */
+  --color-cyan-rgb: 158, 191, 180;        --color-cyan: var(--midori-page-dot);  /* mint       */
+  --color-blue-rgb: 108, 135, 164;        --color-blue: var(--midori-indigo);    /* indigo     */
+  --color-purple-rgb: 160, 121, 190;      --color-purple: var(--midori-purple);  /* purple     */
+  /* "pink" is Obsidian's slot name, not a description: wine-lift is hue 20
+     (light) / 13 (dark) — the wine family, not pink. The palette has no pink
+     and there is no rung free for one; see the README's "the palette is
+     closed". Keeping Obsidian's name so callouts resolve. */
+  --color-pink-rgb: 208, 162, 166;        --color-pink: var(--midori-wine-lift); /* wine lift  */
   --callout-quote: 156, 149, 138;
   --text-highlight-bg-rgb: 216, 176, 106;
 
-  --tag-color: #9aab97;
+  --tag-color: var(--midori-accent);
   --tag-background: rgba(154, 171, 151, 0.12);
 
-  --checkbox-color: #9aab97;
-  --checkbox-color-hover: #b4c0b0;
+  --checkbox-color: var(--midori-accent);
+  --checkbox-color-hover: var(--midori-accent-hover);
   --checkbox-border-color: #6e685f;
   --checklist-done-color: #6e685f;
 
   --h1-color: #ebe8e2;
   --h2-color: #ebe8e2;
   --h3-color: #9c958a;
-  --h4-color: #c4b8a8;                    /* --accent-mythic */
-  --h5-color: #c4b8a8;
+  --h4-color: var(--midori-mythic); /* --accent-mythic */
+  --h5-color: var(--midori-mythic);
   --h6-color: #6e685f;
 
   --scrollbar-thumb-bg: rgba(235, 232, 226, 0.12);
@@ -284,7 +600,8 @@ body {
 
   /* Softer mint on dark paper. Site dark dot is rgb(154 189 179 / 0.38);
      x the 0.46 overlay opacity = 0.1748. */
-  --dotgrid-dot: rgba(154, 189, 179, 0.1748);
+  --dotgrid-dot-rgb: 154, 189, 179;
+  --dotgrid-dot-alpha: 0.1748;
 
   --dotgrid-accent-wash: rgba(154, 171, 151, 0.12);
 
@@ -292,6 +609,73 @@ body {
     radial-gradient(ellipse 100% 55% at 50% -15%, rgb(45 44 40 / 0.9), transparent 52%),
     radial-gradient(ellipse 55% 40% at 0% 100%, rgb(55 52 46 / 0.45), transparent 50%),
     radial-gradient(ellipse 45% 45% at 100% 60%, rgb(48 52 46 / 0.35), transparent 48%);
+}
+
+/* ACCENT SELECTION. Eight options, all existing tokens; see "The palette is
+   closed" in the README for why this is a select and not a picker.
+
+   HOVER IS DERIVED, WITH A FALLBACK, because only some tokens ship a hand-tuned
+   hover variant (sage has one; mint and ochre do not). color-mix gives every
+   accent the same treatment, and the plain declaration outside @supports is
+   what an engine without color-mix lands on -- without it, the second
+   declaration would hand every consumer an unparseable token stream and the
+   hover colour would compute to its initial value, not to the accent. */
+body.midori-accent-sage    { --midori-accent: var(--midori-sage); }
+body.midori-accent-mint    { --midori-accent: var(--midori-mint); }
+body.midori-accent-olive   { --midori-accent: var(--midori-olive); }
+body.midori-accent-ochre   { --midori-accent: var(--midori-ochre); }
+body.midori-accent-clay    { --midori-accent: var(--midori-clay); }
+body.midori-accent-wine    { --midori-accent: var(--midori-wine); }
+body.midori-accent-indigo  { --midori-accent: var(--midori-indigo); }
+body.midori-accent-purple  { --midori-accent: var(--midori-purple); }
+
+body[class*="midori-accent-"] {
+  --midori-accent-hover: var(--midori-accent);
+}
+@supports (color: color-mix(in oklab, red, blue)) {
+  body[class*="midori-accent-"] {
+    --midori-accent-hover: color-mix(in oklab, var(--midori-accent) 82%, var(--text-normal));
+  }
+  /* Selected on body.theme-light / body.theme-dark, NOT gated behind an
+     explicit accent class the way hover is. Hover mixes toward --text-normal,
+     an opaque colour, so its derived value never exactly reproduces the
+     hand-tuned --midori-sage-hover -- gating it behind the class is what keeps
+     a reader who has never opened settings on the exact shipped hover.
+     Selection mixes toward `transparent` instead, and that reduces exactly:
+     at the shipped default (--midori-accent = var(--midori-sage)),
+     color-mix(in srgb, var(--midori-accent) 25%, transparent) computes to the
+     same rgba(95, 111, 94, 0.25) the plain declaration above already ships --
+     not merely close to it. Nothing changes for a reader who never touches
+     the accent setting, so there is no reason to wait for a class to land.
+     Split by mode because the tuned alpha differs (25% light, 38% dark; see
+     the rationale above the dark-mode declaration) -- one shared percentage
+     would silently flatten that relationship back to a single number.
+
+     THREE MORE ROLES, same discipline: --tag-background, --raised-edge and
+     --dotgrid-accent-wash shipped as sage rgba() literals too, so a wine
+     reader got sage behind wine tag text, a sage rule around the mobile bars,
+     and a sage active-row wash in the file explorer (--nav-item-background-
+     active reads --dotgrid-accent-wash directly, so fixing the wash fixes the
+     active row too -- it needs no declaration of its own). Each reduces
+     exactly the same way -- color-mix(in srgb, C, transparent) leaves the RGB
+     channels unshifted and sets alpha to the mix percentage, so
+     color-mix(in srgb, var(--midori-accent) N%, transparent) is
+     rgba(<accent>, N/100) -- verified against each mode's own plain literal:
+       --tag-background:      rgba(95,111,94,.1)  / rgba(154,171,151,.12) -> 10% / 12%
+       --raised-edge:         rgba(95,111,94,.3)  / rgba(154,171,151,.28) -> 30% / 28%
+       --dotgrid-accent-wash: rgba(95,111,94,.10) / rgba(154,171,151,.12) -> 10% / 12% */
+  body.theme-light {
+    --text-selection: color-mix(in srgb, var(--midori-accent) 25%, transparent);
+    --tag-background: color-mix(in srgb, var(--midori-accent) 10%, transparent);
+    --raised-edge: color-mix(in srgb, var(--midori-accent) 30%, transparent);
+    --dotgrid-accent-wash: color-mix(in srgb, var(--midori-accent) 10%, transparent);
+  }
+  body.theme-dark {
+    --text-selection: color-mix(in srgb, var(--midori-accent) 38%, transparent);
+    --tag-background: color-mix(in srgb, var(--midori-accent) 12%, transparent);
+    --raised-edge: color-mix(in srgb, var(--midori-accent) 28%, transparent);
+    --dotgrid-accent-wash: color-mix(in srgb, var(--midori-accent) 12%, transparent);
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -309,7 +693,7 @@ body {
 .markdown-source-view.mod-cm6 .cm-scroller,
 .markdown-reading-view .markdown-preview-view {
   background-image: radial-gradient(circle at 1px 1px, var(--dotgrid-dot) 1px, transparent 1.35px);
-  background-size: 24px 24px;
+  background-size: var(--midori-row) var(--midori-row);
   background-position: 0 var(--dotgrid-offset-y);
   background-attachment: local;
 
@@ -458,21 +842,68 @@ body.zen-mode .workspace-split.mod-root .workspace-leaf-content[data-type="markd
    the text moves down, so the phase moves the same direction to follow it:
    PLUS var(--header-height), not minus. (Minus leaves a residual of exactly
    2 x header-height mod 24 — 8px here — which reads as a mystery offset rather
-   than an obvious sign error.) */
-body.zen-mode .markdown-source-view.mod-cm6 .cm-scroller,
-body.zen-mode .markdown-reading-view .markdown-preview-view {
+   than an obvious sign error.)
+
+   WHY THE GATE IS A UNION, NOT ONE CLASS. These three rules exist only to
+   compensate for a header this block floats out of flow, so they have to run
+   exactly when the header is drawn. app.css removes it with
+   `body:not(.show-view-header):not(.is-phone) .view-header { display: none }`
+   — TWO negations, so the header survives if EITHER of them fails, and the
+   gate has to mirror both. Ungated, the desktop with the setting off gets a
+   header's worth of empty space above the note plus a grid phase shifted to
+   match it. Gated on .show-view-header alone, a PHONE with the setting off
+   still draws the header and no longer compensates for it, so the note's
+   first line sits --header-height too high — 40px there, under the controls.
+   :is() takes the specificity of its most specific argument and both are
+   classes, so the union weighs (0,2,1), the same as the two-class gate it
+   replaces; measured in Chrome against selectors of known weight rather than
+   assumed. */
+body.zen-mode:is(.show-view-header, .is-phone) .markdown-source-view.mod-cm6 .cm-scroller,
+body.zen-mode:is(.show-view-header, .is-phone) .markdown-reading-view .markdown-preview-view {
   background-position: 0 calc(var(--dotgrid-offset-y) + var(--header-height));
 }
-body.zen-mode .markdown-source-view.mod-cm6 .cm-sizer {
+body.zen-mode:is(.show-view-header, .is-phone) .markdown-source-view.mod-cm6 .cm-sizer {
   padding-top: var(--header-height);
 }
-body.zen-mode .markdown-reading-view .markdown-preview-sizer {
-  padding-top: calc(24px + var(--header-height));   /* keeps the base grid row */
+body.zen-mode:is(.show-view-header, .is-phone) .markdown-reading-view .markdown-preview-sizer {
+  padding-top: calc(var(--midori-row) + var(--header-height));   /* keeps the base grid row */
 }
 
+/* Breadcrumb title text ("Writing / 07-05-2026") — hide just the title,
+   the header row stays for its nav arrows and action buttons */
+body.zen-mode .view-header-title-container {
+  visibility: hidden;
+}
+
+/* Quiet the header row itself: no bar look, just floating controls */
+body.zen-mode .view-header {
+  background-color: transparent;
+  border-bottom: none;
+}
+
+/* Tab strip: hide only when a single tab is open, so multi-tab work,
+   tab switching, and the window drag area stay intact when you need them */
+body.zen-mode .mod-root .workspace-tab-header-container:not(:has(.workspace-tab-header:nth-child(2))) {
+  height: 12px; /* slim strip kept as a window-drag handle; 0 to remove */
+  background: transparent;
+  border-bottom: none;
+  box-shadow: none;
+}
+body.zen-mode .mod-root .workspace-tab-header-container:not(:has(.workspace-tab-header:nth-child(2))) .workspace-tab-header-container-inner,
+body.zen-mode .mod-root .workspace-tab-header-container:not(:has(.workspace-tab-header:nth-child(2))) .workspace-tab-header-new-tab,
+body.zen-mode .mod-root .workspace-tab-header-container:not(:has(.workspace-tab-header:nth-child(2))) .workspace-tab-header-tab-list,
+body.zen-mode .mod-root .workspace-tab-header-container:not(:has(.workspace-tab-header:nth-child(2))) .sidebar-toggle-button {
+  display: none;
+}
+
+/* Optional: hide the inline title too, for a completely bare page.
+body.zen-mode .inline-title { display: none; }
+*/
+
 /* --------------------------------------------------------------------------
-   24px baseline grid — text sits in exact grid rows, like the site's
-   leading-6 rhythm. Assumes base font size 15–16px (Settings → Appearance).
+   Baseline grid — text sits in exact grid rows, like the site's leading-6
+   rhythm. The row is --midori-row, 24px at a 15–16px base and following the
+   reader from there (Settings → Appearance); not assuming a base is the point.
    -------------------------------------------------------------------------- */
 /* No leading row. This used to be a full grid row of air, on the reasoning that
    content should "start on a row" — but the phase comes from the background
@@ -490,7 +921,7 @@ body.zen-mode .markdown-reading-view .markdown-preview-sizer {
 /* Body lines: exactly one 24px row each (editor lines have no margins,
    so this alone locks live-preview prose to the grid) */
 .markdown-source-view.mod-cm6 .cm-line {
-  line-height: 24px;
+  line-height: var(--midori-row);
 }
 
 /* THE TEXT CARET SITS LOW, AND THAT CANNOT BE FIXED HERE. Do not add a
@@ -673,15 +1104,17 @@ body.midori-drawn .midori-title-caret {
 }
 
 /* ...and the title's SELECTION band, which is off by even more than the
-   caret was. The title's line box is 24px (--inline-title-line-height) while
-   its face runs ~25.9px, so the native band is 12px either side of the
+   caret was. The title's line box is --inline-title-line-height, which is the
+   row — 24px at the 15-16px base these numbers were measured at, more above it
+   — while its face runs ~25.9px, so the native band is 12px either side of the
    baseline against ink that reaches ~19px up and ~6px down: it starts
    halfway up the capitals and hangs well below the descenders. That is the
    band in the screenshot, and it is the same root cause as the prose one —
    A = D centres everything the browser derives on the baseline.
 
    EM HERE, PX IN THE EDITOR, and the contrast is the point. The prose band is
-   sized against the 24px ROW, which does not move with Appearance → Font size.
+   sized against the ink sitting in the ROW, and the row is --midori-row, one
+   number the whole file shares that follows Appearance → Font size.
    The title has no fixed row to sit in — its line box is one row but its
    glyphs overflow it — so this one is sized against the GLYPHS and has to
    track the title's font size. The plugin makes that expressible by setting
@@ -795,13 +1228,21 @@ body.midori-drawn .midori-selectionLayer {
    still leaves 5px of the row between consecutive selected lines so they read
    as separate lines rather than one column of colour.
 
-   px, NOT em — and this is the trap. The row is an absolute 24px, set by
-   `.cm-line { line-height: 24px }` near the top of this file, and it does NOT
-   move with Appearance → Font size. An em band tracks the font while the row
-   it lives in does not, so `1.5em` was one row only by the coincidence of a
-   16px base. Anything sized against the ROW belongs in px; only things sized
-   against the GLYPHS belong in em. (The title's pair is the mirror case — it
-   is in em precisely because the title has no fixed row.)
+   px, NOT em, AND NOT THE ROW — and the three-way choice is the trap. 14/5 are
+   measured against the GLYPHS, which is why they are a fixed length: the ink
+   does not care what the row does. The `1.5em` they replaced was reaching for
+   one ROW instead, and it hit one only by the coincidence of a 16px base.
+
+   The row is --midori-row, set by `.cm-line { line-height: var(--midori-row) }`
+   near the top of this file. It was an absolute 24px when these numbers were
+   derived, and it now follows Appearance → Font size, so the rule that
+   paragraph licensed has to be restated: anything sized against the ROW
+   belongs in var(--midori-row), not in px. A px literal was the right answer
+   only while the row could not move; left standing, it is a band that stays
+   24px inside a line box that grew to 30. Things sized against the GLYPHS
+   still belong in px, or in em where they have to track a font-size that is
+   not their own. (The title's pair is the mirror case — it is in em precisely
+   because the title has no fixed row.)
 
    SAME PAIR AS THE CARET. --midori-sel-rise / --midori-sel-drop default to the
    caret's --midori-slot-rise / --midori-slot-drop, which is the point: the
@@ -974,17 +1415,30 @@ body.is-ios.midori-drawn .midori-selection-handle-end::after {
    settled is which of the two the measurement says each surface does, and that
    is what these two pairs now carry.
 
-   AND ITS BOX IS 22px, NOT THE 24px OF --inline-title-line-height. The same
-   measurement fixes the height: a centred scrim 11px either side of the
-   baseline IS a 22px line box, because a symmetric face puts half the box on
-   each side whatever the leading. The variable says 24. The plugin therefore
-   measures the element instead of trusting the variable and hands the answer
-   in as --midori-title-line-box; see titleLineBox in main.js. The fallback
-   here keeps a build that predates that measurement at 12/12 — 1px proud of
-   the scrim rather than 9px above it. */
+   AND THE TITLE'S BOX IS 22px, NOT THE ROW --inline-title-line-height CLAIMS
+   FOR IT. The same measurement fixes the height: a centred scrim 11px either
+   side of the baseline IS a 22px line box, because a symmetric face puts half
+   the box on each side whatever the leading. The variable says the row — 24px
+   at the 16px base this was measured at, and whatever the row is elsewhere.
+   The plugin therefore measures the element instead of trusting the variable
+   and hands the answer in as --midori-title-line-box; see titleLineBox in
+   main.js. The fallback here keeps a build that predates that measurement at
+   half the row either side — 1px proud of the scrim rather than 9px above it.
+
+   TWO BANDS, TWO VARIABLES, AND THEY ARE NOT THE SAME MEASUREMENT. Everything
+   above is about the TITLE, whose box is measured in JS and arrives as
+   --midori-title-line-box, consumed by the --midori-title-sel-* pair below.
+   --midori-line-box declared here is the PROSE band's box, consumed by the
+   --midori-sel-* pair immediately below it and drawn on .midori-selection and
+   the iOS drag handles. Nothing else in the theme or the plugin sets it. It
+   was written as a literal 24px when the row was a flat 24px at every base,
+   so the two agreed by construction; with the row following the reader's text
+   size they only agree at a 16px base, and the drawn band would stay 24px
+   against a 30px line box at a 20px base. It follows the row because it IS
+   the row. */
 body.is-ios {
   --midori-scrim-lean: 0.357em;
-  --midori-line-box: 24px;
+  --midori-line-box: var(--midori-row);
   --midori-title-scrim-lean: 0px;
   --midori-sel-rise: calc(var(--midori-line-box) / 2 + var(--midori-scrim-lean));
   --midori-sel-drop: calc(var(--midori-line-box) / 2 - var(--midori-scrim-lean));
@@ -1025,18 +1479,115 @@ body.is-ios .midori-title-selection {
 .markdown-preview-view blockquote,
 .markdown-preview-view th,
 .markdown-preview-view td {
-  line-height: 24px;
+  line-height: var(--midori-row);
 }
 
 /* Reading view block rhythm: spacing in whole grid rows */
-.markdown-preview-view p,
 .markdown-preview-view ul,
 .markdown-preview-view ol,
 .markdown-preview-view blockquote,
 .markdown-preview-view pre,
 .markdown-preview-view table {
-  margin-block: 0 24px;
+  margin-block: 0 var(--midori-row);
 }
+
+/* PARAGRAPH RHYTHM: A NOVEL'S INDENTS, NOT A WEB PAGE'S GAPS.
+
+   Taken over from the pretty-paragraphs plugin, which did this well except for
+   the grid. Two defects came with it and are fixed here, both only fixable by
+   whoever owns the lattice:
+
+   1. It gave the blank line under the caret `line-height: normal` so the caret
+      stays visible. `normal` is ~16.8px at a 14px base — not a multiple of the
+      row — so the whole note below the caret stepped off the dots every time
+      the caret rested on an empty line. One full row does the same job and
+      lands where the dots are.
+   2. Its indent selector was "the line after a blank line", which is also every
+      heading in a real note, so headings were indented 2em.
+
+   The evidence review found nothing either way on indent-versus-blank-line.
+   This is a stated preference, and it is in the theme rather than a plugin
+   because the grid-correct version cannot live anywhere else. */
+body {
+  --midori-set-indent: 2em;
+  --midori-indent: var(--midori-set-indent);
+}
+
+/* Reading view: the indent replaces the paragraph gap, which also gives the
+   grid a row back at every paragraph break. */
+.markdown-preview-view p {
+  text-indent: var(--midori-indent);
+  margin-block: 0;
+}
+/* Not inside quotes, lists, callouts or tables — those are their own blocks. */
+.markdown-preview-view :is(blockquote, li, .callout, table) p {
+  text-indent: 0;
+}
+
+/* Live Preview: a paragraph is ONE .cm-line (soft-wrapped), and the blank line
+   between paragraphs is its own .cm-line containing nothing but a <br>. */
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) {
+  line-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  color: transparent;
+}
+/* The blank line the caret is on, and a deliberate second blank line, each keep
+   a whole row — visible caret, intact lattice. */
+.markdown-source-view.mod-cm6 .cm-line.cm-active:has(> br:only-child),
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) + .cm-line:has(> br:only-child) {
+  line-height: var(--midori-row);
+}
+/* The line that starts a paragraph: the first line of the note, or the line
+   after a blank one — and prose only. */
+.markdown-source-view.mod-cm6 .cm-content > .cm-line:first-child:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout),
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) + .cm-line:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout) {
+  text-indent: var(--midori-indent);
+}
+
+/* RHYTHM MODES. The default is 'indent': the indent replaces the gap, which is
+   also what gives the grid a row back at every paragraph break. 'space' is the
+   web convention -- one whole row between paragraphs, no indent. 'both' marks
+   the boundary twice, which typographers generally call wrong; it is here
+   because some readers want it, and a setting that only offers the tasteful
+   options is a lecture rather than a setting.
+
+   A GAP IS ONE ROW OR IT IS NOTHING. Any other value is a fraction of the
+   lattice and every block below the paragraph leaves it.
+
+   The default carries an explicit rule rather than relying on the base styles,
+   so all three modes are addressable and switching away and back lands
+   somewhere defined. */
+body.midori-rhythm-indent .markdown-preview-view p {
+  margin-block: 0;
+  text-indent: var(--midori-indent);
+}
+body.midori-rhythm-space .markdown-preview-view p,
+body.midori-rhythm-both .markdown-preview-view p {
+  margin-block: 0 var(--midori-row);
+}
+
+/* A variable override, not a text-indent rule: the Live Preview indent
+   selector above (.cm-content > .cm-line:first-child:not(...), and the
+   blank-line + .cm-line:not(...) sibling) carries eleven class-level
+   components apiece, from :first-child/:has() plus five :not() clauses.
+   No body-class selector beats that honestly, and `body.midori-rhythm-space
+   .markdown-source-view.mod-cm6 .cm-line { text-indent: 0; }` shipped once
+   and silently lost the contest -- 'space' kept indenting in the editor
+   while every test stayed green. Zeroing --midori-indent instead resolves
+   before any consumer's selector is even considered, so reading view and
+   Live Preview both go to zero from one declaration, and no future
+   selector on either side can out-specify it back into indenting. */
+body.midori-rhythm-space {
+  --midori-indent: 0;
+}
+
+/* Every paragraph is indented, including the first after a heading. That
+   departs from the book convention deliberately: the exception is expressible
+   in Reading view (h1 + p) and not in Live Preview, where a blank line stands
+   between the heading and the paragraph and the selector becomes positional
+   and fragile. The two panes matching matters more here, and this theme has
+   paid for pane divergence before. */
 
 /* Headings: line boxes AND margins in whole rows.
 
@@ -1045,18 +1596,24 @@ body.is-ios .midori-title-selection {
    short of a multiple, so every line after the first heading in a note sat
    half a row off the dots. (h2 at 24+36+12 = 72 happened to work, which is
    what made the bug look intermittent.) Whole rows throughout instead. */
-/* h1–h4 get a 48px line box, h5–h6 a 24px one. That split is forced, not
-   chosen: a line box is max(strut, tallest inline box), and line-height only
-   sets the strut. Measured natural boxes at baseFontSize 14 are h3 26px and
-   h4 24.5px, so `line-height: 24px` could never shrink them — proved by
-   setting h3 to 40px (box became exactly 40) and h4 to 16px (box stayed
-   24.5). Only a strut ABOVE the natural box wins, so 48 is the nearest whole
-   row that actually takes. h5/h6 sit under 24 naturally and stay at one row.
-   This is also why the values are safe if the base font size changes: 48 has
-   headroom, where a compensating padding constant would not. */
+/* EVERY HEADING IS ONE ROW OF LINE BOX, h5/h6 included. The second row of
+   vertical space above a heading is margin in reading view and padding in live
+   preview, so a heading block is two whole rows in both panes. Measured at
+   base sizes 14, 16, 20 and 30: exactly 2 rows every time.
+
+   An earlier version of this comment described a 48px LINE BOX for h1-h4 and
+   a 24px one for h5/h6, forced because a line box is max(strut, tallest
+   inline box) and only a strut above the natural box wins. The historical
+   measurement behind it was real — setting h3 to 40px made the box exactly 40,
+   setting h4 to 16px left it at 24.5 — but it does not describe this file any
+   more. line-height here resolves to a LENGTH, and a length inherits, so every
+   inner span of a live-preview heading takes the row as well and the natural
+   box never gets the chance to win. The 48 was true as a BLOCK total at a 16px
+   base: one 24px line box plus 24px of padding. It is 2 rows at every other
+   base, which is the thing that actually needs to hold. */
 .markdown-preview-view :is(h1, h2, h3, h4, h5, h6),
 .HyperMD-header-1, .HyperMD-header-2, .HyperMD-header-3,
-.HyperMD-header-4, .HyperMD-header-5, .HyperMD-header-6 { line-height: 24px; }
+.HyperMD-header-4, .HyperMD-header-5, .HyperMD-header-6 { line-height: var(--midori-row); }
 
 /* The .HyperMD-header-N half of the rules above is (0,1,0) and therefore LOSES
    to the theme's own `.markdown-source-view.mod-cm6 .cm-line { line-height }`
@@ -1080,14 +1637,14 @@ body.is-ios .midori-title-selection {
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-2,
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-3,
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-4 {
-  line-height: 24px;
-  padding-top: 24px;
+  line-height: var(--midori-row);
+  padding-top: var(--midori-row);
   padding-bottom: 0;
 }
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-5,
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-header-6 {
-  line-height: 24px;
-  padding-top: 24px;
+  line-height: var(--midori-row);
+  padding-top: var(--midori-row);
 }
 
 /* The footnote definition marker is display:inline-block with top:-0.3em, and
@@ -1105,7 +1662,7 @@ body.is-ios .midori-title-selection {
    applies, so it has to be the whole-row one; setting the margin alone leaves
    every post-paragraph heading half a row out. */
 body {
-  --heading-spacing: 24px;
+  --heading-spacing: var(--midori-row);
 }
 
 /* Every heading box is one row and every baseline sits at L/2, so these are
@@ -1122,14 +1679,14 @@ body {
    the 24 above is the whole gap rather than 24 on top of the paragraph's own
    24; live preview uses padding, which does not collapse, which is why the two
    views need matching values stated separately. */
-.markdown-preview-view :is(h1, h2, h3, h4) { margin-block: 24px 0; }
-.markdown-preview-view :is(h5, h6) { margin-block: 24px 0; }
+.markdown-preview-view :is(h1, h2, h3, h4) { margin-block: var(--midori-row) 0; }
+.markdown-preview-view :is(h5, h6) { margin-block: var(--midori-row) 0; }
 /* --heading-spacing lands on `.markdown-rendered :is(p,pre,…) + :is(h1..h6)`
    at (0,1,2), which outranks the margin-block rules above — so h5/h6 need
    their 24 restated at that same specificity or they inherit the 36. */
 .markdown-rendered :is(p, pre, table, ul, ol) + :is(h5, h6),
 .markdown-rendered div:is(.el-blockquote, .el-p, .el-pre, .el-table, .el-ul, .el-ol) + div > :is(h5, h6) {
-  margin-top: 24px;
+  margin-top: var(--midori-row);
 }
 
 /* --------------------------------------------------------------------------
@@ -1145,7 +1702,7 @@ body {
    preview AND table block margins, so moving it to 24px fixes both at once.
    -------------------------------------------------------------------------- */
 body {
-  --p-spacing: 24px;
+  --p-spacing: var(--midori-row);
   /* Stays 0: this one pads the line AFTER a heading. 0 and 24 are both grid
      multiples, so it is free either way — 0 just avoids inserting a blank row
      under every heading that was not there before. */
@@ -1157,6 +1714,67 @@ body {
      applies per item rather than per list. Air between items has to come from
      the 24px line box itself. */
   --list-spacing: 0;
+  /* THE BULLET SITS ON THE BASELINE, AND THIS THEME IS WHY.
+
+     Obsidian draws the disc as `.list-bullet::after`, absolutely positioned
+     inside an `inline-flex` box with `align-items: center` — so the disc is
+     centred in a box exactly `line-height` tall. Where that centre lands
+     relative to the text is pure font metrics: a line box seats its baseline
+     at L/2 + F*(A-D)/2, so the disc ends up F*(A-D)/2 ABOVE the baseline. With
+     stock Inter that is 0.364em, comfortably up in the lowercase.
+
+     Our alias faces are declared `ascent-override: 45%; descent-override: 45%`
+     — deliberately symmetric, because A == D is what makes a line box come out
+     exactly `line-height` tall and keeps the 24px grid. But A == D also means
+     (A-D)/2 == 0, and the disc's centre collapses onto the baseline. Measured
+     in a stub harness at 16px: stock M PLUS 1p metrics put it 6.00px above the
+     baseline, the alias face 0.00px. Measured off a screenshot of the real
+     app, the disc's ink centroid sat 0.3px above the baseline — the harness
+     and the app agree.
+
+     So the grid override pays for itself in rhythm and bills the bullet. Half
+     an x-height puts it back: M PLUS 1p's `x` is 0.520em of ink, so -0.26em
+     lands the centre exactly on the x-height's middle (harness error 0.00px).
+     em, not px, so it scales with --font-text-size and with nested lists.
+     `--list-bullet-transform` is Obsidian's own knob and nothing else in
+     app.css writes `transform` on this element, so no rule fights it. */
+  --list-bullet-transform: translateY(-0.26em);
+}
+
+/* The fold chevron has the same disease as the bullet, and no vendor knob.
+
+   `.cm-fold-indicator` is an inline-block whose only content is a ZWSP, so its
+   baseline is that ZWSP's — which with A == D sits at exactly half its height.
+   The box therefore straddles the text baseline symmetrically, and the
+   `.collapse-indicator` inside it (`top: 0; height: 100%`) centres its icon on
+   the baseline. Measured off the running app, hovering an h3: the chevron's ink
+   spans rows 1296-1306 against a baseline at 1301 — its centre is 0.25px BELOW
+   the baseline, 8.25px below the middle of the cap band it belongs to.
+
+   Half the cap height of the line's own face, same as any icon centred against
+   type. The two faces need different numbers, so the header lines are called
+   out separately:
+
+     Spectral   cap 0.660em -> 0.330em   (measured want: 0.344em, and the 0.014
+                                          is the chevron's own offset inside its
+                                          viewBox, not a metric)
+     M PLUS 1p  x    0.520em -> 0.260em   matches --list-bullet-transform, so on
+                                          a list line the chevron and the disc
+                                          share one centre line
+
+   Reading view needs none of this: there the icon is centred with
+   `vertical-align: middle`, which is measured from the x-height — ink, not
+   declared metrics — so the override cannot reach it. Live preview only. */
+.markdown-source-view.mod-cm6 .cm-fold-indicator .collapse-indicator {
+  transform: translateY(-0.26em);
+}
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-1 .cm-fold-indicator .collapse-indicator,
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-2 .cm-fold-indicator .collapse-indicator,
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-3 .cm-fold-indicator .collapse-indicator,
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-4 .cm-fold-indicator .collapse-indicator,
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-5 .cm-fold-indicator .collapse-indicator,
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-header-6 .cm-fold-indicator .collapse-indicator {
+  transform: translateY(-0.33em);
 }
 
 /* Horizontal rule. The stock margins are not rows and the border adds height
@@ -1166,17 +1784,20 @@ body {
    1px costs nothing. 24px box + the theme's usual 24px bottom margin = two
    rows, with the line centred in the first. */
 .markdown-rendered hr {
-  height: 24px;
+  height: var(--midori-row);
   border: none;
-  margin-block: 0 24px;
+  margin-block: 0 var(--midori-row);
   background:
     linear-gradient(var(--hr-color), var(--hr-color)) center / 100% 1px
     no-repeat;
 }
 
-/* Code blocks: 24px lines, and vertical padding a whole row so the block
+/* Code blocks: lines on the row, and vertical padding a whole row so the block
    totals a multiple. min-height must be a multiple too — the stock 38px is
-   the kind of value that silently adds 14px to a short block.
+   the kind of value that silently adds 14px to a short block. Three rows, not
+   a literal 72px: the natural height is already two rows of padding plus at
+   least one row of content, so this floor never binds, but a literal one stops
+   being three rows the moment the reader raises their text size.
 
    THE STRUT HAS TO CARRY THE ALIAS TOO. Every block contributes a strut — an
    invisible inline box in the BLOCK's own font at the block's line-height —
@@ -1203,26 +1824,26 @@ body {
 }
 .markdown-rendered pre,
 .markdown-source-view.mod-cm6 .cm-line.HyperMD-codeblock {
-  line-height: 24px;
+  line-height: var(--midori-row);
 }
 .markdown-rendered pre {
-  padding-block: 24px;
-  min-height: 72px;
+  padding-block: var(--midori-row);
+  min-height: calc(var(--midori-row) * 3);
 }
 .markdown-rendered pre code {
-  line-height: 24px;
+  line-height: var(--midori-row);
 }
 
 /* Callouts: padding in whole rows, and the 1px border is absorbed by
    box-sizing rather than added on top. */
 body {
-  --callout-padding: 24px;
+  --callout-padding: var(--midori-row);
 }
 .callout {
   box-sizing: border-box;
 }
 .markdown-preview-view .callout {
-  margin-block: 0 24px;
+  margin-block: 0 var(--midori-row);
 }
 
 /* A callout's body is rendered markdown, not editor lines, so in live preview
@@ -1238,8 +1859,8 @@ body {
    row — otherwise they would double it. */
 .callout-title {
   padding-block: 0;
-  line-height: 24px;
-  min-height: 24px;
+  line-height: var(--midori-row);
+  min-height: var(--midori-row);
 }
 .callout-content {
   padding-block: 0;
@@ -1247,10 +1868,10 @@ body {
 .callout-content p,
 .callout-content li,
 .callout-content blockquote {
-  line-height: 24px;
+  line-height: var(--midori-row);
 }
 .callout-content > * {
-  margin-block: 0 24px;
+  margin-block: 0 var(--midori-row);
 }
 .callout-content > :last-child {
   margin-block-end: 0;
@@ -1259,7 +1880,7 @@ body {
    neither is a row. */
 .callout-content .callout,
 .markdown-source-view.mod-cm6 .callout-content .callout {
-  margin: 24px 0 0;
+  margin: var(--midori-row) 0 0;
 }
 
 /* Tables. A cell was 18n + 9 px tall for n wrapped lines, never 24n:
@@ -1284,7 +1905,7 @@ body {
    exactly 24n. Verified: the widget went 7.042 -> 8.000 rows. */
 .markdown-rendered td,
 .markdown-rendered th {
-  line-height: 24px;
+  line-height: var(--midori-row);
   padding-block: 0;
   border-width: 0;
   box-shadow:
@@ -1304,7 +1925,7 @@ body {
 .markdown-source-view.mod-cm6 .cm-table-widget th,
 .markdown-source-view.mod-cm6 .cm-table-widget td *,
 .markdown-source-view.mod-cm6 .cm-table-widget th * {
-  line-height: 24px !important;
+  line-height: var(--midori-row) !important;
   padding-block: 0 !important;
   margin-block: 0 !important;
 }
@@ -1329,7 +1950,7 @@ body {
    row of space after, so at least the block itself is the only offender. */
 .markdown-preview-view .image-embed,
 .markdown-preview-view .internal-embed {
-  margin-block: 0 24px;
+  margin-block: 0 var(--midori-row);
 }
 
 /* Raw <mark> in the source does not route through --text-highlight-bg the way
@@ -1441,24 +2062,90 @@ mark,
   fill: var(--background-secondary) !important;
   stroke: var(--divider-color) !important;
 }
-/* Title sits close to the prose: the 24px padding-top on .cm-content /
-   .markdown-preview-sizer above already supplies one full grid row of air,
-   so the title adds none of its own. */
-.inline-title {
-  margin-bottom: 0;
+body {
+  /* Undocumented but consumed by app.css on .inline-title. The sizer's own
+     top padding is already one full grid row of air, so the title adds none. */
+  --inline-title-margin-bottom: 0;
 }
 
-/* Headings in Spectral with the site's display weights */
-.markdown-preview-view h1, .HyperMD-header-1,
-.markdown-preview-view h2, .HyperMD-header-2 {
-  font-family: "Midori Display", ui-serif, Georgia, serif;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+/* HEADING SIZES COMPENSATED FOR SPECTRAL'S X-HEIGHT.
+
+   Headings are "Midori Display" (Spectral, x-height 0.450em); body is
+   "Midori Text" (M PLUS 1p, 0.520em). Apparent size follows x-height, not em
+   — which is why every print-size result in the vision literature is stated in
+   x-height rather than points. Set at Obsidian's default em ladder, an h4
+   lands 1.03x body to the eye instead of the 1.19x it claims, and the bottom
+   of the hierarchy stops reading as hierarchy.
+
+   x 1.1556 = 0.520 / 0.450 restores the intended ladder optically. The em
+   numbers now look large; that is the correction, not a mistake.
+
+   Only h1-h4 — h5/h6 are Midori Text and already correct, and are uppercase,
+   where cap-height rather than x-height carries the size.
+
+   THE STRUT IS ONE ROW, AND THE COMPENSATION DOES NOT CHANGE IT. Every
+   heading takes line-height: var(--midori-row); the second row of air above a
+   heading is margin (padding, in Live Preview), not line box. h2-h4 stay
+   inside that strut at every base in the clamp, in both panes, so for them
+   nothing here moves the grid. What changes for them is how far an h1's ink
+   reaches up into the row of air above it: 1.2px before the compensation,
+   7.1px after, at a 16px base with 24px of margin to absorb it.
+
+   h1 IS NOT INSIDE ITS OWN STRUT, AND THIS COMMENT USED TO CLAIM IT WAS. It
+   is the largest size the compensation produces, and a line box is
+   max(strut, tallest inline box) -- a live sweep against a running app
+   (tests/check_rendered_grid.py) measured h1's Live Preview box at 49px
+   against a 24px row at heading-scale 1 (two rows plus one, not one row plus
+   a pixel), clearing to a whole-row 48px only at heading-scale <= 0.9 and
+   failing again at >= 0.95. That brackets the shipped default of 1 on the
+   failing side, so this is live today, not only at the slider's top end.
+   Known and deliberately not fixed here -- see the README's Settings
+   section, "Known open item, under Heading scale". */
+body {
+  --h1-size: calc(1.870em * var(--midori-set-heading-scale));   /* app.css 1.618 x 1.1556 */
+  --h2-size: calc(1.690em * var(--midori-set-heading-scale));   /* app.css 1.462 x 1.1556 */
+  --h3-size: calc(1.523em * var(--midori-set-heading-scale));   /* app.css 1.318 x 1.1556 */
+  --h4-size: calc(1.373em * var(--midori-set-heading-scale));   /* app.css 1.188 x 1.1556 */
 }
-.markdown-preview-view h3, .HyperMD-header-3,
-.markdown-preview-view h4, .HyperMD-header-4 {
-  font-family: "Midori Display", ui-serif, Georgia, serif;
-  font-weight: 500;
+
+/* HEADINGS THROUGH OBSIDIAN'S OWN VARIABLES, NOT AROUND THEM.
+
+   app.css already reads --hN-font, --hN-weight and --hN-letter-spacing on
+   every heading, in BOTH panes: .HyperMD-header-N in Live Preview and h1-h6 in
+   Reading view are the same declaration block. Setting the variables therefore
+   replaces two rules per level with one, and it is the supported path rather
+   than a specificity fight that has to be re-won every time app.css changes.
+
+   The inline title comes free: app.css defaults --inline-title-font,
+   --inline-title-size and --inline-title-weight to their --h1-* counterparts,
+   so the title follows h1 without a rule of its own. */
+body {
+  --h1-font: "Midori Display", ui-serif, Georgia, serif;
+  --h2-font: "Midori Display", ui-serif, Georgia, serif;
+  --h3-font: "Midori Display", ui-serif, Georgia, serif;
+  --h4-font: "Midori Display", ui-serif, Georgia, serif;
+  --h1-weight: 600;
+  --h2-weight: 600;
+  --h3-weight: 500;
+  --h4-weight: 500;
+  --h1-letter-spacing: -0.01em;
+  --h2-letter-spacing: -0.01em;
+
+  /* AND THE LINE HEIGHT, WHICH IS WHERE THE MISSED SELECTOR WAS. app.css
+     applies line-height: var(--hN-line-height) in the same rule that styles
+     .HyperMD-list-line .cm-header-N -- a heading inside a LIST. The theme's
+     own grid rule names .markdown-preview-view h1-h6 and .HyperMD-header-N
+     and does not name .cm-header-N, so those headings kept app.css's 1.2
+     default and sat off the dots: measured at a 16px base, 35.9px for a list
+     h1, 32.4px for an h2, 31.7px for an h3, against a 24px row. Setting the
+     variable reaches every consumer of it at once, which is the whole point
+     of this block. All six levels, because h5 and h6 occur in lists too. */
+  --h1-line-height: var(--midori-row);
+  --h2-line-height: var(--midori-row);
+  --h3-line-height: var(--midori-row);
+  --h4-line-height: var(--midori-row);
+  --h5-line-height: var(--midori-row);
+  --h6-line-height: var(--midori-row);
 }
 
 /* Eyebrow-style H5/H6: small caps tracking like .type-eyebrow on the site */
@@ -1471,12 +2158,86 @@ mark,
   font-size: 0.85em;
 }
 
-/* Blockquotes: warm rule, serif italic, like the site's pull quotes */
+/* Blockquotes: sage rule, serif italic. The site's pull quotes take the warm
+   accent and this one does not — a quote is the same kind of aside as a link
+   or a tag, and those are all sage here, so clay on this one bar was the odd
+   one out rather than a warm counterpoint. Clay keeps --code-important and
+   --color-orange, so it is still in the palette, just not on this rule. */
 .markdown-preview-view blockquote,
 .HyperMD-quote {
   font-style: italic;
   color: var(--text-muted);
 }
+
+/* LIVE PREVIEW: THE THINGS CODEMIRROR PUTS IN A LINE THAT ARE TALLER THAN IT.
+
+   Fourth and fifth instances of the strut problem, and the first two found by
+   measuring the RUNNING APP over CDP rather than a harness — which is how they
+   survived nine tasks and a whole-plan review. The harness reproduces the
+   theme's DOM; it does not reproduce CodeMirror's, and both offenders are
+   CodeMirror's own furniture:
+
+     img.cm-widgetBuffer   height: 1em, vertical-align: text-top. A REPLACED
+                           element, so height applies. At an h1's 29.92px that
+                           is a 29.91px inline box against a 24px strut, and
+                           the line box is max(strut, tallest inline box).
+     div.cm-fold-indicator inline-block, height 24px, on the baseline, so it
+                           adds its whole height ABOVE the baseline and the
+                           descender below. 97bf993 moved the chevron's ICON
+                           with a transform, which is visual and does not
+                           change what the box occupies.
+     span.cm-footref       raised, and tall enough to beat the strut on any
+                           line carrying a footnote marker.
+
+   MEASURED on the block reference note at a 16px base, before and after:
+   6 of 31 lines off the row -> 1. h1 53.91 -> 49.00, every h2 51.03 -> 48,
+   h3 49.36 -> 48, and the footnote line 53.00 -> 48. Zeroing the HEIGHT is
+   what works; display:none does not, because the buffer is not the only
+   contributor and hiding it just lets the next one win.
+
+   THE h1 IS STILL 1px OVER and this is the honest limit of the approach: its
+   content box floors at 25px and will not go below that at any line-height,
+   because 1.870em is 29.92px and the glyph box is 26px. That is a cost of the
+   x-height compensation above -- the correction that makes an h1 read at its
+   intended optical size also makes it unable to sit in one row here. Fixing it
+   means giving h1 a two-row box in live preview, which is a design decision,
+   not a patch. One pixel per h1, against 5.91 before. */
+.markdown-source-view.mod-cm6 .cm-line .cm-widgetBuffer { height: 0; }
+.markdown-source-view.mod-cm6 .cm-line .cm-fold-indicator {
+  height: 0;
+  overflow: visible;   /* the chevron still draws and still takes a click */
+}
+.markdown-source-view.mod-cm6 .cm-footref { line-height: 0; }
+
+/* SUPERSCRIPT AND SUBSCRIPT: RAISED, BUT CONTRIBUTING NO HEIGHT.
+
+   Third instance of the strut problem, after code spans and tag pills, and the
+   only one app.css causes directly:
+
+       .footnote-ref { vertical-align: super; }
+
+   Full-size text, raised above the baseline, with nothing said about
+   line-height. The line box is max(strut, tallest inline box), so the raised
+   box wins and the line grows. MEASURED on the block reference note at a 16px
+   base: the line carrying a footnote marker came out 29.85px against a 24px
+   row, and because the error is a fraction of a row it does not stay local --
+   every block below it, all the way to the end of the note, sat 3.9px off the
+   dots. One marker, and the rest of the page leaves the lattice.
+
+   line-height: 0 is what makes it harmless: an inline box of zero height
+   cannot exceed the strut, so the line stays one row. The visual raise then
+   has to come from position/top instead of vertical-align, which is layout-free.
+   This is normalize.css's fix for the same defect, and it is here rather than
+   in a plugin for the same reason the paragraph rules are: only whoever owns
+   the lattice can see that the cost is measured in rows. */
+.markdown-rendered :is(sup, sub, .footnote-ref) {
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+.markdown-rendered :is(sup, .footnote-ref) { top: -0.45em; }
+.markdown-rendered sub { bottom: -0.2em; }
 
 /* Tag pills. The alias, not stock "M PLUS 1p": a tag sits inline in a
    paragraph, and a stock face there displaces the line box exactly the way it
@@ -1517,17 +2278,100 @@ a.tag, .cm-hashtag {
   padding-bottom: 0;
 }
 
-/* Inline title matches H1 treatment.
-   Set via --inline-title-font as well as the direct declaration: with a
-   per-vault Font override in Settings → Appearance (textFontFamily), Obsidian
-   drives the title off --font-text and the plain rule alone loses. */
-body {
-  --inline-title-font: "Midori Display", ui-serif, Georgia, serif;
-}
+/* Inline title matches H1 treatment — and now takes it FROM h1.
+
+   The !important is gone. It was there because a per-vault Font override
+   (Settings → Appearance → textFontFamily) drives the title off --font-text,
+   and a plain rule lost. With --h1-font set (see the heading variables above)
+   the title resolves through --inline-title-font -> var(--h1-font) instead, a
+   chain that never reads --font-text. Verified with the override actually set
+   the way app.js sets it, written inline on body: body prose changes face and
+   the title does not, with the !important and without it.
+
+   All three declarations here lose to app.css's .inline-title:not([data-level])
+   at (0,2,0) in the ordinary case — which is why the title rendered at weight
+   700 while this rule said 600, until --h1-weight was set. They are kept as the
+   fallback for the one case that selector excludes: a title carrying
+   data-level, which is how it renders inside embeds and hover popovers. */
 .inline-title {
-  font-family: var(--inline-title-font) !important;
+  font-family: var(--inline-title-font);
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   Notices: Obsidian's dark toast, on a paper page.
+
+   A notice arrives as a near-black slab in the middle of the cream. Two
+   separate causes, and fixing only the obvious one makes it strictly worse.
+
+   BACKGROUND. .notice reads --background-modifier-message, which app.css sets
+   to rgba(0, 0, 0, 0.9) on `body` for EVERY context except
+   `.is-mobile.theme-dark` — the single place it resolves to
+   --background-secondary. So a light theme always gets the slab, and on a
+   phone in light mode the notice is the first thing the eye lands on.
+
+   TEXT IS NOT A VARIABLE. app.css hardcodes `color: #FAFAFA` on .notice.
+   Retarget the background alone and you paint near-white text onto a cream
+   card — unreadable, and worse than the slab it replaced. The colour needs
+   its own declaration, which is why this is a block and not a palette line.
+
+   RETARGET THE VARIABLE, because the ARROWS have no other hook. .tooltip and
+   .cm-tooltip-docstring draw their pointers as CSS triangles whose colour is
+   `border-<side>: Npx solid var(--background-modifier-message)`. Set
+   background-color on the elements instead and the bodies turn into light
+   cards while the arrows stay black, pointing at them. Moving the variable is
+   the only fix that carries the arrows along.
+
+   That variable is shared by .notice, .tooltip, .cm-completionInfo and
+   .cm-tooltip-docstring — all four of which hardcode #FAFAFA — so all four are
+   restyled together here deliberately, not as a side effect.
+   `.is-mobile .suggestion-container` names it too but overwrites it on the very
+   next line with a color-mix over --suggestion-background, so it only ever sees
+   this as a fallback.
+
+   THE SECOND SELECTOR IS NOT REDUNDANT. app.css redefines the variable in
+   `.is-mobile.theme-dark` at (0,2,0), which beats a bare `body` (0,0,1) no
+   matter the source order — so without `body.is-mobile.theme-dark` at (0,2,1)
+   a phone in Night would quietly keep Obsidian's value and diverge from every
+   other surface.
+
+   Styled as a raised card rather than a toast: --background-primary-alt is the
+   same surface the settings rows and callouts use, so a message reads as part
+   of the page it interrupts. A light card on a light page has no silhouette of
+   its own, hence the explicit border — and on a phone Obsidian sets
+   `box-shadow: none` on .notice, leaving that border as the ONLY separation.
+   .notice-cta needs nothing; it goes through --text-accent.
+
+   `body` on the selectors only to clear app.css's (0,1,0) without depending on
+   stylesheet order.
+   -------------------------------------------------------------------------- */
+body,
+body.is-mobile.theme-dark {
+  --background-modifier-message: var(--background-primary-alt);
+}
+body .notice,
+body .tooltip,
+body .cm-tooltip.cm-completionInfo,
+body .cm-tooltip.cm-tooltip-docstring {
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border);
+}
+
+/* A notice can carry a <progress>, and in a light theme its track is a black
+   slab for the same reason the text was white: app.css assumed a dark notice
+   behind it.
+
+   Obsidian ALREADY themes this correctly in a general rule — track
+   --background-secondary, inset ring --background-modifier-border, value
+   --interactive-accent. It just loses: `.theme-light .notice progress[value]`
+   hardcodes #262626 / #363636 at (0,2,1) and beats the general rule's (0,1,1),
+   so light mode alone gets the slab. This restores Obsidian's own intended
+   values at (0,2,2) rather than inventing new ones, which is why the
+   declarations below deliberately mirror the general rule. */
+body.theme-light .notice progress[value]::-webkit-progress-bar {
+  background-color: var(--background-secondary);
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
 }
 
 /* --------------------------------------------------------------------------
@@ -1661,12 +2505,16 @@ body:not(.is-grabbing)
 /* --------------------------------------------------------------------------
    Sidebar structure: a manuscript page, not a control panel.
 
-   Rhythm. The file list runs on the same 24px lattice as the prose: 18px line
-   box plus 3px of padding either side, no bottom margin. Obsidian's stock
-   figures (4px padding + a 2px margin on a ~17px line) land on a 27px row —
-   close enough to look accidental rather than composed. Both platforms are
-   pinned to the same 24px here, so the sidebar and the note agree even though
-   their font sizes differ.
+   Rhythm. The file list runs on a hard 24px lattice: 18px line box plus 3px of
+   padding either side, no bottom margin. Obsidian's stock figures (4px padding
+   + a 2px margin on a ~17px line) land on a 27px row — close enough to look
+   accidental rather than composed. Both platforms are pinned to the same 24px
+   here, so at the default base the sidebar and the note agree even though
+   their font sizes differ. Above it they diverge: the note's row is
+   --midori-row and follows Appearance → Font size, so at a 20px base the note
+   is on 30 and the sidebar is still on 24. That is deliberate for now —
+   whether a file list should grow with the reader's PROSE size is a design
+   question, not a grid bug, and it is not answered here.
 
    Typography carries the hierarchy instead of chrome. Folders take the
    semibold weight and full-strength ink; files sit one step back in muted;
@@ -1902,7 +2750,7 @@ body.is-mobile .inline-title { padding-top: 0; }
    -------------------------------------------------------------------------- */
 .metadata-container,
 body.is-mobile .metadata-container {
-  --metadata-input-height: 24px;
+  --metadata-input-height: var(--midori-row);
 }
 body.is-mobile .metadata-content {
   background-color: transparent;
@@ -2012,7 +2860,7 @@ body {
      so the error scales with how many properties a note has. */
   --metadata-padding: 0;
   --metadata-gap: 0;
-  --metadata-input-height: 24px;
+  --metadata-input-height: var(--midori-row);
   --metadata-input-padding: 0 var(--size-4-2);
 
   /* .inline-title:not([data-level]) is (0,2,0) and drives line-height from
@@ -2040,17 +2888,17 @@ body {
      properties, which together with .cm-content's own padding-top is the two
      rows this was asked to close. Doing it that way keeps the air a property
      of the thing that wants it instead of a side effect of the title's box. */
-  --inline-title-line-height: 24px;
+  --inline-title-line-height: var(--midori-row);
   --inline-title-margin-bottom: 0;
 }
 /* The row of air that used to be the title box's own top half. */
 .inline-title {
-  margin-block-start: 24px;
+  margin-block-start: var(--midori-row);
 }
 /* ...and the row that used to sit between the title and the properties card.
    The card asks for it; a paragraph does not, which is the whole point. */
 .metadata-container {
-  margin-block-start: 24px;
+  margin-block-start: var(--midori-row);
 }
 
 /* The add button's intrinsic height will not quantise: pinning height to 24px
@@ -2122,8 +2970,8 @@ body {
   margin-inline: calc(-1 * var(--midori-metadata-bleed));
   padding-inline: var(--midori-metadata-bleed);
   padding-top: var(--midori-metadata-inset);
-  padding-bottom: 24px;
-  margin-block-end: calc(48px - var(--midori-metadata-inset));
+  padding-bottom: var(--midori-row);
+  margin-block-end: calc(var(--midori-row) * 2 - var(--midori-metadata-inset));
 }
 /* THE WIDGET USES THE NATURAL FACE, NOT THE NORMALISED ONE, and that is a
    reversal worth spelling out because the opposite is right everywhere else.
@@ -2169,8 +3017,8 @@ body {
 .metadata-properties-heading {
   padding: 0;
   margin: 0;
-  height: 24px;
-  line-height: 24px;
+  height: var(--midori-row);
+  line-height: var(--midori-row);
   display: flex;
   align-items: center;
 }
@@ -2178,7 +3026,7 @@ body {
 .metadata-container .metadata-show-source-button {
   position: absolute; bottom: 0;
   inset-inline-start: var(--midori-metadata-bleed);
-  margin: 0; padding-block: 0; height: 24px; line-height: 24px;
+  margin: 0; padding-block: 0; height: var(--midori-row); line-height: var(--midori-row);
   /* The button ships as a plain inline box: its "+" is an inline SVG that
      baseline-aligns against the label, which puts the glyph low and the text
      high by however much the icon's descent happens to be. Make it a flex row
@@ -2193,9 +3041,9 @@ body {
    flex box whose height is max(input height, tallest child), so the pills in
    a multi-value property (tags) push it to 28.5px unless they are capped. */
 .metadata-property { align-items: center; }
-.metadata-property-key, .metadata-property-value { min-height: 24px; }
-.metadata-property-key > *, .metadata-property-value > * { line-height: 24px; }
-.multi-select-container { min-height: 24px; }
+.metadata-property-key, .metadata-property-value { min-height: var(--midori-row); }
+.metadata-property-key > *, .metadata-property-value > * { line-height: var(--midori-row); }
+.multi-select-container { min-height: var(--midori-row); }
 
 /* --------------------------------------------------------------------------
    Row interiors line up with each other, not with the dots — see the paper
@@ -2290,7 +3138,7 @@ body.is-mobile .metadata-container {
    pill background keeps its inset look. Anywhere else the theme sets a
    line-height below ~1.2em inside an overflow: hidden box needs the same
    treatment. */
-.multi-select-pill-content { line-height: 24px; }
+.multi-select-pill-content { line-height: var(--midori-row); }
 
 /* No live-preview override. The widget used to measure half a row (12px)
    taller in live preview than in reading view, and the theme carried a

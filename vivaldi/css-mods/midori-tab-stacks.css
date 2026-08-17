@@ -4,7 +4,7 @@
    :root #browser .colorN in Vivaldi's common.css). Overriding those vars recolors
    BOTH the applied tab groups and the Edit-Stack picker swatches (same classes).
    Palette gaps: Midori has no native pink/purple/cyan, so slots 6/7/8 are on-brand
-   muted derivations (dusty rose / plum / sage-teal). Light + dark tracked separately,
+   muted derivations (dusty rose / purple / sage-teal). Light + dark tracked separately,
    matching Vivaldi's own two-theme definitions. */
 
 /* --- light theme --- */
