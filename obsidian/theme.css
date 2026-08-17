@@ -15,6 +15,35 @@
    See build-fonts.py for why 45%, and why the interface keeps the stock faces.
    ========================================================================== */
 
+/* THE SETTING AND THE VALUE ARE NEVER THE SAME VARIABLE.
+
+   Style Settings writes `--<id>` on body from the block below. Those are
+   INPUTS, named --midori-set-*. The theme never reads one directly; it reads a
+   DERIVED variable computed from it, and the derivation is where clamping and
+   round() live. That indirection is the whole reason a slider cannot break the
+   dot grid: there is no path from a user value to a rule that skips the
+   quantisation. test_inputs_are_never_read_by_a_real_property holds the line.
+
+   The block is a CSS comment, so with the plugin absent it is inert and the
+   theme behaves exactly as it did before any of this existed. Defaults live in
+   the CSS below, never only in the block -- Style Settings persists deviations
+   only, so a reader who never opens settings gets the shipped design, and
+   uninstalling the plugin restores it rather than orphaning state. */
+
+/* @settings
+
+name: Midori
+id: midori
+settings:
+    -
+        id: midori-measure-heading
+        title: Measure and rhythm
+        type: heading
+        level: 2
+        description: What the evidence review calls preference. What it calls evidence is derived and not exposed.
+
+*/
+
 body {
   /* Prose is the SANS face and the interface is the SERIF one — that is not a
      transposition. Note titles are Spectral (see --inline-title-font) against
