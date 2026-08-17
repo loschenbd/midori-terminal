@@ -102,7 +102,7 @@ settings:
     -
         id: midori-set-heading-scale
         title: Heading scale
-        description: Multiplies the heading ladder. Capped at 1.1 because an h1's Live Preview line box already floors 1px over a row at the shipped size.
+        description: Multiplies the heading ladder. Capped at 1.1 because at the shipped default the h1's glyph box already overflows its strut into a second row; nothing here quantises that.
         type: variable-number-slider
         default: 1
         min: 0.85
