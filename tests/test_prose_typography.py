@@ -125,6 +125,13 @@ def test_measure():
     measure gives heading lines a wider column than body lines: measured, 34em
     is 544px on a body line and 880px on an h1. calc(var(--font-text-size) * N)
     resolves numerically before it reaches any consumer.
+
+    THE SUBJECT CHANGED WHEN THE MEASURE BECAME A SETTING. "The value" is now
+    whatever the reader chose, so this cannot assert it. It asserts the two
+    things that are still the theme's to get right: the DEFAULT sits in the
+    conventional band, and the slider BOUNDS stay inside what the evidence can
+    carry. Widening the band here instead of splitting it would have silently
+    deleted the check rather than loosened it.
     """
     raw = theme_var("--file-line-width")
     if raw is None:
@@ -134,17 +141,29 @@ def test_measure():
         bad(f"--file-line-width is {raw!r}: an em measure is resolved against the "
             "font-size of .cm-line, which is 1.618em on a heading line")
         return
-    m = re.fullmatch(r"calc\(\s*var\(--font-text-size\)\s*\*\s*([0-9.]+)\s*\)", raw)
-    if not m:
-        bad(f"--file-line-width is {raw!r}: expected "
-            "calc(var(--font-text-size) * N), which both tracks the reader's "
-            "text size and is immune to the consuming element's font-size")
+    if "var(--midori-set-measure)" not in raw:
+        bad(f"--file-line-width is {raw!r}: expected it to derive from "
+            "var(--midori-set-measure)")
         return
-    cpl = float(m.group(1)) / AVG_ADVANCE_EM
-    if 55.0 <= cpl <= 75.0:
-        ok(f"measure {raw} = {cpl:.1f} characters per line, inside 55-75")
-    else:
-        bad(f"measure {raw} = {cpl:.1f} characters per line, outside 55-75")
+    if "var(--font-text-size)" not in raw:
+        bad(f"--file-line-width is {raw!r}: must be a multiple of "
+            "--font-text-size so it tracks the reader's text size")
+        return
+    b = settings_block()
+    s = next((x for x in (b or {}).get("settings", [])
+              if x["id"] == "midori-set-measure"), None)
+    if s is None:
+        bad("no midori-set-measure control in the @settings block")
+        return
+    dflt, lo, hi = float(s["default"]), float(s["min"]), float(s["max"])
+    if not 55.0 <= dflt <= 75.0:
+        bad(f"the measure default is {dflt:g} cpl, outside the conventional 55-75")
+        return
+    if lo < 40.0 or hi > 100.0:
+        bad(f"the measure slider spans {lo:g}-{hi:g} cpl; 40-100 is what the "
+            f"evidence carries (preference floor to the ~95 cpl speed peak)")
+        return
+    ok(f"measure default {dflt:g} cpl in 55-75, slider {lo:g}-{hi:g} inside 40-100")
 
 
 def test_row_is_one_number():

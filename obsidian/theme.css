@@ -41,6 +41,15 @@ settings:
         type: heading
         level: 2
         description: What the evidence review calls preference. What it calls evidence is derived and not exposed.
+    -
+        id: midori-set-measure
+        title: Line length
+        description: Characters per line. Longer lines are read faster; moderate lines are preferred; ratings do not track performance. 70 is the preference end, 95 the speed peak.
+        type: variable-number-slider
+        default: 70
+        min: 40
+        max: 100
+        step: 1
 
 */
 
@@ -90,7 +99,28 @@ body {
      before it ever reaches a consumer. 34 / 0.4818 average advance = 70
      characters, at any base size. See
      docs/superpowers/specs/2026-08-15-prose-typography-evidence.md */
-  --file-line-width: calc(var(--font-text-size) * 34);
+
+  /* THE MEASURE IS A SETTING, IN CHARACTERS, HELD IN EM.
+
+     34em was 70.6 cpl: cpl = em / 0.4818, where 0.4818 is M PLUS 1p's average
+     advance measured with a BoundsPen over a prose sample (not a pangram --
+     pangrams over-weight rare letters and run ~4% narrow). The slider is in
+     characters because that is what a writer thinks in and what the research
+     is reported in. It is NOT a claim that characters is the variable the eye
+     responds to: the evidence review refuted characters-over-visual-angle 0-3
+     and lists the question as open.
+
+     The advance constant is font-specific and is only valid because the body
+     font is fixed. If fonts are ever exposed, measure it from the chosen face.
+
+     Numeric, not em: an em here resolves against .cm-line's own font-size, and
+     .cm-line is also the heading element, so an em measure hands an h1 an 880px
+     column against a body line's 544px. */
+  --midori-avg-advance: 0.4818;
+  --midori-set-measure: 70;
+  --file-line-width: calc(var(--font-text-size)
+                          * var(--midori-set-measure)
+                          * var(--midori-avg-advance));
 
   /* THE GRID ROW. 24px at a 16px base is a leading of exactly 1.50 — above the
      CSS ~1.2 floor that Rello et al. actually measured (their harmful
