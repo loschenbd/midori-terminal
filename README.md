@@ -720,6 +720,59 @@ Residual gotchas:
   because the plugin providing them broke the dot grid, and only the grid's
   owner could fix that — see the bullet above.
 
+### Settings
+
+Install the **Style Settings** community plugin and the theme's controls appear
+under Settings → Style Settings → Midori. Without it the block is an inert CSS
+comment and the theme behaves exactly as it does with every setting at its
+default — nothing is required.
+
+The line the settings draw: **what the evidence review called preference is
+exposed; what it called evidence is derived and is not.** Paragraph rhythm is a
+setting because the review found nothing either way. The ×1.1556 heading
+compensation is not, because it is Spectral's x-height over M PLUS 1p's.
+
+| Setting | Default | Range |
+|---|---|---|
+| Line length | 70 characters | 40–100 |
+| Paragraph rhythm | Indent | Indent / Space between / Both |
+| Paragraph indent | 2em | 0–4em |
+| Dot grid visibility | 100% | 0–150%, 0 turns it off |
+| Accent | Sage | the eight palette tokens |
+| Leading | 1.5 | 1.4–2 |
+| Heading scale | 1 | 0.85–1.1 |
+
+**Known open item, under Heading scale.** A sweep against a running Obsidian
+measured the Live Preview h1's line box at 49px against a 24px row — two rows
+plus one, not one row plus a pixel. `line-height` only sets the strut (one
+row, 24px at the shipped base), but a line box is `max(strut, tallest inline
+box)`, and at heading scale 1 the h1's own 29.92px font produces a glyph box
+that overflows the strut, so the box grows to fill two rows and spills one
+pixel past. It clears at heading scale ≤ 0.9 (font ≤ 26.928px) and fails at
+≥ 0.95 — which brackets the shipped default of 1 on the failing side, so this
+is live at the theme's own defaults, not just at the slider's top end.
+`line-height: calc(var(--midori-row) * 2)` would seat it on two rows exactly,
+at the cost of making every h1 two rows tall; that is a real design decision
+and it has not been taken here. Reproduce it with the sweep in "Checking the
+grid in the running app" below.
+
+**No setting can put the note off the dot grid.** The controls write input
+variables; the theme reads derived ones, and everything that can touch vertical
+rhythm passes through `round(up, …, 2px)` on the way. Two pixels rather than
+one because the dot offset adds half the row's growth, so an odd row lands the
+baseline 0.50px off.
+
+Line length is in characters because that is the unit a writer thinks in and
+the unit the research is reported in — not because characters is established as
+what the eye responds to. That claim was refuted 0–3 in the review and the
+question is open. The range spans the two ends of the one finding that
+survived: 40 is under every proposed preference band, 100 covers the ~95 cpl
+speed peak and Obsidian's stock ~91.
+
+The settings are swept across their range against a running app the same way
+the grid itself is checked — see the next section rather than a second set of
+instructions here.
+
 ### Checking the grid in the running app
 
 Static tests read the stylesheet; they cannot see what the browser laid out.
