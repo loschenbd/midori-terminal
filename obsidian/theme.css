@@ -2053,14 +2053,24 @@ body {
    Only h1-h4 — h5/h6 are Midori Text and already correct, and are uppercase,
    where cap-height rather than x-height carries the size.
 
-   THE LINE BOX IS ONE ROW, AND THE COMPENSATION DOES NOT CHANGE IT. Every
+   THE STRUT IS ONE ROW, AND THE COMPENSATION DOES NOT CHANGE IT. Every
    heading takes line-height: var(--midori-row); the second row of air above a
-   heading is margin (padding, in Live Preview), not line box. Measured at
-   bases 14, 16, 20, 24 and 30, every heading's box stays exactly one row after
-   this change, so nothing here moves the grid. What does change is how far an
-   h1's ink reaches up into the row of air above it: 1.2px before the
-   compensation, 7.1px after, at a 16px base with 24px of margin to absorb it.
-   h2-h4 stay inside their own line box at every base in the clamp. */
+   heading is margin (padding, in Live Preview), not line box. h2-h4 stay
+   inside that strut at every base in the clamp, in both panes, so for them
+   nothing here moves the grid. What changes for them is how far an h1's ink
+   reaches up into the row of air above it: 1.2px before the compensation,
+   7.1px after, at a 16px base with 24px of margin to absorb it.
+
+   h1 IS NOT INSIDE ITS OWN STRUT, AND THIS COMMENT USED TO CLAIM IT WAS. It
+   is the largest size the compensation produces, and a line box is
+   max(strut, tallest inline box) -- a live sweep against a running app
+   (tests/check_rendered_grid.py) measured h1's Live Preview box at 49px
+   against a 24px row at heading-scale 1 (two rows plus one, not one row plus
+   a pixel), clearing to a whole-row 48px only at heading-scale <= 0.9 and
+   failing again at >= 0.95. That brackets the shipped default of 1 on the
+   failing side, so this is live today, not only at the slider's top end.
+   Known and deliberately not fixed here -- see the README's Settings
+   section, "Known open item, under Heading scale". */
 body {
   --h1-size: calc(1.870em * var(--midori-set-heading-scale));   /* app.css 1.618 x 1.1556 */
   --h2-size: calc(1.690em * var(--midori-set-heading-scale));   /* app.css 1.462 x 1.1556 */

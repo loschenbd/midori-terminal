@@ -24,8 +24,8 @@ has established as evidence.**
 The theme's own documentation already draws this line. On paragraph indents the
 README says: *"The evidence review found nothing either way on
 indent-versus-blank-line. This is a stated preference."* That is a setting
-waiting to happen. By contrast `x 1.1556` is Spectral's x-height (0.450em)
-divided by M PLUS 1p's (0.520em) — not a matter of taste, and meaningless as a
+waiting to happen. By contrast `x 1.1556` is M PLUS 1p's x-height (0.520em)
+divided by Spectral's (0.450em) — not a matter of taste, and meaningless as a
 slider.
 
 A second rule, decided explicitly: **no setting may put the note off the dot
@@ -268,6 +268,13 @@ furniture is where the last two defects lived.
   `--midori-set-*` variables, not the block; a different front end could write
   the same variables.
 - **The heading-scale knob interacts with a known defect.** An h1's line box in
-  Live Preview already floors at 25px against a 24px row, because 1.870em is
-  29.92px and the glyph box is 26. Raising the heading scale makes that worse.
-  The slider's upper bound should be chosen with that measured, not guessed.
+  Live Preview already overflows its 24px row strut at the shipped scale — a
+  line box is `max(strut, tallest inline box)`, and 1.870em is 29.92px. This
+  was guessed at 25px before it was measured; a live sweep (Task 7, run
+  against a running app) found it is 49px, two rows plus one, not one row
+  plus a pixel. It clears to a whole-row 48px only at heading-scale ≤ 0.9 and
+  fails again at ≥ 0.95, which brackets the shipped default of 1 on the
+  failing side — raising the heading scale further makes it worse, but it is
+  not the only case where this bites. The slider's upper bound (1.1) was
+  chosen with that measured, not guessed. Left as a known, undecided defect
+  rather than fixed here; see the README's Settings section.
