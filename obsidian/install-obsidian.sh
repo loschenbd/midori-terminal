@@ -13,6 +13,7 @@ VAULTS="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents"
 EXTRA="$REPO_DIR/extra-vaults.txt"
 THEME="Midori"
 LEGACY="Dot Grid"   # theme was renamed; clean up the old install
+STYLE_SETTINGS="obsidian-style-settings"   # reported if absent, never installed
 
 # A VAULT THIS DOES NOT SCAN DOES NOT FAIL — IT DRIFTS, which is worse, because
 # nothing announces it. A vault kept outside iCloud (~/Projects/CFA) sat 11
@@ -48,6 +49,7 @@ trap 'rm -f "$vault_list"' EXIT INT TERM
 list_vaults > "$vault_list"
 
 installed=0
+missing_ss=""
 # Read on fd 3, not stdin: the loop body feeds heredocs to python3, and keeping
 # the vault list off stdin means nothing in the body can ever eat an iteration.
 # A pipeline would also put the loop in a subshell and lose `installed`.
@@ -143,6 +145,37 @@ if pid not in enabled:
 PY
   done
 
+  # STYLE SETTINGS IS REPORTED, NEVER INSTALLED. theme.css carries a
+  # `/* @settings */` block; the Style Settings plugin is what turns it into a
+  # panel under Settings -> Style Settings -> Midori. It is third-party, it is
+  # ~170KB, and it ships a styles.css -- so it fails the "manifest.json and
+  # main.js only" rule above three times over, and vendoring someone else's
+  # plugin into this repo to dodge that would be the wrong trade.
+  #
+  # But leaving it entirely unmentioned is the failure this script's header
+  # warns about, in its quietest form: the block is an inert CSS comment
+  # without the plugin, so a vault missing it gets a fully current theme, at
+  # every default, that looks exactly like a correct install and offers no way
+  # to change anything. Nothing errors. Nothing announces it.
+  #
+  # Both halves are checked because both produce that same silent symptom: the
+  # files can be present while the plugin sits disabled in
+  # community-plugins.json, and a disabled plugin draws no panel either.
+  ss="$vault.obsidian/plugins/$STYLE_SETTINGS"
+  if [ -f "$ss/main.js" ] && [ -f "$ss/manifest.json" ] && [ -f "$ss/styles.css" ]; then
+    ID="$STYLE_SETTINGS" python3 - "$vault.obsidian/community-plugins.json" <<'PY' || missing_ss="$missing_ss$(basename "$vault") (installed, not enabled)\n"
+import json, os, sys
+try:
+    with open(sys.argv[1]) as f:
+        enabled = json.load(f)
+except (OSError, ValueError):
+    enabled = []
+sys.exit(0 if os.environ["ID"] in enabled else 1)
+PY
+  else
+    missing_ss="$missing_ss$(basename "$vault")\n"
+  fi
+
   echo "Installed into $(basename "$vault")"
   installed=1
 done 3< "$vault_list"
@@ -150,6 +183,14 @@ done 3< "$vault_list"
 if [ "$installed" -eq 0 ]; then
   echo "No Obsidian vaults found under $VAULTS (or in $(basename "$EXTRA"))" >&2
   exit 1
+fi
+
+if [ -n "$missing_ss" ]; then
+  echo
+  echo "Style Settings is missing or disabled in these vaults, so the theme's"
+  echo "controls have nowhere to appear (it still renders, at every default):"
+  printf '%b' "$missing_ss" | sed 's/^/  /'
+  echo "Install it per vault from Settings -> Community plugins -> Browse."
 fi
 
 echo
