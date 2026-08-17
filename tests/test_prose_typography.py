@@ -783,6 +783,13 @@ def test_accent_options_are_palette_tokens():
     a lightness rung with an existing role and read as a duplicate of it. A
     colour picker here would reopen that silently. A select over the existing
     tokens cannot.
+
+    NOT JUST THAT THE RULE EXISTS -- THAT IT ASSIGNS THE MATCHING TOKEN.
+    body.midori-accent-wine { --midori-accent: var(--midori-clay); } used to
+    pass this test: the class existed, the token existed, and nothing checked
+    that one selector actually points at the other. Eight nearly-identical
+    hand-written rules are exactly where a copy-paste swap hides, so the
+    correlation is the check that matters.
     """
     b = settings_block()
     s = next((x for x in (b or {}).get("settings", [])
@@ -795,15 +802,45 @@ def test_accent_options_are_palette_tokens():
             f"which cannot name a colour, and a variable-color reopens the "
             f"closed palette")
         return
+    rule_decls = {sel: decls for sel, decls in rules()}
     for opt in s.get("options", []):
         token = opt.replace("midori-accent-", "")
         if f"--midori-{token}:" not in THEME:
             bad(f"accent option {opt} has no --midori-{token} token")
             return
-        if f"body.{opt}" not in THEME:
+        selector = f"body.{opt}"
+        decls = rule_decls.get(selector)
+        if decls is None:
             bad(f"accent option {opt} has no body.{opt} rule")
             return
-    ok(f"all {len(s.get('options', []))} accent options are existing palette tokens")
+        if not re.search(rf"--midori-accent\s*:\s*var\(--midori-{re.escape(token)}\)",
+                          decls):
+            bad(f"body.{opt} does not set --midori-accent to "
+                f"var(--midori-{token}) -- check for a copy-paste swap")
+            return
+    ok(f"all {len(s.get('options', []))} accent options are existing palette "
+       f"tokens, correctly wired to their own rule")
+
+
+def test_accent_derived_roles_follow_the_accent():
+    """A role documented as accent-derived must read the accent, not a literal.
+
+    --text-selection shipped as rgba(95, 111, 94, 0.25) with the comment
+    "--accent (sage) @ 25%" -- true when written, and silently false the moment
+    the accent became selectable. Every other accent role turned wine; the
+    selection band stayed sage, and no test noticed because the literal was
+    still a perfectly valid colour.
+    """
+    for name in ("--text-selection",):
+        raw = theme_var(name)
+        if raw is None:
+            bad(f"{name} is not declared")
+            return
+        if "var(--midori-accent)" not in raw:
+            bad(f"{name} is {raw!r}: an accent-derived role that does not read "
+                f"var(--midori-accent) stops following the accent setting")
+            return
+    ok("every accent-derived colour role reads var(--midori-accent)")
 
 
 if __name__ == "__main__":
@@ -826,5 +863,6 @@ if __name__ == "__main__":
     test_space_rhythm_zeroes_the_indent_variable()
     test_dot_alpha_is_split_in_both_modes()
     test_accent_options_are_palette_tokens()
+    test_accent_derived_roles_follow_the_accent()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)
