@@ -93,13 +93,13 @@
     "editorBracketPairGuide.background1": "#b6cde8",
     "editorBracketPairGuide.background2": "#bad3b8",
     "editorBracketPairGuide.background3": "#dbc8aa",
-    "editorBracketPairGuide.background4": "#ddc0d8",
+    "editorBracketPairGuide.background4": "#d4c3e1",
     "editorBracketPairGuide.background5": "#aed5c7",
     "editorBracketPairGuide.background6": "#e7c0be",
     "editorBracketPairGuide.activeBackground1": "#7fa9d6",
     "editorBracketPairGuide.activeBackground2": "#86b285",
     "editorBracketPairGuide.activeBackground3": "#c09f6a",
-    "editorBracketPairGuide.activeBackground4": "#c292bc",
+    "editorBracketPairGuide.activeBackground4": "#b496cb",
     "editorBracketPairGuide.activeBackground5": "#6eb59e",
     "editorBracketPairGuide.activeBackground6": "#d29190",
     "editorRuler.foreground": "#e6e4dc",
@@ -111,7 +111,7 @@
     "editorBracketHighlight.foreground1": "#264464",
     "editorBracketHighlight.foreground2": "#5f6f5e",
     "editorBracketHighlight.foreground3": "#906613",
-    "editorBracketHighlight.foreground4": "#786275",
+    "editorBracketHighlight.foreground4": "#71647c",
     "editorBracketHighlight.foreground5": "#0b3c2f",
     "editorBracketHighlight.foreground6": "#744242",
     "editorBracketHighlight.unexpectedBracket.foreground": "#8f4f38",
@@ -173,7 +173,7 @@
     "terminal.ansiGreen": "#5f6f5e",
     "terminal.ansiYellow": "#b88a3a",
     "terminal.ansiBlue": "#3a5572",
-    "terminal.ansiMagenta": "#664f63",
+    "terminal.ansiMagenta": "#653f7f",
     "terminal.ansiCyan": "#548373",
     "terminal.ansiWhite": "#c9c4b8",
     "terminal.ansiBrightBlack": "#524d46",
@@ -181,7 +181,7 @@
     "terminal.ansiBrightGreen": "#6c7d52",
     "terminal.ansiBrightYellow": "#cc9c42",
     "terminal.ansiBrightBlue": "#4d7095",
-    "terminal.ansiBrightMagenta": "#8a6d85",
+    "terminal.ansiBrightMagenta": "#81569f",
     "terminal.ansiBrightCyan": "#6f9c8d",
     "terminal.ansiBrightWhite": "#faf9f6",
     "gitDecoration.modifiedResourceForeground": "#8f6414",
@@ -243,9 +243,9 @@
     "symbolIcon.moduleForeground": "#744242",
     "symbolIcon.typeParameterForeground": "#744242",
     "symbolIcon.variableForeground": "#4c473f",
-    "symbolIcon.fieldForeground": "#685265",
-    "symbolIcon.propertyForeground": "#685265",
-    "symbolIcon.keyForeground": "#685265",
+    "symbolIcon.fieldForeground": "#61546c",
+    "symbolIcon.propertyForeground": "#61546c",
+    "symbolIcon.keyForeground": "#61546c",
     "symbolIcon.constantForeground": "#773913",
     "symbolIcon.enumeratorMemberForeground": "#773913",
     "symbolIcon.numberForeground": "#773913",
@@ -279,7 +279,7 @@
     "debugConsole.warningForeground": "#8f6414",
     "debugConsole.errorForeground": "#8f4f38",
     "debugConsole.sourceForeground": "#2a2825",
-    "debugTokenExpression.name": "#685265",
+    "debugTokenExpression.name": "#61546c",
     "debugTokenExpression.value": "#2a2825",
     "debugTokenExpression.string": "#4d5f2f",
     "debugTokenExpression.number": "#773913",
@@ -298,7 +298,7 @@
     "charts.yellow": "#8f6414",
     "charts.orange": "#9d5c39",
     "charts.green": "#617247",
-    "charts.purple": "#664f63",
+    "charts.purple": "#653f7f",
     "settings.modifiedItemIndicator": "#5f6f5e",
     "walkThrough.embeddedEditorBackground": "#f8f5ed",
     "extensionButton.prominentBackground": "#5f6f5e",
@@ -432,7 +432,7 @@
       }
     },
     {
-      "name": "Properties \u2014 derived plum (wine \u00d7 indigo)",
+      "name": "Properties \u2014 midori-purple",
       "scope": [
         "variable.other.property",
         "variable.other.object.property",
@@ -440,21 +440,21 @@
         "meta.object-literal.key"
       ],
       "settings": {
-        "foreground": "#786275"
+        "foreground": "#71647c"
       }
     },
     {
-      "name": "this / self \u2014 plum italic",
+      "name": "this / self \u2014 purple italic",
       "scope": [
         "variable.language"
       ],
       "settings": {
-        "foreground": "#786275",
+        "foreground": "#71647c",
         "fontStyle": "italic"
       }
     },
     {
-      "name": "Decorators & annotations \u2014 plum",
+      "name": "Decorators & annotations \u2014 purple",
       "scope": [
         "meta.decorator",
         "entity.name.function.decorator",
@@ -462,7 +462,7 @@
         "storage.type.annotation"
       ],
       "settings": {
-        "foreground": "#786275"
+        "foreground": "#71647c"
       }
     },
     {
@@ -634,7 +634,7 @@
       "foreground": "#625649",
       "italic": true
     },
-    "property": "#786275",
+    "property": "#71647c",
     "type": "#744242",
     "class": "#744242",
     "interface": "#744242",
@@ -642,7 +642,7 @@
     "namespace": "#744242",
     "function": "#906613",
     "method": "#906613",
-    "decorator": "#786275",
+    "decorator": "#71647c",
     "function.declaration": {
       "foreground": "#906613",
       "bold": true

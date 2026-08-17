@@ -21,6 +21,11 @@ jobs:
       - name: Patcher unit tests
         run: python3 tests/test_patch_claude_diffs.py
 
+      # Portable: re-derives in memory and compares against the committed
+      # files. Writes nothing, so it never touches iCloud or the working tree.
+      - name: Moshi themes are current
+        run: python3 tests/test_moshi_themes.py
+
       - name: Python compiles
         run: |
           for py in $(find . -name '*.py' -not -path './.git/*'); do

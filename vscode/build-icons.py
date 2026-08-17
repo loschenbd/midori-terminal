@@ -28,7 +28,7 @@ ROLES = {
     "wine":   ("#7a4a4a", "#b8868a"),  # markup, tests
     "olive":  ("#6c7d52", "#9eaf85"),  # shell, spreadsheets
     "ochre":  ("#b88a3a", "#d8b06a"),  # data, config, package
-    "plum":   ("#664f63", "#a48ba3"),  # styles, databases
+    "purple": ("#653f7f", "#a079be"),  # styles, databases
     "mint":   ("#548373", "#9ebfb4"),  # images
     "warm":   ("#b06d4a", "#d4a07a"),  # env, git
     "faint":  ("#a29f98", "#5d574e"),  # locks, vendored dirs
@@ -44,7 +44,7 @@ DEFS = {
     "file":         (["draft", "description"], "muted"),
     "code":         (["code_blocks", "code"], "indigo"),
     "markup":       (["html", "code"], "wine"),
-    "style":        (["css", "palette"], "plum"),
+    "style":        (["css", "palette"], "purple"),
     "data":         (["data_object"], "ochre"),
     "text":         (["article", "description"], "muted"),
     "image":        (["image"], "mint"),
@@ -54,7 +54,7 @@ DEFS = {
     "config":       (["settings"], "ochre"),
     "test":         (["science"], "wine"),
     "package":      (["package_2", "deployed_code", "inventory_2"], "ochre"),
-    "db":           (["database"], "plum"),
+    "db":           (["database"], "purple"),
     "sheet":        (["csv", "table"], "olive"),
     "git":          (["account_tree", "merge"], "warm"),
 }

@@ -1,0 +1,9 @@
+{
+  "id": "zen-toggle",
+  "name": "Zen Toggle",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Toggles zen mode by flipping a body class, from a dot in the status bar or the command. The rules that respond to that class live in the Midori theme; without it this plugin sets a class nothing reads.",
+  "author": "Benjamin Loschen",
+  "isDesktopOnly": false
+}

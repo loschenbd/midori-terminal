@@ -3,8 +3,8 @@
 A complete terminal theme system built on the Midori design language from
 [benjaminloschen.com](https://benjaminloschen.com) — warm paper neutrals and a
 sage accent, taking their cue from Japanese MD-style notebook stock. It covers
-Ghostty, Claude Code, tmux, fzf, oh-my-posh, Vivaldi, Cursor/VS Code, Obsidian
-and Antinote, all switching light/dark together with macOS appearance.
+Ghostty, Claude Code, tmux, herdr, fzf, oh-my-posh, Vivaldi, Cursor/VS Code,
+Obsidian and Antinote, all switching light/dark together with macOS appearance.
 
 **Midori Paper** (light) · **Midori Night** (dark)
 
@@ -26,7 +26,9 @@ to skip the prompt). After tweaking hotkeys in Vivaldi's UI, re-export them with
 (it prints the settings snippet to wire up auto light/dark + icons). For
 Obsidian: `./obsidian/install-obsidian.sh`. For Antinote:
 `./antinote/install-antinote.sh`, then Settings → Visuals → "Reload Custom
-Themes".
+Themes". herdr is handled by `install.sh` too (skipped when it isn't installed) —
+see `herdr/README.md`, which explains why herdr is the one component with no
+`midori-paper`/`midori-night` theme files.
 
 Safe to re-run `./install.sh` any time (it's idempotent) — that's also the
 update path: `git pull && ./install.sh`.
@@ -53,6 +55,76 @@ background symlinks between `@1x`/`@2x` assets (see below).
 the Claude Code token map, tmux border hexes, and the Vivaldi themes. Swap
 this layer to re-skin everything without touching the infrastructure.
 
+## The accent palette
+
+Every surface here draws from one named set, mirrored from
+`benjaminloschen.com`'s `app/globals.css` (which is the source of truth):
+
+| Token | Light | Dark | Role |
+|---|---|---|---|
+| `--midori-indigo` | `#3a5572` | `#6c87a4` | links, `function` |
+| `--midori-olive` | `#6c7d52` | `#9eaf85` | `string` |
+| `--midori-wine` | `#7a4a4a` | `#b8868a` | ANSI red, `operator` |
+| `--midori-ochre` | `#b88a3a` | `#d8b06a` | ANSI yellow, `value` |
+| `--midori-sage` | `#5f6f5e` | `#9aab97` | the UI accent |
+| `--midori-purple` | `#653f7f` | `#a079be` | ANSI magenta, `keyword` |
+| `--midori-mint` | `#548373` | `#9ebfb4` | ANSI cyan, `property` |
+
+plus a warm ramp (wash → light → clay → terracotta → deep) and
+`--midori-mythic` for unresolved/faint text.
+
+**Purple is new (Aug 2026), and the old one was broken.** The site had no
+purple token, so this repo derived a plum (`#664f63` / `#a48ba3`) for the ANSI
+magenta slot; it spread to seven surfaces and drifted to `#7f5a74` in one.
+Measured in OKLCh it sat **0.6 lightness and 2.2 chroma from wine** — well
+under the C 12 mark where hue stops doing any work at body size, so `keyword`
+and `operator` read as a single colour in a code fence. The replacement is not
+a chroma *lift above* the palette but a lift *up to* it: C 10.9, where ochre is
+11.1 and terracotta 9.9 and the old plum was the outlier at 4.3. Hue 310 clears
+wine by ~70° and indigo by ~59°, the two neighbours it has to beat.
+
+Dark is L 64, not the 65 a straight mirror of light would give: on the charcoal
+ground terracotta rises to L 70, and *every* close neighbour sits above purple,
+so dropping a point widens all four gaps at once. It still reads 5.00:1.
+
+Two surfaces deliberately don't follow:
+
+- **Obsidian dark** uses the dot-grid mint `#9ebfb4` as `property` ink rather
+  than `--midori-mint`. The site's dark mint lands at L 71.2 / C 5.7 and
+  indigo-lift at L 70.6 / C 6.3 — 0.6 apart on both axes. Light has no such
+  problem and uses the real mint.
+- **Antinote** keeps its own 331° purple — see `antinote/README.md` for the
+  measurements. It is the one palette here that separates on hue rather than
+  lightness, and 310° would move it *toward* its blue.
+
+### The palette is closed
+
+Purple was the last slot. Don't add an eighth accent without re-reading this —
+the instinct is to look for an empty hue, and hue is not the constraint.
+
+**The ANSI-16 seam has six chromatic slots and all six are filled**: red=wine
+20°, green=olive 144°, yellow=ochre 78°, blue=indigo 251°, magenta=purple
+310°, cyan=mint 171°. A new hue has nowhere to live downstream — every surface
+here speaks through that seam.
+
+**Lightness, not hue, is what ran out.** VS Code Paper packs 15 distinct syntax
+colours into L 27.8–54.1 — 26 points of range at a mean gap of **1.9**. Night
+packs 16 into L 62.6–93.2 at a mean gap of **2.0**. Neither has one rung
+10 points wide. Below C 12 hue does almost no work at body size, so an eighth
+accent would have to share a rung with an existing role and would read as a
+duplicate of it no matter how far apart their hues are.
+
+Four hue gaps ≥40° do exist (102°, 211°, 280°, 345°) and none is usable. The
+two widest are also the worst real estate: hue 211° has a ceiling of only
+**C 7.8** at L 45, the muddiest region of the wheel. Two candidates in these
+gaps were already priced and rejected — see the 289° and 212° note under
+"Cursor / VS Code notes".
+
+**If a future role genuinely needs its own colour**, the lever is not a new hue.
+It is the one control flow already used: take an *extreme* lightness rung and
+buy separation with chroma. That is how `#175a98` got in at C 12.0 / L 46.1
+without colliding with anything.
+
 ## What's in the box
 
 | Path | What |
@@ -65,12 +137,38 @@ this layer to re-skin everything without touching the infrastructure.
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |
 | `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, file icons recolored from Material Symbols Rounded (Apache-2.0), workbench-chrome product icons built from Phosphor (MIT) — see `midori-theme/CREDITS.md`; `build-icons.py` / `build-product-icons.py` regenerate — plus installer |
 | `antinote/` | Midori Paper/Night Antinote themes (24-key JSON), installer, and a transcription of Antinote's undocumented theme schema |
-| `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret` companion plugin, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
+| `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret`, `midori-confetti` and `midori-timer` companion plugins, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
+| `moshi/` | Midori Paper/Night for [Moshi](https://getmoshi.app) (the phone terminal for agents) — **generated** from the Ghostty themes by `build-moshi-themes.py`, which also publishes them to iCloud for the phone |
 | `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
 | `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
 
 Fonts follow the site's semantic split: **Spectral** is the naming voice
 (titles, headers), **M PLUS** is the working voice (text you read and type).
+
+**Spectral was re-examined in Aug 2026 and retained.** Twenty-seven libre
+serifs were measured against M PLUS straight out of the font binaries, and on
+metrics Spectral loses: its x-height is 454 against M PLUS's 520, so at the
+same font-size a title reads about 13% smaller than the body beneath it, and
+no variable font exists or is coming — fourteen discrete statics, no `wght`
+axis. Literata at a low optical size wins that comparison outright (x-height
+within 2% of M PLUS at *every* opsz, stem 53 vs 50).
+
+It was kept anyway, for two reasons a metrics table cannot see. Spectral's
+−10° italic carries the sublines and Literata's is −2°, near-upright by
+design. And **this repo is pixel-tuned to Spectral specifically**: the caret
+and selection band constants in `obsidian/theme.css` are derived from
+Spectral's measured ink at the title size (19.41px above the baseline, 6.21px
+below at 25.888px, giving the `0.83em / 0.30em` offsets), the h1–h4 line-box
+struts come from Spectral's *natural* boxes, and `midori-caret` shares those
+numbers. Swapping the face invalidates all of it, because a natural line box
+comes from the font's own ascent and descent. The general rule, since it will
+recur: before replacing any component, grep for constants derived from the
+incumbent — a comparison that only looks at the candidates understates the
+cost of moving.
+
+If a title ever reads too small, headings can absorb a size bump: the 48px
+line box has headroom over their ~24.5–27.5px natural boxes. The note title is
+the one to leave alone; its 24px box is tight.
 
 ## How the dot grid stays aligned (Ghostty)
 
@@ -182,6 +280,282 @@ Residual gotchas:
   editable. `caret-color: transparent`, by contrast, is honoured (the native
   caret blinked across 4 of 8 frames without it and 0 of 8 with it) because the
   caret is WebKit's own editing code.
+- **Confetti fires on the crossing, not the value** —
+  `obsidian/plugins/midori-confetti`, also fanned out by the installer, throws
+  a burst when a note passes a word target you set. The obvious test, `words >=
+  target`, is wrong in a way that only shows up in use: a finished note is
+  above its target forever, so opening one and typing a single character would
+  set it off. It instead remembers the previous count per note and fires only
+  on the transition `prev < target <= now`, seeding `prev` on file-open so an
+  already-finished note stays quiet. Particle colours are read from the theme's
+  own CSS variables rather than hardcoded, so the burst follows Paper and Night
+  without the plugin knowing either exists. Nothing in the community registry
+  did this — of 6,478 plugins, Writing Goals draws a progress bar and stops,
+  Target Word Count *blocks editing* until you hit your number, and the one
+  confetti plugin fires on every keystroke.
+- **The timer stores a deadline, not a remaining count** —
+  `obsidian/plugins/midori-timer`, a countdown you set either for a length or
+  until a clock time, on drums or by typing `25m`, `1h30`, `90s`, `1:30` or
+  `1:30pm` into a window a hotkey can open. The obvious
+  implementation keeps a `remaining` number and subtracts one per tick, and it
+  runs slow by minutes: Chromium — which is what Obsidian is — clamps
+  background timers to roughly one wake per minute once a window is hidden, and
+  suspends them while the machine sleeps. The bug hides while you watch it,
+  because watching it is what keeps the window in front. So the only stored
+  quantity is an absolute `endsAt`, and every tick recomputes `endsAt -
+  Date.now()`; ticks are then free to be late, coalesced or skipped, including
+  across a lid close, and persisting that value is also what lets a restart
+  resume the same countdown instead of losing it. The readout uses tabular
+  figures *and* reserves the width of the longest form the run will produce,
+  because a proportional countdown changes its own width twice a second and
+  drags every status item to its left along with it. Finishing *resets*: the
+  session clears and the bar returns to its idle clock in the same frame,
+  because the end is announced by things that announce themselves and then stop
+  — a Notice, the chime, the optional OS banner — and a readout parked at 0:00
+  wearing a bell until you click it is a chore, and a lie by the time you come
+  back to the desk.
+- **The duration window is a drum you flick, reading out on a split-flap clock.**
+  Two implementation notes, both learned the hard way. The drum is a *real
+  scroll container* — `overflow: scroll` plus `scroll-snap-type: mandatory` —
+  which buys momentum, rubber-banding, wheel support, trackpad inertia and touch
+  flinging from the platform; the only hand-written part is pointer-drag,
+  because a mouse press does not scroll a div, and that drag has to switch
+  `scroll-snap-type` off while it runs or every `scrollTop` it sets is yanked
+  back to the nearest snap point and the drum judders. And **position and value
+  are pure arithmetic in both directions, never measured.** The obvious
+  `item.offsetTop - (scroller.clientHeight - item.offsetHeight) / 2` is wrong
+  here in a way that hides: `clientHeight` *includes padding*, and this scroller
+  is mostly padding — 68px top and bottom so the first and last values can reach
+  the centre band. Under content-box sizing `clientHeight` came back 306 instead
+  of 170, every scroll landed two items short, and because the drum's scroll
+  handler writes what it finds back into state, the window quietly rewrote its
+  own default from 25m to 23m on open. A measurement bug in a control that feeds
+  itself does not look like a measurement bug — it looks like the setting not
+  sticking. Centring item *i* is `scrollTop = 34i`; the inverse is one division.
+- **A surface colour that must differ from a ground has to be *derived* from
+  it, not named.** The bar's flip cards took three attempts. First
+  `--background-modifier-form-field`, which the setting window's cards use —
+  invisible, because a status bar is `--background-secondary` and the two sit a
+  hair apart, so all that survived was the seam: a hairline through the middle
+  of every digit, reading as a strikethrough. Then `--background-primary`,
+  which fixed the harness and not the app, because this theme sets
+  `.status-bar { background-color: transparent }` and the bar therefore shows
+  the *page* ground — exactly `--background-primary`. Same bug, other colour.
+  There is no named surface that is reliably distinct from a ground a theme is
+  free to redefine, so the card is derived from the ground — lifted off it, the
+  way a card sits on the desk it is lying on. That needs *two amounts and one
+  direction*, and the second table is unavoidable rather than lazy: "lighter"
+  is a single instruction, but the room to obey it is not symmetric. Paper's
+  `#f3f1eb` has twelve points of headroom below white; Night's `#1a1917` has
+  almost the whole range. One percentage toward white is either invisible on
+  paper or a floodlight at night. Measured after: `#f3f1eb → #fdfdfc` and
+  `#1a1917 → #282724`, ~1.1:1 either way — a card, not a panel. It is stated as
+  a custom property rather than as two background rules, so the theme branch
+  and the `is-sep` exception cannot end up tied on specificity and settled by
+  document order. **The middle attempt is the interesting one:**
+  the harness stubbed the status bar as `--background-secondary`, the way
+  Obsidian paints it by default, so it was checking contrast against a colour
+  that never appears in this theme. A harness that models the host's chrome has
+  to model *this* host's chrome.
+- **A placement that takes four rounds of fighting to fit is the wrong
+  placement.** The status-bar readout has no home on a phone — Obsidian hides
+  the status bar there and offers nothing else to park a persistent item in —
+  so it was homed in the note's own header instead, on the grounds that a
+  header is existing chrome rather than the writing surface. Making it fit took
+  a re-homing dance across leaf rebuilds, a resize against the neighbours'
+  metrics, an icon matched to their stroke, and three separate rounds of the
+  spacing simply not applying. Every one of those was solvable and every one was
+  a signal. (The cause was diagnosed at the time as a specificity fight with a
+  `.view-actions .clickable-icon` rule. Reading the shipped `app.css` afterwards
+  — see `obsidian/dump-app-css.py` — there is no such rule in the current build.
+  What actually zeroes the spacing is the *container*: `.view-actions { gap: 0 }`
+  and, on a phone, `.is-phone .view-header .view-actions { padding: 0; margin: 0 }`.
+  The fix that worked — putting the inset on class names the host has never
+  heard of — was right for a reason other than the one recorded, which is worth
+  knowing, because a wrong mechanism generalises to the wrong next fix.) It was removed on sight in use, for the same reason six painted timer
+  designs were: the header is where the eye goes to *leave* the note, and a
+  countdown parked there is a persistent thing to look at that nobody asked to
+  see. On a phone the caret is the whole display now, which is what it is on
+  desktop by default anyway. The findings below survive it, because they were
+  about the mechanism rather than the place.
+- **Inheriting another component's gate inherits its reasons, which may not be
+  yours.** The timer recolours the caret `midori-caret` draws, so it hung its
+  rules on `body.midori-drawn` — the class that plugin sets when it detects the
+  Midori stylesheet. Under any other theme the whole caret display was silently
+  inert, which read as a bug and was in fact a copied premise. `midori-caret`
+  gates itself because it replaces caret **geometry**, and the numbers it uses
+  to do that are `theme.css`'s; the timer only ever wanted **colour**, and
+  colour is portable — the native caret has taken `caret-color` since forever.
+  So there is now a second rule, `body:not(.midori-drawn)`, painting the native
+  caret with the same drift. The `:not()` is not defensive tidiness: where the
+  drawn caret exists the theme paints the native one transparent, so both
+  branches live at once would be setting the colour of something invisible. The
+  general form: when you adopt a neighbouring component's feature detection,
+  check what it is detecting *for*. A gate is an answer to a question, and it
+  travels without the question attached.
+- **A native caret's blink does not survive having its colour changed
+  underneath it**, so the colour is written *on the next keystroke* instead.
+  The drawn caret is an element whose blink is a CSS animation, and a
+  background change does not restart one; the native caret's blink is the
+  browser's, and every write snaps it back to visible and starts the cycle
+  over. Three hundred of those a session, on a clock with no relation to the
+  blink's, reads as the caret blinking *wrong* — which is a much louder signal
+  than the 1.5px of colour it was carrying, and it is the thing that gets
+  reported. Suppressing the blink is not the fix; it is the platform's, and a
+  caret that stops blinking mid-session is exactly the unbidden change this
+  whole design exists to avoid. The write waits for `keydown`/`input`, because
+  Chromium holds the caret solid while typing — and because a keystroke resets
+  the blink by itself, so the write rides a reset that was already going to
+  happen, which means the fix holds whichever of those two is doing the work.
+  The general form: **a property you are borrowing may be carrying state you
+  cannot see.** Colour looked like the inert half of the caret and it was not;
+  it is an input to an animation the browser is running.
+- **`:empty` never matches an element that has children, however little it is
+  showing.** The readout is emptied when it has nothing to say, and Obsidian's
+  own `.status-bar-item:empty { display: none }` was expected to take it out of
+  the bar — it never did, because the item still contains its icon and readout
+  spans. Emptied but present, it is an invisible item still holding a gap
+  between two real ones, which nobody noticed in a status bar and is a hole in
+  a phone header's tight row of touch targets. The plugin now says `is-blank`
+  outright rather than hoping a selector notices.
+- **A software keyboard does not resize the layout viewport**, so no media
+  query, no `resize` listener and nothing in CSS knows it is there — the window
+  stays serenely centred on a screen half of which is now covered. What the
+  keyboard *does* resize is the **visual** viewport, so the fix is
+  `visualViewport` and its `resize`/`scroll` events, lifting the window by
+  exactly the overlap and no further, clamped to the distance to the top of the
+  screen (a window pushed off the top is not an improvement on one pushed off
+  the bottom). The other half of the fix is not summoning it at all: the
+  duration field is autofocused on desktop, where the premise is a duration you
+  type into a window a hotkey opened, and *not* on a phone, where the same line
+  hides the drums behind a keyboard nobody asked for.
+- **A width reserve that was invisible in text is a visible hole beside
+  objects.** The status-bar readout reserved the widest form the run would
+  produce, so the item would not shrink from `1:00:00` to `59:59` and drag its
+  neighbours across. That was right for a proportional countdown, which changes
+  width twice a second. It stopped being right the moment the digits became
+  fixed-width cards: the board's width now changes only when a *cell* is
+  dropped — twice in a whole session — and the reserved emptiness that nobody
+  could see in a run of text is perfectly obvious as a gap beside a row of
+  cards. Two rare one-cell shifts is the cheaper of the two. Removing a
+  mechanism is the same kind of decision as adding one, and it is worth
+  checking whether the condition that justified it still holds.
+- **A mouse gets no momentum for free, and the throw has to outlive the drag.**
+  A trackpad and a finger both hand the platform a release velocity and get
+  inertia from it; a mouse button hands it nothing, so a flicked drum stopped
+  dead the instant the button came up — which is what makes a dial feel like a
+  list of rows rather than a wheel. Three things make the hand-written version
+  behave. Velocity is an *exponential average* over the moves, not the last
+  move's distance, or the same gesture flies or dies depending on whether the
+  final event happened to carry 14px or 1px. Snap-off has to persist through
+  the whole glide, not just the drag, or the first frame of coasting is hauled
+  back to the nearest row. And the glide can afford a long tail — 0.96 a frame,
+  about twelve rows from a firm flick — precisely because a press anywhere in
+  the window kills it, so overshooting costs a tap rather than a second gesture
+  in the opposite direction. That press is captured at the window, before the
+  drum's own handler, and each drum it actually stops is marked so the same
+  press does not also select the row it was passing.
+- **Two ways to say the same thing, and one value underneath.** A session is
+  held in the head either as *for 25 minutes* or as *until 1pm*, and neither is
+  a special case of the other, so the window offers both: a segmented control,
+  drums for hours/minutes/seconds on one side and hour/minute/meridiem on the
+  other, and one typed field that parses whichever the current mode expects.
+  Only `seconds` is state — until-mode works out the exact remainder and hands
+  that to the same machinery — so switching modes carries the value across
+  rather than resetting it, and everything downstream stayed untouched. The
+  12-hour column is asked of `Intl.DateTimeFormat().resolvedOptions()` rather
+  than guessed from the language, and the deadline is recomputed at the moment
+  Start is pressed, because "until 1pm" means 1pm and the seconds spent
+  choosing it are part of what has to come off.
+- **Seeding a drum from typed text has to be instant, not smooth.** A smooth
+  programmatic scroll passes through every intermediate row, each firing a
+  scroll event, and a control that reads its own scroll position back as a
+  value will read every one of those as a choice the human never made —
+  overwriting the field mid-keystroke. Landing on the row in one step means the
+  only event that arrives already reads the value just written, and the drum's
+  own index check swallows it. The other half of that fix is knowing *who*
+  moved a drum: the drums report `pointerdown`/`wheel`/`touchstart` separately
+  from any value change, so the window can tell a scroll it caused from a
+  scroll the reader caused, and never rewrites text under a live cursor.
+- **The same split-flap board reads the countdown in the status bar, and
+  turning the flip off cannot be done in CSS.** The obvious way to honour
+  Reduce Motion — or a "don't flip" setting — is to hide the two animated
+  halves and let the static ones change. That leaves a real defect: the lower
+  static half is *deliberately late*, because it must not change until the fold
+  has covered it, so with nothing covering it the top of the glyph shows the
+  new digit and the bottom shows the old one for 90ms. A torn character, once a
+  second. The suppression has to set both halves in the same frame, which is
+  JS.
+- **A split-flap that only flips what changed, and cancels rather than queues.**
+  Scrolling the drum changes the value many times a second. Re-rendering every
+  cell flips the unchanged ones too, so the whole board flaps when only the
+  minutes moved, which reads as noise instead of a mechanism; and queued flips
+  fall behind a fast scroll and keep flapping after the drum has stopped. So an
+  unchanged glyph is left completely alone, and a new flip cancels the one in
+  flight — which is also what produces the cascade while you scroll. Each cell's
+  two timers are tracked and cleared, rather than trusting `setTimeout` ordering
+  to make the last write win: that happens to be true today and is an argument
+  rather than a guarantee.
+- **Parsing is not loading, and a truncated plugin parses fine.** An edit that
+  replaced a range of `main.js` swallowed everything after it — the `Plugin`
+  class, the settings tab, `module.exports` — and the file that came out was
+  still perfectly valid JavaScript. `node --check` passed, the stylesheet guard
+  passed, and the browser harness passed too, because the harness lifts the
+  modal out of the file and never asks the file as a whole to be a plugin. The
+  only symptom was Obsidian saying *Failed to load plugin* with no line number.
+  `tests/check_plugin_loads.js` now `require()`s each plugin the way Obsidian
+  does, with `obsidian` and `@codemirror/*` stubbed, and insists the export is
+  a class extending `Plugin` with an `onload`. Every check a repo has can be
+  green on a file that does not work; the fix is to run the thing, not to read
+  it more carefully.
+- **Seven designs, and the first six were the same mistake.** The timer's
+  display went through a dotted rail inside the note's edge, the same rail as a
+  solid gradient, a warming page-wide glow, a tinted dot grid, a corner bloom,
+  and discrete marks at session breakpoints. Every rejection was read as a
+  tuning problem and answered with a better-tuned version of the same idea. The
+  constraint that explains all six only arrived at the end — *nothing may enter
+  the visual field unbidden* — and it leaves exactly two legal moves: change a
+  property of something already on screen, or reveal something that was asked
+  for. All six were new matter on the page. So the display is now the **caret**,
+  which drifts from its resting indigo through sage and ochre to wine: already
+  there, already the theme's, and the only thing in *foveal* vision while
+  writing, which is where colour discrimination is best and where none of the
+  six were. That is why 1.5px of it is enough. It also deleted a fixed element,
+  a live measurement of the note's scroller and a list of floating chrome to
+  dodge — the mobile placement problem was not solved, it stopped existing.
+  Written up in `docs/superpowers/specs/2026-08-15-timer-caret-design.md`.
+- **A rectangular colour space cuts the corner between two hues, and the corner
+  is where the grey is.** The drift interpolates in `oklch`, and the usual
+  argument for it is wrong at this scale: measured off a render of this exact
+  ramp, sRGB and oklab differ by at most ΔE 0.029 — a JND on a big swatch,
+  nothing on a 1.5px caret. The real defect is that indigo and sage sit on
+  opposite sides of neutral, so a straight line between them passes *nearer the
+  achromatic axis than either endpoint*. Chroma measured 0.058 → 0.042 → 0.029
+  → **0.024** → 0.033, bottoming a third of the way in, below sage's own 0.033:
+  the caret would have gone grey mid-session, reading as a caret that lost its
+  colour rather than as time passing. `oklch` interpolates hue angle and chroma
+  separately, rounds the corner, and stays monotonic into sage. A unit test can
+  only assert which space was *asked for*; the rendered check is what caught it.
+- **Notices and tooltips are Obsidian's dark toast, and the text colour is not
+  a variable.** `.notice`, `.tooltip`, `.cm-completionInfo` and
+  `.cm-tooltip-docstring` all take their background from
+  `--background-modifier-message`, which app.css sets to `rgba(0, 0, 0, 0.9)`
+  on `body` everywhere except `.is-mobile.theme-dark` — so a paper theme always
+  got a near-black slab, full-width at the top of a phone. All four also
+  hardcode `color: #FAFAFA`, so retargeting only the background paints
+  near-white text on cream: unreadable, and worse than the slab. The fix has to
+  move the *variable*, not the elements, because the tooltip arrows are CSS
+  triangles coloured by `border-<side>: solid var(--same-var)` — style the
+  elements and the bodies go light while the arrows stay black, pointing at
+  them. Moving the variable then inherits app.css's specificity problem:
+  `.is-mobile.theme-dark` redefines it at (0,2,0) and beats a bare `body`
+  regardless of source order, hence the second selector. A notice's
+  `<progress>` needed a third fix for the same root cause — Obsidian themes it
+  correctly at (0,1,1) but a `.theme-light` hardcode of `#262626` at (0,2,1)
+  beats that, so light mode alone got a black track. Measured after: text at
+  10.89:1 on Paper and 13.17:1 on Night, with the card only 1.07:1 against the
+  page — which is why the border is explicit, since Obsidian drops the
+  box-shadow entirely on phone.
 
   The first response was to withhold the band on mobile, because drawing under
   an unremovable native one read as a doubled highlight. That blamed the
@@ -230,12 +604,18 @@ Residual gotchas:
   its bottom edge tracks the descender depth to within 0.6px) and the only way
   it can enclose the descenders it sits beside. Text hangs from the bottom of
   its cell, so nothing sized to the ink can also be dot-aligned.
-- **px in the editor, em in the title, and the distinction is load-bearing.**
-  `.cm-line` has an absolute `line-height: 24px` that does *not* move with
-  Appearance → Font size, so anything sized against the ROW is px. The title
-  has no fixed row and its size *is* a user setting, so its slot is em. The
-  plugin makes that expressible by copying the title's font size onto the
-  elements it draws, which live outside `.inline-title`.
+- **The row was fixed, then it wasn't, and a px literal copied from it is now
+  the trap.** `.cm-line`'s `line-height` used to be an absolute `24px`; it is
+  now `var(--midori-row)`, which follows both Appearance → Font size and the
+  Leading setting. A px literal sized against the row was the right answer
+  only while the row could not move — left standing, it is a band that stays
+  24px inside a line box that has grown to 30, or further still at a high
+  Leading and a large font size. Anything sized against the ROW has to
+  reference `var(--midori-row)` itself, never a px number copied from what it
+  once resolved to. The title has no row at all, fixed or otherwise, and its
+  size *is* a user setting, so its slot is em. The plugin makes that
+  expressible by copying the title's font size onto the elements it draws,
+  which live outside `.inline-title`.
 - **The properties widget opts out, onto its own paper.** Its rows are flex
   boxes full of inputs, icons and pills whose heights Obsidian derives from
   content the theme never sees. The block's *outer* box is a whole number of
@@ -249,6 +629,215 @@ Residual gotchas:
   clears them.
 - Elements with arbitrary heights (images, Mermaid diagrams, embeds) knock
   following lines off-register — inherent to baseline grids.
+- **The measure was outside every band, and the band has no experiment behind
+  it.** Obsidian's 700px default is ~91 characters per line at a 16px base;
+  the 45–75 / 66-character rule traces to Spencer asserting and Rayner &
+  Pollatsek deducing from Tinker's print data, not to a screen study. What is
+  real is the speed/preference split — longer lines are read faster, moderate
+  lines are preferred, and subjective ratings do not track performance — and a
+  writing surface, sat at for hours, takes the preference side. `theme.css`
+  sets `--file-line-width: calc(var(--font-text-size) * var(--midori-set-measure)
+  * var(--midori-avg-advance))`: `--font-text-size` — the variable Obsidian's
+  own `updateFontSize()` writes on `<body>` from the reader's text-size slider
+  — times the reader's chosen measure (the Line length setting, 40–100,
+  defaulting to 70) times `--midori-avg-advance` (0.4818, M PLUS 1p's average
+  glyph advance, which converts characters to em). So the line grows and
+  shrinks with the reader's font size AND their chosen measure now, rather
+  than staying pinned to the single `34em` constant (≈70.6 characters) one
+  person happened to use.
+- **A grid tuned to one base size is tuned to one person.** 24px is exactly
+  1.5 leading at a 16px base and 1.33 at 18px — under the WCAG 1.4.8 policy
+  floor as soon as a reader raises their text size, with no signal that the
+  theme had an opinion. The row now follows `--font-text-size` — and, since
+  Leading itself later became a setting, the reader's chosen leading too —
+  via `round(up, max(24px, var(--font-text-size) * var(--midori-set-leading)),
+  2px)`, gated behind `@supports` because a custom property parses as a token
+  stream and a plain second declaration hands every consumer an unparseable
+  value rather than degrading gracefully. The dot offset became
+  `calc(10.98px + (var(--midori-row) - 24px) / 2)` — an offset from the
+  historical row rather than a constant measured against it — and the
+  baseline-vs-dot phase was measured across the app's full 10–30px clamp: one
+  distinct offset at every base, not the per-device magic number this theme's
+  history is made of.
+- **Apparent size follows x-height, not em.** Headings are Spectral
+  (x-height 0.450em) against M PLUS 1p body copy (0.520em), and every
+  print-size result in the vision literature is stated in x-height for
+  exactly this reason. Set at Obsidian's default em ladder, an h4 read 1.03x
+  body to the eye while its em claimed 1.19x, and the bottom of the hierarchy
+  stopped reading as hierarchy. `x1.1556 = 0.520 / 0.450` restores it:
+  `--h1-size` through `--h4-size` now ship 1.870/1.690/1.523/1.373em; h5/h6
+  stay untouched — already Midori Text, and uppercase, where cap-height
+  carries the size, not x-height. The strut does not move: every heading
+  keeps `line-height: var(--midori-row)`, one row at every base tested
+  (14/16/20/24/30px). h2–h4 stay inside it there, in both panes, so for them
+  nothing here moves the grid. **h1 does not** — it is the largest size this
+  compensation produces, and a live sweep found its glyph box overflowing the
+  strut in Live Preview at the shipped scale; see the known open item under
+  Heading scale in the Settings section. What moves for every heading is how
+  far the ink reaches into the row of air above — an h1 at a 16px base now
+  reaches 7.1px into its 24px margin, against 1.2px before.
+- **A nominal contrast ratio overstates legibility at 1x, but less than the
+  premise assumed.** At 81 ppi a stem is about a pixel wide, and the
+  antialiaser spends most of a glyph's pixels on partial coverage — the
+  estimate going in was that only ~9% carry full ink. Measured on paper
+  `#f3f1eb` against ink `#3d3933` (the shipped `--text-normal`, not
+  `#33302b`, the unlifted foreground it is a step lifted from), nominal
+  10.15:1, from Playwright screenshots at devicePixelRatio 1 — the panel's
+  real regime: base 14 puts 22.9% of glyph pixels at full ink, median
+  3.30:1; base 16, 27.1%, median 3.68:1; base 18, 30.8%, median 4.17:1. So
+  the effect is real but less acute than assumed. The gate was p90 ≥ 5:1, and
+  p90 measured 10.15:1 at every base — but it SATURATES here: once more than
+  10% of a glyph's pixels sit at full ink the 90th percentile is 1.0 by
+  construction, so it stops discriminating, and the informative numbers are
+  the full-ink fraction and the median. That median is 3.30:1 at base 14,
+  below the 4.5:1 floor — the overstatement effect itself, and the strongest
+  evidence yet that 15–16 suits this 81 ppi panel better than 14. Nothing
+  changed: the gate passed with room. Two caveats. Playwright's Chromium at
+  dpr 1 is the right pixel regime, not guaranteed identical font smoothing to
+  Obsidian's Electron. And a theme-only harness measures the fallback, not
+  the theme: `theme.css` does not paint prose, it hands `--text-normal` and
+  `--font-text` to `app.css`, and a page missing `app.css` renders Times at
+  pure black and reports coverage above 1.0 — impossible, and the first run's
+  tell that the harness was wrong.
+- **A mode that lives in three homes ships from none of them.** The writing
+  mode needed a plugin (`zen-toggle`) and a CSS snippet that lived only in the
+  vault, so only `theme.css` travelled with the repo. Folding the plugin into
+  `obsidian/plugins/zen-toggle` and absorbing the snippet into the theme made
+  it one artifact — and doing so exposed that three of its rules compensated
+  for a view header the app removes outright when Settings → Appearance →
+  Show view header is off, so zen mode was adding a header's worth of empty
+  space above every note and shifting the dot grid to match. Those three
+  rules are now gated on `:is(.show-view-header, .is-phone)` — app.css hides
+  the header on `body:not(.show-view-header):not(.is-phone)`, two negations,
+  and a gate that mirrors only the first leaves a phone with the setting off
+  drawing a header nothing compensates for, which is the same bug 40px in the
+  other direction. Measured in the app.css + theme.css harness: with the
+  header off, the note's first line sits at the same position whether zen is
+  on or off.
+- **A plugin that gets typography right can still get the grid wrong.**
+  `pretty-paragraphs` gave the caret's blank line `line-height: normal` so
+  the caret stays visible — about 16.8px at a 14px base, which is not a
+  multiple of 24, so the note stepped off the lattice whenever the caret
+  rested on an empty line. Its indent selector was also "the line after a
+  blank line," which is every heading in a real note. The theme now owns
+  paragraph rhythm directly: the caret's blank line opens to exactly one row
+  rather than `normal`, and indents are 2em on paragraphs only —
+  measured 0 on headings, list lines and blanks. Both defects were fixable
+  only by whoever owns the grid, which is the argument for the theme owning
+  it rather than delegating to a plugin that cannot see it.
+- **What was deliberately not changed, and why.** Leading — no experiment
+  separates 1.4 from 1.5 from 1.6, and the much-cited Chaparro result is a
+  null. Letter-spacing. Serif-vs-sans for the body face — unresolved, not a
+  proven null; the claim that it is settled was itself refuted. Revision and
+  look-back support, and everything around the note. Typewriter scrolling and
+  dimming — no evidence exists in either direction, and both were explicitly
+  declined. Paragraph indents moved IN, not because evidence appeared, but
+  because the plugin providing them broke the dot grid, and only the grid's
+  owner could fix that — see the bullet above.
+
+### Settings
+
+Install the **Style Settings** community plugin and the theme's controls appear
+under Settings → Style Settings → Midori. Without it the block is an inert CSS
+comment and the theme behaves exactly as it does with every setting at its
+default — nothing is required.
+
+`install-obsidian.sh` does not install it: it is third-party, and it ships a
+`styles.css`, which the companion-plugin copy deliberately does not handle. The
+installer names any vault that is missing it instead, because the symptom
+otherwise is silent — a current theme, at every default, with no way to change
+anything, which looks exactly like a correct install.
+
+The line the settings draw: **what the evidence review called preference is
+exposed; what it called evidence is derived and is not.** Paragraph rhythm is a
+setting because the review found nothing either way. The ×1.1556 heading
+compensation is not, because it is M PLUS 1p's x-height over Spectral's.
+
+| Setting | Default | Range |
+|---|---|---|
+| Line length | 70 characters | 40–100 |
+| Paragraph rhythm | Indent | Indent / Space between / Both |
+| Paragraph indent | 2em | 0–4em |
+| Dot grid visibility | 100% | 0–150%, 0 turns it off |
+| Accent | Sage | the eight palette tokens |
+| Leading | 1.5 | 1.4–2 |
+| Heading scale | 1 | 0.85–1.1 |
+
+**Known open item, under Heading scale.** A sweep against a running Obsidian
+measured the Live Preview h1's line box at 49px against a 24px row — two rows
+plus one, not one row plus a pixel. `line-height` only sets the strut (one
+row, 24px at the shipped base), but a line box is `max(strut, tallest inline
+box)`, and at heading scale 1 the h1's own 29.92px font produces a glyph box
+that overflows the strut, so the box grows to fill two rows and spills one
+pixel past. It clears at heading scale ≤ 0.9 (font ≤ 26.928px) and fails at
+≥ 0.95 — which brackets the shipped default of 1 on the failing side, so this
+is live at the theme's own defaults, not just at the slider's top end.
+`line-height: calc(var(--midori-row) * 2)` would seat it on two rows exactly,
+at the cost of making every h1 two rows tall; that is a real design decision
+and it has not been taken here. Reproduce it with the sweep in "Checking the
+grid in the running app" below.
+
+**Not every setting is caught, and one of them is not caught at all.** Line
+length, paragraph indent and dot grid visibility have no path to a row-sized
+property — they change wrap width, horizontal indent and opacity
+respectively — so no value a reader picks can move the grid. Paragraph
+rhythm does move content vertically (`space`/`both` open a
+`margin-block: 0 var(--midori-row)` gap after each paragraph), but the three
+modes only ever select between 0 and one whole row; no reader-chosen number
+reaches that property, so there is nothing for a rounding function to catch.
+Leading is the one input that flows into a row-sized property as a
+continuous value, and it is caught: it reaches the page only through
+`round(up, max(24px, …), 2px)`. Two pixels rather than one because the dot
+offset adds half the row's growth, so an odd row lands the baseline 0.50px
+off.
+
+**Heading scale is the exception, and the note above is what it costs.** It
+multiplies a font-size, not a row, and a line box is
+`max(strut, tallest inline box)` — a glyph box large enough overflows the
+strut no matter what the row is doing, and nothing between the slider and
+the font-size passes through a `round()` to stop it. That is why the h1
+sits a pixel over two rows at the shipped default rather than exactly one,
+and why the slider is capped at 1.1 rather than something larger — the cap
+narrows the exposure; it does not close it.
+
+Line length is in characters because that is the unit a writer thinks in and
+the unit the research is reported in — not because characters is established as
+what the eye responds to. That claim was refuted 0–3 in the review and the
+question is open. The range spans the two ends of the one finding that
+survived: 40 is under every proposed preference band, 100 covers the ~95 cpl
+speed peak and Obsidian's stock ~91.
+
+The settings are swept across their range against a running app the same way
+the grid itself is checked — see the next section rather than a second set of
+instructions here.
+
+### Checking the grid in the running app
+
+Static tests read the stylesheet; they cannot see what the browser laid out.
+Two real defects survived nine tasks and a whole-plan review because the
+offenders were CodeMirror's own elements, which a theme-only harness does not
+build. **Open a note with headings, a list, a code block and a footnote
+reference in Live Preview first** — the sweep measures what is on screen, and
+an empty or trivial note proves nothing. To sweep the settings against the
+live app:
+
+    open -a Obsidian --args --remote-debugging-port=9222
+    python3 -m venv /tmp/cdpenv && /tmp/cdpenv/bin/pip install websocket-client
+    /tmp/cdpenv/bin/python tests/check_rendered_grid.py
+
+It walks leading x base size — 63 combinations — and asserts the row is always
+an even number of pixels and every line box is a whole number of rows. It is
+not part of `tests/lint.sh` because it needs a running app.
+
+On its first live run this tool reported a confident all-clear while
+measuring a twelve-line note in one window, and a second window with a
+31-line note found 25 of 63 combinations off the lattice — a false green
+driven entirely by which of several open windows CDP's target list happened
+to list first. It now enumerates every open Obsidian window, prints a table
+of each one's title and `.cm-line` count, measures whichever has the most
+lines, and refuses to run at all — exiting non-zero — if that window has
+fewer than 15 lines. Watch that table: it is how you confirm the note that
+got graded is the one you meant.
 
 ## Cursor / VS Code notes
 
@@ -445,7 +1034,7 @@ Residual gotchas:
   instead: move control **lighter** and much more chromatic, so a medium blue
   sits against a deep navy. Searching every (L, C) at the indigo hue for slots
   with no flagged pair showed paper's L 42–54 band is only passable at C ≥ 9.6
-  — below that the comment, plum, string, mint and number rungs block it — which
+  — below that the comment, purple, string, mint and number rungs block it — which
   is why the answer needed chroma and lightness together.
 - **`fontStyle: bold` is a real axis here; `fontStyle: italic` is not.**
   `MPLUS1Code[wght].ttf` is a variable font carrying Thin → Bold, so bold is an
@@ -522,12 +1111,12 @@ Residual gotchas:
   mean chroma 12.3**; Midori Night carries 10 accents over 7 bins at **8.3**,
   Paper 8 over 6 at **8.5**. Below roughly C 12 hue does almost no work at body
   size, so the field's 12.3 is exactly what buys them a spare hue slot. An 11th
-  Midori accent dropped into the 76° gap at 289° would sit at C 8 and read as
-  another muddy mid-tone — every candidate priced (plum 327°, cyan 212°) still
-  flagged `ΔL<6 and ΔC<3` against `function`, because at this chroma separation
-  has to come from lightness and night's L 73–86 band already holds function,
-  number, value, mint and plain. Raising chroma to open the slot is the
-  experiment in the second bullet that already failed. The role is separated on
+  Midori accent dropped into the gap at 289° would sit at C 8 and read as
+  another muddy mid-tone — every candidate priced (the then-plum at 327°, cyan
+  212°) still flagged `ΔL<6 and ΔC<3` against `function`, because at this
+  chroma separation has to come from lightness and night's L 73–86 band already
+  holds function, number, value, mint and plain. Raising chroma to open the
+  slot is the experiment in the second bullet that already failed. The role is separated on
   an orthogonal channel instead: `entity.other.attribute-name` is italic and
   `entity.name.function` is not — verified in the tokeniser, not assumed —
   which is what 18% of the surveyed themes do deliberately.
@@ -576,6 +1165,33 @@ nudging sliders.
   so the repo is the only copy. Edit the JSON, re-run
   `./antinote/install-antinote.sh`, hit "Reload Custom Themes"; no restart.
 
+## Moshi notes
+
+[Moshi](https://getmoshi.app) is the phone terminal for driving agents over
+SSH/Mosh, and it restyles its whole UI from the imported scheme — not just the
+terminal grid. `moshi/build-moshi-themes.py` derives both themes from
+`ghostty/themes/midori-*`, emits the JSON, deep links, QR codes and
+`import.html`, and publishes all of it to
+`iCloud Drive/Dev/midori-moshi-theme` so the phone copies can't fall behind the
+repo. Full format notes — the schema is undocumented — are in `moshi/README.md`.
+
+Two things worth carrying to any future port:
+
+- **A sentinel value is not a colour.** Both Ghostty themes set `cursor-color`
+  to the exact background hex on purpose: Ghostty composites the native cursor
+  *after* the custom shader and `cursor-opacity=0` doesn't hide the hollow
+  unfocused cursor, so bg-on-bg is how they kill it and the shader draws the
+  indigo instead. Ported verbatim to a renderer with no shader, that is simply
+  an invisible cursor. The generator detects `cursor == background` and
+  substitutes palette 4 — the indigo the shader was drawing. Before copying a
+  theme value anywhere, check whether it's a colour or a hack exploiting one
+  renderer's quirk.
+- **ANSI 7/15 are reverse-video on a light theme**, so they belong *near* the
+  background and their low contrast is correct, not a defect. Midori Paper
+  lands 8/18 under 4.5:1, the same as Piatto Light, against Atom One Light's 11
+  and Belafonte Day's 14. The generator prints the contrast table on every
+  build so a palette edit that hurts phone legibility is visible immediately.
+
 ## Claude Code notes
 
 - The installer sets `"theme": "custom:midori"` in `~/.claude/settings.json`.
@@ -616,6 +1232,23 @@ nudging sliders.
   update mechanisms). Opt out with `MIDORI_SKIP_CC_PATCH`; restore stock by
   copying back the per-version backup under `~/.config/midori/claude-backup/`
   (or `brew reinstall claude-code` if you're on the brew cask).
+- **The self-heal wrapper must use `whence -p`, not `command -v`.** Inside a
+  zsh function *named* `claude`, `command -v claude` resolves the function and
+  returns the bare word `claude`; `readlink` of that is empty, the guard
+  short-circuits, and the patch silently never runs. That bug shipped three
+  unpatched Claude Code updates before anyone noticed, and it was caught by
+  measuring a screenshot's pixels (inline code at hue 233° — Midori's blue is
+  211° and its purple 274°, so it was neither), not by the tooling. If Midori
+  colours ever quietly revert, check this first.
+- **Currently blocked upstream: 2.1.229+ cannot be unpacked.** `tweakcc` 4.3.1
+  and 4.3.2 both fail to extract the embedded JS from 2.1.229 and 2.1.231,
+  while the same tool handles 2.1.226–228 cleanly — the binary packaging
+  changed (it also grew 279 MB → 295 MB). The patch script records the specific
+  binary path in `~/.config/midori/claude-unpatchable` and skips it silently,
+  so the wrapper doesn't retry-and-fail on every launch; a new Claude Code
+  version lifts the block by itself, and a successful patch clears it. Until
+  tweakcc catches up, **inline code and tips render stock blue** — everything
+  else in the theme is unaffected. Delete that file to force a retry.
 
 ## Shell & tmux fragments are additive
 
@@ -747,6 +1380,48 @@ scores 58 quantised colours, dead on the field median of 56. The 1024 master
 holds exactly five hexes; the mint dot grid plus downsampling generates the
 rest. Low saturation is what makes it read flat, not a small palette — so
 judge that quality by saturation, not by colour count.
+
+### Publishing the VS Code extension
+
+Release is automated — `.github/workflows/release-vscode.yml` packages and
+publishes on a `vscode-v*` tag — but it cannot run until four one-time,
+account-level things exist. As of Aug 2026 none of them do, so the extension
+is packaged and installable locally but **not published**.
+
+1. **Two README screenshots**, `vscode/midori-theme/media/paper.png` and
+   `media/night.png`. `media/SCREENSHOTS.md` is the brief: same file and
+   scroll position in both themes, 1800px captured then halved to 900, with
+   the explorer strip and a tab visible. `media/screenshot-sample.tsx` is the
+   file to shoot — it is arranged to exercise control-flow vs declaration
+   colour, bold-on-introduction, and accents on a single line. Until these are
+   committed the Marketplace listing renders two broken images, because the
+   README links them by absolute raw URL (see below).
+2. **A publisher named `benjaminloschen`**, created once at
+   <https://marketplace.visualstudio.com/manage>.
+3. **An Azure DevOps PAT** with *Marketplace → Manage* scope and
+   *All accessible organizations* — the org dropdown defaults to a single org
+   and a PAT scoped that way fails at publish time with an unhelpful error.
+   Then `gh secret set VSCE_PAT`. `OVSX_PAT` is optional; the Open VSX step
+   skips cleanly without it.
+4. **Tag `vscode-v1.21.0`** to trigger the workflow.
+
+The version numbering starts at 1.21.0 deliberately: 1.0.0–1.20.0 were local
+builds that were never published, and a Marketplace version number can never
+be reused, so restarting the count would collide. `CHANGELOG.md` says so.
+
+**Why the README uses absolute raw URLs for images.** vsce rewrites relative
+links assuming the extension sits at the *repo root*, so `media/paper.png` in
+this subdirectory package becomes `.../blob/HEAD/media/paper.png` and 404s.
+Verified by unzipping the built `.vsix` and curling both forms. The
+alternatives are `--baseContentUrl` / `--baseImagesUrl` or
+`--no-rewrite-relative-links`; absolute URLs were chosen because they are
+correct regardless of which tool builds the package. Full write-up in the
+`vsce-readme-links-rewritten-relative-to-repo-root` skill.
+
+Local installs are a different path and do **not** go through any of this —
+see the Cursor/VS Code notes above: a folder drop is silently ignored, only a
+`.vsix` installed through each editor's own CLI registers in
+`extensions.json`.
 
 ## A note on the name
 
