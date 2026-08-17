@@ -720,6 +720,21 @@ Residual gotchas:
   because the plugin providing them broke the dot grid, and only the grid's
   owner could fix that — see the bullet above.
 
+### Checking the grid in the running app
+
+Static tests read the stylesheet; they cannot see what the browser laid out.
+Two real defects survived nine tasks and a whole-plan review because the
+offenders were CodeMirror's own elements, which a theme-only harness does not
+build. To sweep the settings against the live app:
+
+    open -a Obsidian --args --remote-debugging-port=9222
+    python3 -m venv /tmp/cdpenv && /tmp/cdpenv/bin/pip install websocket-client
+    /tmp/cdpenv/bin/python tests/check_rendered_grid.py
+
+It walks leading x base size — 63 combinations — and asserts the row is always
+an even number of pixels and every line box is a whole number of rows. It is
+not part of `tests/lint.sh` because it needs a running app.
+
 ## Cursor / VS Code notes
 
 - **Judge syntax contrast at 1x, never on the retina display.** Decomposing a
