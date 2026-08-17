@@ -304,7 +304,12 @@ body {
   --link-external-color-hover: var(--midori-accent-hover); /* --accent-hover */
   --link-unresolved-color: var(--midori-mythic);         /* --accent-mythic */
 
-  --text-selection: rgba(95, 111, 94, 0.25); /* --accent (sage) @ 25% */
+  /* THE SELECTION BAND FOLLOWS THE ACCENT, with the same fallback discipline as
+     --midori-accent-hover. A custom property has no two-declaration fallback, so
+     the plain rgba() below is not a leftover -- it is what an engine without
+     color-mix actually lands on. Delete it and the band computes to its initial
+     value rather than to sage. */
+  --text-selection: rgba(95, 111, 94, 0.25);
   --text-highlight-bg: #e2d4b9;              /* ochre wash — --color-yellow @ 28% on paper */
 
   --hr-color: rgba(60, 58, 54, 0.1);
@@ -492,7 +497,12 @@ body {
      weaker to look at, because down here the band also has to out-read the dot
      grid and the halation around light text on dark. 38% puts it at 24.6,
      which is where it stops looking like a smudge. */
-  --text-selection: rgba(154, 171, 151, 0.38); /* --accent (sage) @ 38% */
+  /* THE SELECTION BAND FOLLOWS THE ACCENT, with the same fallback discipline as
+     --midori-accent-hover. A custom property has no two-declaration fallback, so
+     the plain rgba() below is not a leftover -- it is what an engine without
+     color-mix actually lands on. Delete it and the band computes to its initial
+     value rather than to sage. */
+  --text-selection: rgba(154, 171, 151, 0.38);
   --text-highlight-bg: #483d2b;                /* ochre wash — --color-yellow @ 24% on paper */
 
   --hr-color: rgba(235, 232, 226, 0.1);
@@ -593,6 +603,26 @@ body[class*="midori-accent-"] {
 @supports (color: color-mix(in oklab, red, blue)) {
   body[class*="midori-accent-"] {
     --midori-accent-hover: color-mix(in oklab, var(--midori-accent) 82%, var(--text-normal));
+  }
+  /* Selected on body.theme-light / body.theme-dark, NOT gated behind an
+     explicit accent class the way hover is. Hover mixes toward --text-normal,
+     an opaque colour, so its derived value never exactly reproduces the
+     hand-tuned --midori-sage-hover -- gating it behind the class is what keeps
+     a reader who has never opened settings on the exact shipped hover.
+     Selection mixes toward `transparent` instead, and that reduces exactly:
+     at the shipped default (--midori-accent = var(--midori-sage)),
+     color-mix(in srgb, var(--midori-accent) 25%, transparent) computes to the
+     same rgba(95, 111, 94, 0.25) the plain declaration above already ships --
+     not merely close to it. Nothing changes for a reader who never touches
+     the accent setting, so there is no reason to wait for a class to land.
+     Split by mode because the tuned alpha differs (25% light, 38% dark; see
+     the rationale above the dark-mode declaration) -- one shared percentage
+     would silently flatten that relationship back to a single number. */
+  body.theme-light {
+    --text-selection: color-mix(in srgb, var(--midori-accent) 25%, transparent);
+  }
+  body.theme-dark {
+    --text-selection: color-mix(in srgb, var(--midori-accent) 38%, transparent);
   }
 }
 
