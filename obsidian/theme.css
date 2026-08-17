@@ -1405,11 +1405,20 @@ body.midori-rhythm-space .markdown-preview-view p,
 body.midori-rhythm-both .markdown-preview-view p {
   margin-block: 0 var(--midori-row);
 }
-body.midori-rhythm-space .markdown-preview-view p {
-  text-indent: 0;
-}
-body.midori-rhythm-space .markdown-source-view.mod-cm6 .cm-line {
-  text-indent: 0;
+
+/* A variable override, not a text-indent rule: the Live Preview indent
+   selector above (.cm-content > .cm-line:first-child:not(...), and the
+   blank-line + .cm-line:not(...) sibling) carries eleven class-level
+   components apiece, from :first-child/:has() plus five :not() clauses.
+   No body-class selector beats that honestly, and `body.midori-rhythm-space
+   .markdown-source-view.mod-cm6 .cm-line { text-indent: 0; }` shipped once
+   and silently lost the contest -- 'space' kept indenting in the editor
+   while every test stayed green. Zeroing --midori-indent instead resolves
+   before any consumer's selector is even considered, so reading view and
+   Live Preview both go to zero from one declaration, and no future
+   selector on either side can out-specify it back into indenting. */
+body.midori-rhythm-space {
+  --midori-indent: 0;
 }
 
 /* Every paragraph is indented, including the first after a heading. That

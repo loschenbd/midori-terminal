@@ -649,6 +649,32 @@ def test_inputs_are_never_read_by_a_real_property():
         ok("inputs are read only by derived custom properties")
 
 
+def _length_tokens(value):
+    """Split a shorthand CSS value into its space-separated lengths.
+
+    `margin: 0 0 18px 0` needs each length checked on its own -- a naive
+    substring/equality check on the whole value would miss a bad length
+    sitting next to good ones. Splits respect parens, so `var(--midori-row)`
+    (or a future fallback-bearing `var(--x, 24px)`) survives as one token
+    rather than being cut on an internal space.
+    """
+    tokens, depth, cur = [], 0, ""
+    for ch in value:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        if ch.isspace() and depth == 0:
+            if cur:
+                tokens.append(cur)
+                cur = ""
+        else:
+            cur += ch
+    if cur:
+        tokens.append(cur)
+    return tokens
+
+
 def test_rhythm_modes_all_exist():
     """Each rhythm option has rules, and only 'space' and 'both' add a gap.
 
@@ -672,18 +698,53 @@ def test_rhythm_modes_all_exist():
     if not gaps:
         bad("no rule gives the 'space' or 'both' modes a paragraph gap")
         return
+    # ANY BOX-SPACING PROPERTY, NOT JUST THE THREE margin-* NAMES THE BRIEF'S
+    # RULES HAPPENED TO USE. A shorthand (`margin: 0 0 18px 0`) or a
+    # different property (padding-bottom, height) can shove a paragraph off
+    # the grid exactly the same way, and margin-block/-bottom/-top alone
+    # would not have noticed. A shorthand's value is split into its
+    # individual lengths, because only one length among several needs to be
+    # off-grid to break it.
     for sel, decls in rules():
         if "midori-rhythm-" not in sel:
             continue
         for decl in decls.split(";"):
             name, _, val = decl.partition(":")
-            if name.strip() in ("margin-block", "margin-bottom", "margin-top"):
-                v = val.strip()
-                if v not in ("0", "0px") and "var(--midori-row)" not in v:
-                    bad(f"a rhythm mode sets {name.strip()}: {v}, which is not "
+            prop = name.strip()
+            if not (prop.startswith("margin") or prop.startswith("padding")
+                     or prop == "height"):
+                continue
+            v = val.strip()
+            if not v:
+                continue
+            for tok in _length_tokens(v):
+                if tok not in ("0", "0px") and "var(--midori-row)" not in tok:
+                    bad(f"a rhythm mode sets {prop}: {v}, which is not "
                         f"a whole row: {' '.join(sel.split())[:50]}")
                     return
     ok("all three rhythm modes exist and every gap is a whole row")
+
+
+def test_space_rhythm_zeroes_the_indent_variable():
+    """The 'space' mode kills the indent through the VARIABLE, not a property.
+
+    The Live Preview indent selector carries eleven class-level components
+    (:first-child or :has(), plus five :not() clauses), so any plain
+    `text-indent: 0` written against a body class loses the cascade and the
+    mode silently does nothing -- which is what shipped, green, until a
+    reviewer computed the specificity by hand. Overriding --midori-indent
+    instead resolves before any consumer's selector is considered.
+    """
+    for selector, decls in rules():
+        if "midori-rhythm-space" not in selector:
+            continue
+        for decl in decls.split(";"):
+            name, _, val = decl.partition(":")
+            if name.strip() == "--midori-indent" and val.strip() in ("0", "0em", "0px"):
+                ok("the 'space' mode zeroes --midori-indent, so no consumer indents")
+                return
+    bad("no rule zeroes --midori-indent for midori-rhythm-space; a plain "
+        "text-indent: 0 loses to the eleven-component Live Preview selector")
 
 
 if __name__ == "__main__":
@@ -703,5 +764,6 @@ if __name__ == "__main__":
     test_indent_excludes_non_prose()
     test_zen_header_rules_are_gated()
     test_rhythm_modes_all_exist()
+    test_space_rhythm_zeroes_the_indent_variable()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)
