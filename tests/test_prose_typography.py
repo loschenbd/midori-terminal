@@ -69,9 +69,17 @@ def theme_vars(name):
     proves at most one mode is wired: a reviewer deleted the light-mode
     --text-selection override and the whole suite stayed green, because dark's
     copy was textually last and answered for both.
+
+    COMMENTS ARE STRIPPED FIRST, for the same reason theme_var() strips them:
+    this file's comments quote CSS, whole declarations included, and a quoted
+    declaration matches this pattern exactly as well as a real one. Nothing
+    collides today, but this file uses that quoting pattern constantly, and an
+    unstripped scan would silently inflate the count the moment a future
+    comment quotes one of these properties.
     """
     return [m.group(1).strip()
-            for m in re.finditer(re.escape(name) + r"\s*:\s*([^;]+);", THEME)]
+            for m in re.finditer(re.escape(name) + r"\s*:\s*([^;]+);",
+                                 re.sub(r"/\*.*?\*/", "", THEME, flags=re.S))]
 
 
 def em_value(raw):
@@ -275,7 +283,8 @@ def test_no_stray_grid_literals():
 
 
 def test_snapped_vars_all_have_plain_fallbacks():
-    """Every custom property defined inside @supports also has one outside.
+    """Every custom property defined inside @supports also has one outside,
+    UNDER THE SAME SELECTOR.
 
     A custom property parses as an arbitrary token stream, so `--x: 24px;
     --x: round(...)` hands the SECOND declaration to every consumer whatever
@@ -288,9 +297,56 @@ def test_snapped_vars_all_have_plain_fallbacks():
     deleting it is invisible: every other assertion here reads the @supports
     copy and stays green. Measured -- that is exactly what happened before this
     test existed.
+
+    SELECTOR-SCOPED, NOT NAME-ONLY. Which declaration a non-supporting engine
+    falls back to is decided by the CASCADE -- by selector, not by property
+    name -- so that is what a guard for it has to check. A name-only version
+    shipped here first and passed a real regression: deleting
+    `body[class*="midori-accent-"] { --midori-accent-hover: var(--midori-accent) }`
+    left the suite green, because `.theme-light` and `.theme-dark` ALSO
+    declare --midori-accent-hover -- their own pre-accent-select default,
+    --midori-sage-hover, a different rule answering a different question, not
+    this one's fallback. A reader on an engine without color-mix, with the
+    accent set to wine, silently got a SAGE hover: a defined, sane-looking
+    value, so nothing crashed and the name-only guard never noticed.
+
+    ONE NORMALISATION BEYOND WHITESPACE: a leading `body` is stripped before
+    comparing selectors. Every class/attribute selector in this file is only
+    ever applied to <body> -- Style Settings has nowhere else to write a
+    class -- so `body.theme-light` and `.theme-light` select the exact same
+    element and are the same rule for fallback purposes; only their
+    specificity differs, which is irrelevant here. Without this, the
+    genuinely-paired --text-selection fallback (`.theme-light { ... }`, no
+    `body`) and its @supports override (`body.theme-light { ... }`, and the
+    comment directly above it says in so many words that the two compute to
+    the same colour) would read as two different selectors, and this guard
+    would fail on the file exactly as shipped.
     """
     body = re.sub(r"/\*.*?\*/", "", THEME, flags=re.S)
-    inside = set()
+
+    def norm_selector(sel):
+        return re.sub(r"^body(?=[.\[:])", "", " ".join(sel.split()))
+
+    def prop_pairs(text):
+        """(normalised selector, custom property) for every declaration in
+        text. Mirrors rules(): split on '}', the head before the last '{' is
+        the selector -- but scoped to a supplied fragment rather than the
+        whole file, so "inside @supports" and "outside @supports" can be
+        collected separately."""
+        pairs = set()
+        for chunk in text.split("}"):
+            if "{" not in chunk:
+                continue
+            selector, _, decls = chunk.rpartition("{")
+            sel = norm_selector(selector)
+            for decl in decls.split(";"):
+                name, sep, _ = decl.partition(":")
+                name = name.strip()
+                if sep and name.startswith("--"):
+                    pairs.add((sel, name))
+        return pairs
+
+    inside, spans = set(), []
     for m in re.finditer(r"@supports[^{]*\{", body):
         start = m.end()
         depth, i = 1, start
@@ -300,27 +356,28 @@ def test_snapped_vars_all_have_plain_fallbacks():
             elif body[i] == "}":
                 depth -= 1
             i += 1
-        inside.update(re.findall(r"(--[\w-]+)\s*:", body[start:i]))
+        inside |= prop_pairs(body[start:i])
+        spans.append((m.start(), i))
     outside_text = body
-    for m in reversed(list(re.finditer(r"@supports[^{]*\{", body))):
-        start = m.end()
-        depth, i = 1, start
-        while i < len(body) and depth:
-            if body[i] == "{":
-                depth += 1
-            elif body[i] == "}":
-                depth -= 1
-            i += 1
-        outside_text = outside_text[:m.start()] + outside_text[i:]
-    missing = [n for n in sorted(inside)
-               if not re.search(re.escape(n) + r"\s*:", outside_text)]
+    for s, e in reversed(spans):
+        outside_text = outside_text[:s] + outside_text[e:]
+    outside = prop_pairs(outside_text)
+
+    missing = sorted(inside - outside)
     if missing:
-        for n in missing:
-            bad(f"{n} is defined only inside @supports: an engine without the "
-                f"feature gets an undefined property and every consumer falls "
-                f"back to its initial value, not to a sane default")
+        for sel, n in missing:
+            shown = sel if sel else "body"
+            bad(f"{n} is defined inside @supports for selector {shown!r} but "
+                f"not outside it: an engine without the feature gets no "
+                f"matching fallback for that rule, and either falls back to "
+                f"the property's initial value or -- if some unrelated rule "
+                f"happens to declare the same property name -- silently picks"
+                f" up that rule's value instead")
     else:
-        ok(f"all {len(inside)} @supports-defined properties have plain fallbacks")
+        names = sorted({n for _, n in inside})
+        ok(f"all {len(inside)} @supports-scoped declarations across "
+           f"{len(names)} properties ({', '.join(names)}) have a plain "
+           f"fallback under the same selector")
 
 
 def row_px(base):
@@ -359,8 +416,15 @@ def test_row_is_an_even_number_of_pixels():
     the L/2 model that the offset formula assumes. Rounding to 2px keeps every
     row in the 10-30px clamp even, and the measured baseline then matches L/2
     exactly at all 21 of them.
+
+    WHITESPACE-NORMALISED BEFORE MATCHING. The declaration is allowed to wrap
+    across lines for readability -- see the three-line form in the @supports
+    block -- and `.` in this regex does not cross a newline, so an unnormalised
+    match would fail on correctly-wrapped source and read as a missing
+    round(). The constraint belongs on the regex, not on how the next person
+    is allowed to format the CSS.
     """
-    raw = theme_var("--midori-row") or ""
+    raw = " ".join((theme_var("--midori-row") or "").split())
     if re.search(r"round\(\s*up\s*,.*,\s*2px\s*\)", raw):
         ok("the row is rounded up to even pixels")
     else:

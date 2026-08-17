@@ -241,7 +241,9 @@ body {
    all 21 of them. Leading runs 1.517-1.579 above the floor region. */
 @supports (line-height: round(up, 25px, 2px)) {
   body {
-    --midori-row: round(up, max(24px, var(--font-text-size) * var(--midori-set-leading)), 2px);
+    --midori-row: round(up,
+                        max(24px, var(--font-text-size) * var(--midori-set-leading)),
+                        2px);
   }
 }
 
