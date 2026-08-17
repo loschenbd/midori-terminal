@@ -61,8 +61,35 @@ def theme_var(name):
     return hits[-1].strip() if hits else None
 
 
+def theme_vars(name):
+    """EVERY declaration of a custom property, in source order.
+
+    theme_var returns only the last one, which is a trap in a stylesheet that
+    declares most colour tokens twice -- once per mode. A guard built on it
+    proves at most one mode is wired: a reviewer deleted the light-mode
+    --text-selection override and the whole suite stayed green, because dark's
+    copy was textually last and answered for both.
+    """
+    return [m.group(1).strip()
+            for m in re.finditer(re.escape(name) + r"\s*:\s*([^;]+);", THEME)]
+
+
 def em_value(raw):
+    """The em coefficient of a heading size, plain or scaled.
+
+    Task 6 turned the heading ladder into
+    `calc(1.870em * var(--midori-set-heading-scale))` so a reader could move
+    it. The optical-step check below still wants the em coefficient, at the
+    setting's default of 1 -- so calc() around a scale multiply is unwrapped
+    rather than read as "not an em" the way a genuinely different unit still
+    would be.
+    """
     m = re.fullmatch(r"([0-9.]+)em", (raw or "").strip())
+    if m:
+        return float(m.group(1))
+    m = re.fullmatch(
+        r"calc\(\s*([0-9.]+)em\s*\*\s*var\(--midori-set-heading-scale\)\s*\)",
+        (raw or "").strip())
     return float(m.group(1)) if m else None
 
 
@@ -247,66 +274,53 @@ def test_no_stray_grid_literals():
            "24/48/72/96px")
 
 
-def test_row_has_a_plain_fallback():
-    """A plain --midori-row must exist OUTSIDE the @supports block.
+def test_snapped_vars_all_have_plain_fallbacks():
+    """Every custom property defined inside @supports also has one outside.
 
-    The whole reason the row is written as one plain declaration refined by a
-    feature query, rather than two declarations in a row, is that a custom
-    property is a token stream: an engine that cannot parse round() would keep
-    the unparseable value and hand it to all ~45 consumers, and line-height
-    would compute to `normal` rather than to 24px. The @supports form degrades
-    instead — but only because the plain declaration is there to degrade TO.
+    A custom property parses as an arbitrary token stream, so `--x: 24px;
+    --x: round(...)` hands the SECOND declaration to every consumer whatever
+    the engine supports, and the failure lands at each use site as
+    invalid-at-computed-value-time -- the consumer computes to its initial
+    value, not to the fallback. var(--x, 24px) does not rescue it either:
+    var()'s fallback is for an UNDEFINED property, and this one is defined.
 
-    NOTHING ELSE IN THIS FILE CAN SEE IT GO. theme_var() returns the LAST
-    match, which is the copy inside @supports, so deleting the base
-    declaration leaves every other assertion here green while an engine
-    without round() loses the grid entirely. Deleting the @supports block is
-    already caught; this is the other half.
-
-    So: excise the @supports block from the source and check what is left.
+    So the plain declaration OUTSIDE the query is the entire fallback, and
+    deleting it is invisible: every other assertion here reads the @supports
+    copy and stays green. Measured -- that is exactly what happened before this
+    test existed.
     """
     body = re.sub(r"/\*.*?\*/", "", THEME, flags=re.S)
-
-    # Excise @supports blocks by brace-counting from the at-rule. A regex
-    # cannot do this: the block contains nested {} of its own.
-    out, i = [], 0
-    while True:
-        at = body.find("@supports", i)
-        if at == -1:
-            out.append(body[i:])
-            break
-        out.append(body[i:at])
-        depth, j = 0, body.find("{", at)
-        if j == -1:
-            break
-        while j < len(body):
-            if body[j] == "{":
+    inside = set()
+    for m in re.finditer(r"@supports[^{]*\{", body):
+        start = m.end()
+        depth, i = 1, start
+        while i < len(body) and depth:
+            if body[i] == "{":
                 depth += 1
-            elif body[j] == "}":
+            elif body[i] == "}":
                 depth -= 1
-                if depth == 0:
-                    break
-            j += 1
-        i = j + 1
-    outside = "".join(out)
-
-    hits = re.findall(r"--midori-row\s*:\s*([^;]+);", outside)
-    if not hits:
-        bad("no --midori-row declaration outside @supports: an engine without "
-            "round() gets an undefined row, and ~45 consumers fall back to "
-            "their initial values instead of to the historical 24px grid")
-        return
-    plain = [h.strip() for h in hits if re.fullmatch(r"\d+px", h.strip())]
-    if not plain:
-        bad(f"--midori-row outside @supports is {hits[-1].strip()!r}: the "
-            "fallback has to be a plain px literal, or the engine that cannot "
-            "parse round() cannot parse the fallback either")
-        return
-    if int(plain[-1][:-2]) % 2 != 0:
-        bad(f"the --midori-row fallback is {plain[-1]}, which is odd; "
-            "--dotgrid-offset-y adds half the row")
-        return
-    ok(f"--midori-row falls back to a plain {plain[-1]} outside @supports")
+            i += 1
+        inside.update(re.findall(r"(--[\w-]+)\s*:", body[start:i]))
+    outside_text = body
+    for m in reversed(list(re.finditer(r"@supports[^{]*\{", body))):
+        start = m.end()
+        depth, i = 1, start
+        while i < len(body) and depth:
+            if body[i] == "{":
+                depth += 1
+            elif body[i] == "}":
+                depth -= 1
+            i += 1
+        outside_text = outside_text[:m.start()] + outside_text[i:]
+    missing = [n for n in sorted(inside)
+               if not re.search(re.escape(n) + r"\s*:", outside_text)]
+    if missing:
+        for n in missing:
+            bad(f"{n} is defined only inside @supports: an engine without the "
+                f"feature gets an undefined property and every consumer falls "
+                f"back to its initial value, not to a sane default")
+    else:
+        ok(f"all {len(inside)} @supports-defined properties have plain fallbacks")
 
 
 def row_px(base):
@@ -363,6 +377,46 @@ def test_row_is_an_even_number_of_pixels():
             bad_here = True
     if not bad_here:
         ok(f"all rows across {BASES[0]}-{BASES[-1]}px are even")
+
+
+def test_leading_setting_is_snapped():
+    """The leading slider reaches the row only through round(..., 2px).
+
+    TWO PIXELS, NOT ONE. --dotgrid-offset-y adds HALF the row's growth, so an
+    odd row puts the baseline 0.50px off. Measured against the true baseline
+    (a zero-size inline-block on vertical-align: baseline, whose rect top IS
+    the baseline) at every base in the 10-30 clamp: exact at even rows, -0.50px
+    at odd ones, because Chromium rounds half-leading to a whole pixel.
+    """
+    raw = None
+    for m in re.finditer(r"--midori-row\s*:\s*([^;]+);", THEME):
+        if "round" in m.group(1):
+            raw = " ".join(m.group(1).split())
+    if raw is None:
+        bad("no rounded --midori-row declaration")
+        return
+    if "var(--midori-set-leading)" not in raw:
+        bad(f"--midori-row is {raw!r}: expected it to derive from "
+            "var(--midori-set-leading)")
+        return
+    if not re.search(r"round\(\s*up\s*,.*,\s*2px\s*\)", raw):
+        bad(f"--midori-row is {raw!r}: must round UP to 2px, not 1px -- "
+            "the dot offset adds half the row's growth")
+        return
+    if "max(24px" not in raw:
+        bad(f"--midori-row is {raw!r}: must floor at 24px")
+        return
+    b = settings_block()
+    s = next((x for x in (b or {}).get("settings", [])
+              if x["id"] == "midori-set-leading"), None)
+    if s is None:
+        bad("no midori-set-leading control in the @settings block")
+        return
+    if float(s["default"]) != 1.5:
+        bad(f"the leading default is {s['default']}, not the shipped 1.5")
+        return
+    ok(f"leading {s['min']}-{s['max']} reaches the row only through "
+       f"round(up, ..., 2px)")
 
 
 # Obsidian's defaults, in em of the base size.
@@ -755,6 +809,14 @@ def test_dot_alpha_is_split_in_both_modes():
     0.46 on paper against 0.1748 on dark paper is not an accident -- one flat
     slider would flatten a relationship that was tuned twice. Split one block
     and not the other and the theme still looks right in the mode you tested.
+
+    CHECKS EVERY DECLARATION, NOT theme_var()'S LAST ONE. A leftover mode
+    literal is always textually last in a two-mode file, so a guard built on
+    theme_var() would trip its "expected it to multiply" branch on that
+    literal and never reach the message that actually names it as a literal.
+    theme_vars() sees every declaration, so a literal is caught wherever it
+    sits, and the fix is reported by name instead of read as a missing
+    multiply.
     """
     n_rgb = THEME.count("--dotgrid-dot-rgb:")
     n_alpha = THEME.count("--dotgrid-dot-alpha:")
@@ -762,16 +824,24 @@ def test_dot_alpha_is_split_in_both_modes():
         bad(f"--dotgrid-dot is split in {min(n_rgb, n_alpha)} mode block(s); "
             f"both light and dark must be split or one stops responding")
         return
-    raw = theme_var("--dotgrid-dot")
-    if raw is None or "var(--midori-set-dot-alpha)" not in raw:
-        bad(f"--dotgrid-dot is {raw!r}: expected it to multiply "
-            "var(--midori-set-dot-alpha)")
+    decls = theme_vars("--dotgrid-dot")
+    if not decls:
+        bad("--dotgrid-dot is not declared")
         return
-    if re.search(r"--dotgrid-dot:\s*rgba\(\s*\d", THEME):
-        bad("a --dotgrid-dot declaration is still a literal rgba(), so that "
-            "mode ignores the setting")
-        return
-    ok("the dot alpha is a multiplier on both modes' shipped values")
+    bad_here = False
+    for raw in decls:
+        if re.match(r"rgba\(\s*\d", raw):
+            bad("a --dotgrid-dot declaration is still a literal rgba(), so that "
+                "mode ignores the setting")
+            bad_here = True
+        elif "var(--midori-set-dot-alpha)" not in raw:
+            bad(f"--dotgrid-dot is {raw!r}: expected it to multiply "
+                "var(--midori-set-dot-alpha)")
+            bad_here = True
+    if not bad_here:
+        n = len(decls)
+        ok(f"the dot alpha is a multiplier on both modes' shipped values "
+           f"({n} declaration{'s' if n != 1 else ''} checked)")
 
 
 def test_accent_options_are_palette_tokens():
@@ -830,17 +900,36 @@ def test_accent_derived_roles_follow_the_accent():
     the accent became selectable. Every other accent role turned wine; the
     selection band stayed sage, and no test noticed because the literal was
     still a perfectly valid colour.
+
+    COUNTS THE MODE OVERRIDES, NOT theme_var()'S LAST DECLARATION.
+    --text-selection carries the SAME fallback discipline as
+    --midori-accent-hover: a plain rgba() literal outside @supports for an
+    engine without color-mix, and a var(--midori-accent)-derived override
+    inside @supports for EACH of the two colour modes -- so requiring every
+    declaration to read the accent would fail on the deliberate literal
+    fallbacks. theme_var() answers with whichever declaration is textually
+    last, so a guard built on it proves at most one mode's override exists: a
+    reviewer deleted only the light-mode override and this suite stayed green,
+    because dark's copy came later in the file and answered for both.
+    Requiring TWO accent-reading declarations -- one per mode -- catches
+    either mode going missing, not just the one that sorts last.
     """
+    total = 0
     for name in ("--text-selection",):
-        raw = theme_var(name)
-        if raw is None:
+        decls = theme_vars(name)
+        if not decls:
             bad(f"{name} is not declared")
             return
-        if "var(--midori-accent)" not in raw:
-            bad(f"{name} is {raw!r}: an accent-derived role that does not read "
-                f"var(--midori-accent) stops following the accent setting")
+        derived = [d for d in decls if "var(--midori-accent)" in d]
+        if len(derived) < 2:
+            bad(f"{name} reads var(--midori-accent) in only {len(derived)} of "
+                f"{len(decls)} declarations: an accent-derived role that does "
+                f"not read var(--midori-accent) in BOTH mode overrides stops "
+                f"following the accent setting in whichever mode lost it")
             return
-    ok("every accent-derived colour role reads var(--midori-accent)")
+        total += len(decls)
+    ok(f"every accent-derived colour role reads var(--midori-accent) in both "
+       f"mode overrides ({total} declarations checked)")
 
 
 if __name__ == "__main__":
@@ -852,9 +941,10 @@ if __name__ == "__main__":
     test_inputs_are_never_read_by_a_real_property()
     test_row_is_one_number()
     test_no_stray_grid_literals()
-    test_row_has_a_plain_fallback()
+    test_snapped_vars_all_have_plain_fallbacks()
     test_leading_holds_across_the_slider()
     test_row_is_an_even_number_of_pixels()
+    test_leading_setting_is_snapped()
     test_heading_ladder_is_optical()
     test_blank_line_keeps_the_grid()
     test_indent_excludes_non_prose()
