@@ -604,7 +604,18 @@ def test_settings_defaults_match_the_css():
         fmt = s.get("format")
         if fmt and css_cmp.endswith(fmt):
             css_cmp = css_cmp[: -len(fmt)]
-        if css_cmp != s["default"].strip():
+        default_cmp = s["default"].strip()
+        # COMPARE NUMERICALLY WHEN BOTH SIDES PARSE. String equality is a
+        # foot-gun once a control's value is a number rather than a class name:
+        # "1" != "1.0" and ".46" != "0.46" would fail a control that is
+        # actually in sync. Fall back to the string compare for anything that
+        # is not a bare number -- a class-select default, say -- where there is
+        # no numeric reading to fall back to.
+        try:
+            mismatch = float(css_cmp) != float(default_cmp)
+        except ValueError:
+            mismatch = css_cmp != default_cmp
+        if mismatch:
             mismatched.append(f"--{s['id']} ships {css.strip()!r} but the "
                               f"@settings block advertises {s['default']!r}")
     if mismatched:
@@ -638,6 +649,43 @@ def test_inputs_are_never_read_by_a_real_property():
         ok("inputs are read only by derived custom properties")
 
 
+def test_rhythm_modes_all_exist():
+    """Each rhythm option has rules, and only 'space' and 'both' add a gap.
+
+    The theme's own argument for owning paragraph rhythm is that only the
+    grid's owner can keep it on the lattice. That argument survives a setting
+    only if every mode is a whole number of rows: an indent costs no height,
+    and a gap must cost exactly one row, never a fraction.
+    """
+    b = settings_block()
+    s = next((x for x in (b or {}).get("settings", [])
+              if x["id"] == "midori-rhythm"), None)
+    if s is None:
+        bad("no midori-rhythm control in the @settings block")
+        return
+    want = ["midori-rhythm-indent", "midori-rhythm-space", "midori-rhythm-both"]
+    if s.get("options") != want:
+        bad(f"midori-rhythm options are {s.get('options')}, expected {want}")
+        return
+    gaps = [sel for sel, decls in rules()
+            if "midori-rhythm-space" in sel or "midori-rhythm-both" in sel]
+    if not gaps:
+        bad("no rule gives the 'space' or 'both' modes a paragraph gap")
+        return
+    for sel, decls in rules():
+        if "midori-rhythm-" not in sel:
+            continue
+        for decl in decls.split(";"):
+            name, _, val = decl.partition(":")
+            if name.strip() in ("margin-block", "margin-bottom", "margin-top"):
+                v = val.strip()
+                if v not in ("0", "0px") and "var(--midori-row)" not in v:
+                    bad(f"a rhythm mode sets {name.strip()}: {v}, which is not "
+                        f"a whole row: {' '.join(sel.split())[:50]}")
+                    return
+    ok("all three rhythm modes exist and every gap is a whole row")
+
+
 if __name__ == "__main__":
     print("== prose typography ==")
     test_measure()
@@ -654,5 +702,6 @@ if __name__ == "__main__":
     test_blank_line_keeps_the_grid()
     test_indent_excludes_non_prose()
     test_zen_header_rules_are_gated()
+    test_rhythm_modes_all_exist()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)
