@@ -26,13 +26,38 @@ bad()  { printf '  FAIL %s\n' "$*"; FAIL=1; }
 # green" as evidence was citing a check that had never run.
 FILES() { find . -mindepth 1 -name '.*' -prune -o -name "$1" -print; }
 
+# A LOOP OVER AN EMPTY SET LOOKS EXACTLY LIKE A LOOP WHERE EVERYTHING PASSED.
+# That is the whole reason the bug above survived two days: zero iterations, no
+# bad(), section green. Counting the set before walking it is what makes the
+# next broken finder announce itself instead of going quiet, and the count is
+# printed because a green run that cannot say HOW MANY things it checked is not
+# evidence.
+#
+# THE CHECK RUNS IN THE PARENT SHELL, DELIBERATELY. Wrapping this in a helper
+# called as `for f in $(found ...)` is the obvious shape and it is wrong twice:
+# bad() writes to stdout, so its message would be captured and word-split into
+# the loop as filenames; and `$( )` is a subshell, so the FAIL=1 it sets would
+# be discarded and the run would still exit 0 -- the exact silent-pass this
+# guard exists to prevent, reintroduced by the guard. Both were observed.
+PY_FILES=$(FILES '*.py')
+SH_FILES=$(FILES '*.sh')
+count() { printf '%s\n' "$1" | wc -l | tr -d ' '; }
+
 echo "== python compiles =="
-for py in $(FILES '*.py'); do
-  if python3 -m py_compile "$py" 2>/dev/null; then ok "py_compile $py"; else bad "py_compile $py"; fi
-done
+if [ -z "$PY_FILES" ]; then
+  bad "no .py files found at all -- FILES() is broken, not the repo"
+else
+  ok "$(count "$PY_FILES") python files to check"
+  for py in $PY_FILES; do
+    if python3 -m py_compile "$py" 2>/dev/null; then ok "py_compile $py"; else bad "py_compile $py"; fi
+  done
+fi
 
 echo "== shell scripts =="
-for sh in $(FILES '*.sh'); do
+if [ -z "$SH_FILES" ]; then
+  bad "no .sh files found at all -- FILES() is broken, not the repo"
+fi
+for sh in $SH_FILES; do
   if command -v shellcheck >/dev/null 2>&1; then
     # -S error: fail only on real errors, not style nits in these hand-written scripts.
     if shellcheck -S error "$sh" >/dev/null 2>&1; then ok "shellcheck $sh"; else bad "shellcheck $sh"; fi
