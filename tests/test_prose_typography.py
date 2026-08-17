@@ -747,6 +747,33 @@ def test_space_rhythm_zeroes_the_indent_variable():
         "text-indent: 0 loses to the eleven-component Live Preview selector")
 
 
+def test_dot_alpha_is_split_in_both_modes():
+    """Both mode blocks must be split, or dark silently stops responding.
+
+    --dotgrid-dot was a whole rgba() literal in each mode. The setting is a
+    MULTIPLIER on the shipped per-mode alpha rather than a flat value, because
+    0.46 on paper against 0.1748 on dark paper is not an accident -- one flat
+    slider would flatten a relationship that was tuned twice. Split one block
+    and not the other and the theme still looks right in the mode you tested.
+    """
+    n_rgb = THEME.count("--dotgrid-dot-rgb:")
+    n_alpha = THEME.count("--dotgrid-dot-alpha:")
+    if n_rgb < 2 or n_alpha < 2:
+        bad(f"--dotgrid-dot is split in {min(n_rgb, n_alpha)} mode block(s); "
+            f"both light and dark must be split or one stops responding")
+        return
+    raw = theme_var("--dotgrid-dot")
+    if raw is None or "var(--midori-set-dot-alpha)" not in raw:
+        bad(f"--dotgrid-dot is {raw!r}: expected it to multiply "
+            "var(--midori-set-dot-alpha)")
+        return
+    if re.search(r"--dotgrid-dot:\s*rgba\(\s*\d", THEME):
+        bad("a --dotgrid-dot declaration is still a literal rgba(), so that "
+            "mode ignores the setting")
+        return
+    ok("the dot alpha is a multiplier on both modes' shipped values")
+
+
 if __name__ == "__main__":
     print("== prose typography ==")
     test_measure()
@@ -765,5 +792,6 @@ if __name__ == "__main__":
     test_zen_header_rules_are_gated()
     test_rhythm_modes_all_exist()
     test_space_rhythm_zeroes_the_indent_variable()
+    test_dot_alpha_is_split_in_both_modes()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)
