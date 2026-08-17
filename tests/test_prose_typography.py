@@ -20,6 +20,14 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parent.parent
 THEME = (REPO / "obsidian" / "theme.css").read_text()
 
+# THEME with comments stripped, for guards that match property/class names
+# against raw text. This file's comments quote CSS constantly -- whole
+# declarations, selectors, property names -- so a guard that scans THEME
+# directly can be satisfied by a comment that merely discusses the real
+# thing instead of the real thing itself. Computed once and shared, the way
+# theme_var()/theme_vars() already strip comments internally.
+THEME_NC = re.sub(r"/\*.*?\*/", "", THEME, flags=re.S)
+
 AVG_ADVANCE_EM = 0.4818     # M PLUS 1p, averaged over a prose sample
 X_MPLUS = 0.520             # x-height, em
 X_SPECTRAL = 0.450
@@ -183,6 +191,19 @@ def test_measure():
     if "var(--font-text-size)" not in raw:
         bad(f"--file-line-width is {raw!r}: must be a multiple of "
             "--font-text-size so it tracks the reader's text size")
+        return
+    # THE CONSTANT MUST BE USED, NOT JUST CORRECT ELSEWHERE. The block below
+    # this one checks --midori-avg-advance's own VALUE against the measured
+    # constant, but that is silent about whether --file-line-width actually
+    # MULTIPLIES by it. Delete `* var(--midori-avg-advance)` from the calc and
+    # 70 characters silently becomes 70 EM (540px becomes 1120px at a 16px
+    # base) while the agreement check below stays green, because
+    # --midori-avg-advance is still declared with the right value -- it is
+    # simply no longer read by anything.
+    if "var(--midori-avg-advance)" not in raw:
+        bad(f"--file-line-width is {raw!r}: does not multiply by "
+            "var(--midori-avg-advance), so the measure setting is read in "
+            "em, not characters -- 70 silently becomes 70em")
         return
     css_adv = theme_var("--midori-avg-advance")
     if css_adv is None or abs(float(css_adv) - AVG_ADVANCE_EM) > 1e-9:
@@ -380,29 +401,60 @@ def test_snapped_vars_all_have_plain_fallbacks():
            f"fallback under the same selector")
 
 
-def row_px(base):
-    """Mirror of the CSS: round(up, max(24px, base * 1.5), 2px)."""
-    return math.ceil(max(24, base * 1.5) / 2) * 2
+def row_px(base, leading=1.5):
+    """Mirror of the CSS: round(up, max(24px, base * leading), 2px).
+
+    LEADING IS A PARAMETER, NOT A HARDCODED 1.5. It used to be baked in, so
+    test_leading_holds_across_the_slider only ever modelled the shipped
+    DEFAULT -- a reader who actually drags the leading slider to its stated
+    minimum was never checked at all.
+    """
+    return math.ceil(max(24, base * leading) / 2) * 2
 
 
 def test_leading_holds_across_the_slider():
+    """The row's leading must not fall under WCAG 1.4.8's 1.5 floor.
+
+    Checked at the DEFAULT (1.5) and at the slider's STATED MINIMUM, read
+    from the @settings block rather than re-typed here -- not just the
+    default, because the theme's own comment above --midori-set-leading cites
+    1.5 as a policy floor for the ROW, unqualified, not "for the default
+    only". If the slider lets a reader choose a leading the floor does not
+    survive, that is a real gap between a shipped bound and a stated
+    accessibility rationale.
+    """
     raw = theme_var("--midori-row")
     if raw is None or "--font-text-size" not in raw:
         bad(f"--midori-row is {raw!r}: fixed, so leading falls below 1.5 "
             "as soon as the reader raises their text size")
         return
+    b = settings_block()
+    s = next((x for x in (b or {}).get("settings", [])
+              if x["id"] == "midori-set-leading"), None)
+    if s is None:
+        bad("no midori-set-leading control in the @settings block")
+        return
+    default = float(s["default"])
+    slider_min = float(s["min"])
+
     # A LOCAL flag, not the global FAIL: an unrelated earlier failure must not
     # silently swallow this test's own ok line.
     bad_here = False
-    worst = min(((base, row_px(base) / base) for base in BASES), key=lambda p: p[1])
-    for base in BASES:
-        ratio = row_px(base) / base
-        if ratio < 1.5 - 1e-9:
-            bad(f"base {base}px gives leading {ratio:.2f}, under the 1.5 policy floor")
+    for label, leading in (("default", default), ("slider minimum", slider_min)):
+        worst = min(((base, row_px(base, leading) / base) for base in BASES),
+                    key=lambda p: p[1])
+        failing = [(base, row_px(base, leading) / base) for base in BASES
+                  if row_px(base, leading) / base < 1.5 - 1e-9]
+        if failing:
+            bad(f"at leading {leading:g} ({label}), {len(failing)} of "
+                f"{len(BASES)} base sizes drop under the 1.5 WCAG 1.4.8 "
+                f"floor the theme cites -- worst {worst[1]:.3f} at "
+                f"{worst[0]}px, e.g. base {failing[0][0]}px gives "
+                f"{failing[0][1]:.3f}")
             bad_here = True
-    if not bad_here:
-        ok(f"leading >= 1.5 across {BASES[0]}-{BASES[-1]}px "
-           f"(worst {worst[1]:.2f} at {worst[0]}px)")
+        else:
+            ok(f"leading >= 1.5 across {BASES[0]}-{BASES[-1]}px at leading "
+               f"{leading:g} ({label}) (worst {worst[1]:.2f} at {worst[0]}px)")
 
 
 def test_row_is_an_even_number_of_pixels():
@@ -451,9 +503,17 @@ def test_leading_setting_is_snapped():
     (a zero-size inline-block on vertical-align: baseline, whose rect top IS
     the baseline) at every base in the 10-30 clamp: exact at even rows, -0.50px
     at odd ones, because Chromium rounds half-leading to a whole pixel.
+
+    SCANNED AGAINST THEME_NC, NOT THEME. theme.css:232 quotes two
+    --midori-row declarations -- including one containing "round" -- inside a
+    comment explaining why the two-declaration form fails. A raw scan over
+    THEME finds that quote too, and "keep the last match containing round"
+    only reads the real declaration by accident, because the real one happens
+    to sit later in the file. Add a later comment that also says "round" and
+    the guard would silently start reading prose instead of CSS.
     """
     raw = None
-    for m in re.finditer(r"--midori-row\s*:\s*([^;]+);", THEME):
+    for m in re.finditer(r"--midori-row\s*:\s*([^;]+);", THEME_NC):
         if "round" in m.group(1):
             raw = " ".join(m.group(1).split())
     if raw is None:
@@ -623,6 +683,17 @@ def test_settings_block_parses():
     A malformed block does not error in Obsidian -- Style Settings simply shows
     nothing, so the settings silently do not exist. This is the only thing that
     notices.
+
+    PRESENCE IS NOT ENOUGH FOR THE SLIDERS WHOSE RANGE IS LOAD-BEARING. This
+    used to check that min/max/step/default EXIST and nothing about what they
+    ARE. The branch's entire mitigation for its one documented unquantised
+    path -- an h1's glyph box overflowing its strut -- is "heading scale is
+    capped at 1.1", asserted in three prose documents (the @settings
+    description, the README, the evidence spec) and enforced by nothing
+    executable: `max: 3` in the block above shipped green under the old
+    version of this test. SLIDER_BOUNDS below is the executable form of that
+    cap, plus the leading slider's 1.4-2 range, which WCAG 1.4.8 and the
+    round-up-to-even-row mechanism both depend on staying put.
     """
     b = settings_block()
     if b is None:
@@ -635,6 +706,19 @@ def test_settings_block_parses():
     if not b["settings"]:
         bad("the @settings block declares no settings")
         return
+    # id -> (min floor or None, max ceiling or None, why the ceiling/floor
+    # matters). Only sliders whose range is load-bearing are listed here --
+    # this is not a blanket "ranges never change" rule.
+    SLIDER_BOUNDS = {
+        "midori-set-heading-scale": (
+            None, 1.1,
+            "above 1.1 the h1's glyph box overflows the strut further, and "
+            "nothing quantises that path"),
+        "midori-set-leading": (
+            1.4, 2.0,
+            "1.4-2 is the range the round-up-to-even-row mechanism and the "
+            "WCAG 1.4.8 floor were verified against"),
+    }
     for s in b["settings"]:
         for key in ("id", "title", "type"):
             if key not in s:
@@ -645,6 +729,18 @@ def test_settings_block_parses():
                 if key not in s:
                     bad(f"slider {s['id']} is missing {key}, which Style "
                         f"Settings requires")
+                    return
+            bounds = SLIDER_BOUNDS.get(s["id"])
+            if bounds is not None:
+                lo_floor, hi_ceiling, why = bounds
+                smin, smax = float(s["min"]), float(s["max"])
+                if lo_floor is not None and smin < lo_floor - 1e-9:
+                    bad(f"slider {s['id']} min is {smin:g}, below the "
+                        f"required floor {lo_floor:g}: {why}")
+                    return
+                if hi_ceiling is not None and smax > hi_ceiling + 1e-9:
+                    bad(f"slider {s['id']} max is {smax:g}, above the "
+                        f"required ceiling {hi_ceiling:g}: {why}")
                     return
         if s["type"] == "class-select":
             if "allowEmpty" not in s:
@@ -664,6 +760,11 @@ def test_settings_ids_are_real():
     body class for a class-* one. Either way a typo produces a control that
     moves nothing, and the UI still looks correct -- which is the failure mode
     worth a test.
+
+    MATCHED AGAINST THEME_NC, NOT THEME. This file's comments quote CSS
+    constantly, including bare property and class names in prose (e.g. "the
+    --midori-row grid"), so a raw scan can be satisfied by a comment that
+    merely mentions the id instead of a real declaration or selector using it.
     """
     b = settings_block()
     if b is None:
@@ -675,14 +776,14 @@ def test_settings_ids_are_real():
         if t == "heading":
             continue
         if t.startswith("variable-"):
-            if f"--{sid}:" not in THEME:
+            if f"--{sid}:" not in THEME_NC:
                 missing.append(f"{t} {sid} -> --{sid} is never declared")
         elif t == "class-toggle":
-            if f".{sid}" not in THEME:
+            if f".{sid}" not in THEME_NC:
                 missing.append(f"class-toggle {sid} -> .{sid} is in no selector")
         elif t == "class-select":
             for opt in s.get("options", []):
-                if f".{opt}" not in THEME:
+                if f".{opt}" not in THEME_NC:
                     missing.append(f"class-select {sid} option {opt} -> "
                                    f".{opt} is in no selector")
     if missing:
@@ -800,6 +901,24 @@ def test_rhythm_modes_all_exist():
     grid's owner can keep it on the lattice. That argument survives a setting
     only if every mode is a whole number of rows: an indent costs no height,
     and a gap must cost exactly one row, never a fraction.
+
+    BOTH HALVES BELOW WERE PROVEN VACUOUS BY SABOTAGE, on a scratch copy:
+
+    THE EXISTENCE CHECK used to be "does any rule's SELECTOR mention
+    midori-rhythm-space or -both", which `body.midori-rhythm-space
+    { --midori-indent: 0; }` satisfies -- it shares the class name and
+    declares nothing box-spacing at all. Deleting 'space's actual gap
+    selector (`body.midori-rhythm-space .markdown-preview-view p,` off the
+    `margin-block: 0 var(--midori-row)` rule) left the suite green. Now a
+    match must also DECLARE a margin/padding/height, via _rule_gives_a_gap().
+
+    THE WHOLE-ROW CHECK used to accept any token merely CONTAINING
+    "var(--midori-row)", which `calc(var(--midori-row) / 2)` does -- a half
+    row, wearing the row variable's name as camouflage. Changing the shipped
+    `margin-block: 0 var(--midori-row)` to that halved form left the suite
+    green too. Now a token must be exactly "0", "0px", or exactly
+    "var(--midori-row)" with nothing wrapped around it; a calc() -- division,
+    multiplication, anything -- is rejected rather than pattern-matched.
     """
     b = settings_block()
     s = next((x for x in (b or {}).get("settings", [])
@@ -811,10 +930,32 @@ def test_rhythm_modes_all_exist():
     if s.get("options") != want:
         bad(f"midori-rhythm options are {s.get('options')}, expected {want}")
         return
-    gaps = [sel for sel, decls in rules()
-            if "midori-rhythm-space" in sel or "midori-rhythm-both" in sel]
-    if not gaps:
-        bad("no rule gives the 'space' or 'both' modes a paragraph gap")
+
+    def _rule_gives_a_gap(decls):
+        """True if decls actually sets a non-empty margin/padding/height,
+        not merely a rule that happens to share a rhythm-mode class name."""
+        for decl in decls.split(";"):
+            name, _, val = decl.partition(":")
+            prop = name.strip()
+            if (prop.startswith("margin") or prop.startswith("padding")
+                    or prop == "height") and val.strip():
+                return True
+        return False
+
+    # EACH MODE, NOT THE PAIR AGGREGATED. An "any rule gives space OR both a
+    # gap" check is satisfied by 'both' alone, so deleting 'space's gap
+    # selector while 'both' keeps its own left an aggregate check green --
+    # measured, on a scratch copy, with exactly that deletion. Each mode is
+    # checked on its own so either one going missing is caught by name.
+    missing_gap = [cls for cls in ("midori-rhythm-space", "midori-rhythm-both")
+                   if not any(cls in sel and _rule_gives_a_gap(decls)
+                              for sel, decls in rules())]
+    if missing_gap:
+        for cls in missing_gap:
+            bad(f"no rule gives {cls} a paragraph gap: a rule merely SHARING "
+                f"the {cls} class name (e.g. the one zeroing --midori-indent) "
+                f"does not count -- it must declare an actual "
+                f"margin/padding/height")
         return
     # ANY BOX-SPACING PROPERTY, NOT JUST THE THREE margin-* NAMES THE BRIEF'S
     # RULES HAPPENED TO USE. A shorthand (`margin: 0 0 18px 0`) or a
@@ -836,10 +977,15 @@ def test_rhythm_modes_all_exist():
             if not v:
                 continue
             for tok in _length_tokens(v):
-                if tok not in ("0", "0px") and "var(--midori-row)" not in tok:
-                    bad(f"a rhythm mode sets {prop}: {v}, which is not "
-                        f"a whole row: {' '.join(sel.split())[:50]}")
-                    return
+                # EXACT MATCH, NOT SUBSTRING. "var(--midori-row)" being
+                # present somewhere in the token is not the same as the
+                # token BEING the row -- calc(var(--midori-row) / 2) contains
+                # the substring and is still half a row.
+                if tok in ("0", "0px") or tok == "var(--midori-row)":
+                    continue
+                bad(f"a rhythm mode sets {prop}: {v}, which is not "
+                    f"a whole row: {' '.join(sel.split())[:50]}")
+                return
     ok("all three rhythm modes exist and every gap is a whole row")
 
 
@@ -881,6 +1027,14 @@ def test_dot_alpha_is_split_in_both_modes():
     theme_vars() sees every declaration, so a literal is caught wherever it
     sits, and the fix is reported by name instead of read as a missing
     multiply.
+
+    COUNTED PER MODE, NOT JUST COUNTED. `n_rgb >= 2 and n_alpha >= 2` passes
+    if both landed in the SAME mode block -- two rgb/alpha pairs under
+    .theme-light, none under .theme-dark -- and dark would then read
+    whichever earlier declaration the cascade lets through, silently ignoring
+    its own tuned values. Confirmed instead against .theme-light and
+    .theme-dark specifically, using rules() the way the accent-role checks
+    already do.
     """
     n_rgb = THEME.count("--dotgrid-dot-rgb:")
     n_alpha = THEME.count("--dotgrid-dot-alpha:")
@@ -888,6 +1042,16 @@ def test_dot_alpha_is_split_in_both_modes():
         bad(f"--dotgrid-dot is split in {min(n_rgb, n_alpha)} mode block(s); "
             f"both light and dark must be split or one stops responding")
         return
+    mode_decls = {sel: decls for sel, decls in rules()
+                  if sel in (".theme-light", ".theme-dark")}
+    for mode in (".theme-light", ".theme-dark"):
+        decls_for_mode = mode_decls.get(mode, "")
+        if ("--dotgrid-dot-rgb:" not in decls_for_mode
+                or "--dotgrid-dot-alpha:" not in decls_for_mode):
+            bad(f"{mode} declares no --dotgrid-dot-rgb/-alpha of its own; a "
+                f"bare count of 2 across the file can be satisfied entirely "
+                f"by the OTHER mode, leaving this one silently unresponsive")
+            return
     decls = theme_vars("--dotgrid-dot")
     if not decls:
         bad("--dotgrid-dot is not declared")
@@ -977,9 +1141,24 @@ def test_accent_derived_roles_follow_the_accent():
     because dark's copy came later in the file and answered for both.
     Requiring TWO accent-reading declarations -- one per mode -- catches
     either mode going missing, not just the one that sorts last.
+
+    ACCENT_DERIVED_ROLES IS THE ENUMERATION, AND MUST GROW WHEN A ROLE IS
+    ADDED. This test's name promises "every accent-derived colour role", and
+    for a while it checked exactly one: three more roles (--tag-background,
+    --raised-edge, --dotgrid-accent-wash) shipped as the same kind of stale
+    sage literal that --text-selection was, and this test could not have
+    caught it -- it never looked at them. Whenever a role is given the same
+    color-mix-in-@supports treatment as --text-selection, its name belongs in
+    this tuple, or the promise in the docstring is false again.
     """
+    ACCENT_DERIVED_ROLES = (
+        "--text-selection",
+        "--tag-background",
+        "--raised-edge",
+        "--dotgrid-accent-wash",
+    )
     total = 0
-    for name in ("--text-selection",):
+    for name in ACCENT_DERIVED_ROLES:
         decls = theme_vars(name)
         if not decls:
             bad(f"{name} is not declared")
