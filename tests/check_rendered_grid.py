@@ -17,6 +17,26 @@ SUPPRESS THE ORIGIN HEADER. Chromium >= 111 rejects WebSocket clients that send
 a non-allowlisted Origin, and websocket-client sends one by default. Omitting
 it entirely is allowed, so no relaunch flags are needed.
 
+Open a note with headings, a list, a code block and a footnote reference in
+Live Preview before running -- the sweep measures what is on screen, and every
+open window is enumerated and printed below so you can see which one got
+graded.
+
+ON ITS FIRST LIVE RUN THIS TOOL REPRODUCED THE EXACT FAILURE MODE IT EXISTS TO
+CATCH. Obsidian had three windows open; connect() took the first `type: "page"`
+target CDP happened to list -- a twelve-line note -- and printed a confident
+"all 63 combinations hold." The same sweep against a second window, 31 lines
+with headings, a list, code and a footnote, found 25 of 63 off the lattice,
+including at the shipped default of 1.5 leading / 16px base. A green driven by
+CDP target-list ordering the operator cannot see is worse than no tool, since
+this tool's whole reason to exist is that a static check cannot be trusted to
+have seen the real page. So connect() now enumerates every open `type: "page"`
+target, evaluates each one's title and `.cm-line` count, prints that as a
+table, and measures whichever window has the most lines -- the cheapest honest
+proxy for "the real note is open here." Fewer than 15 lines is a hard error,
+not a quiet pass: a pass earned by an empty or trivial note must be
+impossible to produce.
+
 Not stdlib, and deliberately not wired into tests/lint.sh: it imports
 websocket (not in the standard library) and needs a running app to talk to,
 so it can never be a CI check. This follows the same split as the font
@@ -30,14 +50,11 @@ import urllib.request
 
 import websocket   # not stdlib; see the module docstring
 
-
-def connect():
-    targets = json.load(urllib.request.urlopen("http://localhost:9222/json"))
-    page = next((t for t in targets if t.get("type") == "page"), None)
-    if page is None:
-        sys.exit("no page target; is Obsidian running with --remote-debugging-port=9222?")
-    return websocket.create_connection(page["webSocketDebuggerUrl"],
-                                       timeout=40, suppress_origin=True)
+# A trivial note proves nothing -- see the module docstring for the run
+# that measured a clean pass against a twelve-line note. The plan's sample
+# note (headings, a list, code, a footnote) measured 31 lines; 15 is a floor
+# well below that, not a target.
+MIN_LINES = 15
 
 
 def evaluate(ws, expr, _id=[0]):
@@ -51,6 +68,43 @@ def evaluate(ws, expr, _id=[0]):
             if "exceptionDetails" in res:
                 sys.exit(f"page error: {res['exceptionDetails'].get('text')}")
             return res["result"].get("value")
+
+
+def connect():
+    targets = json.load(urllib.request.urlopen("http://localhost:9222/json"))
+    pages = [t for t in targets if t.get("type") == "page"]
+    if not pages:
+        sys.exit("no page target; is Obsidian running with --remote-debugging-port=9222?")
+
+    # ENUMERATE EVERY WINDOW, DON'T TRUST THE FIRST ONE. CDP's /json list order
+    # is not "the window the operator meant" -- see the module docstring for
+    # the run where the first target was a twelve-line note sitting beside a
+    # 31-line one with 25 of 63 combinations off the lattice.
+    rows = []
+    for t in pages:
+        ws = websocket.create_connection(t["webSocketDebuggerUrl"],
+                                         timeout=40, suppress_origin=True)
+        try:
+            title = evaluate(ws, "document.title")
+            lines = evaluate(ws, "document.querySelectorAll('.cm-line').length")
+        finally:
+            ws.close()
+        rows.append((lines, title, t))
+
+    print(f"{'lines':>5}  title")
+    for lines, title, _ in sorted(rows, key=lambda r: -r[0]):
+        print(f"{lines:>5}  {title}")
+    print()
+
+    lines, title, target = max(rows, key=lambda r: r[0])
+    if lines < MIN_LINES:
+        sys.exit(f"selected window {title!r} has only {lines} .cm-line elements "
+                 f"(< {MIN_LINES}); open a note with headings, a list, a code "
+                 "block and a footnote reference in Live Preview before "
+                 "running -- an empty or trivial note proves nothing.")
+    print(f"measuring: {title!r} ({lines} lines)\n")
+    return websocket.create_connection(target["webSocketDebuggerUrl"],
+                                       timeout=40, suppress_origin=True)
 
 
 PROBE = """
@@ -93,12 +147,18 @@ def main():
             if bad or base in (10, 16, 30):
                 print(f"{lead:>5} {base:>5} {row:>5.0f} {str(even):>5} "
                       f"{off:>14}" + ("   <-- FAIL" if bad else ""))
-    # Put the app back the way it was found.
+    # Put the app back the way it was found. setProperty(prop, "") already
+    # removes a custom property per the CSSOM spec, so this guard is a no-op
+    # on a spec-compliant engine -- kept, and kept symmetric across both
+    # properties, as cheap insurance against one that isn't.
     evaluate(ws, "(()=>{const b=document.body;"
                  f"b.style.setProperty('--midori-set-leading', {json.dumps(saved[0])});"
                  f"b.style.setProperty('--font-text-size', {json.dumps(saved[1])});"
                  "if(!b.style.getPropertyValue('--midori-set-leading'))"
-                 "b.style.removeProperty('--midori-set-leading');return 1})()")
+                 "b.style.removeProperty('--midori-set-leading');"
+                 "if(!b.style.getPropertyValue('--font-text-size'))"
+                 "b.style.removeProperty('--font-text-size');"
+                 "return 1})()")
     print()
     if failures:
         print(f"RENDERED GRID: {failures} of 63 combinations off the lattice")
