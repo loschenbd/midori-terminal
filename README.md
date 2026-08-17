@@ -742,6 +742,12 @@ under Settings → Style Settings → Midori. Without it the block is an inert C
 comment and the theme behaves exactly as it does with every setting at its
 default — nothing is required.
 
+`install-obsidian.sh` does not install it: it is third-party, and it ships a
+`styles.css`, which the companion-plugin copy deliberately does not handle. The
+installer names any vault that is missing it instead, because the symptom
+otherwise is silent — a current theme, at every default, with no way to change
+anything, which looks exactly like a correct install.
+
 The line the settings draw: **what the evidence review called preference is
 exposed; what it called evidence is derived and is not.** Paragraph rhythm is a
 setting because the review found nothing either way. The ×1.1556 heading
