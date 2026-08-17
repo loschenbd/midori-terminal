@@ -66,6 +66,56 @@ def em_value(raw):
     return float(m.group(1)) if m else None
 
 
+def settings_block():
+    r"""The @settings YAML, parsed by hand because tests/ is stdlib-only.
+
+    PyYAML is not available to the interpreter tests/lint.sh runs; verified by
+    `python3 -c "import yaml"` failing. Rather than add a dependency to a suite
+    that is deliberately stdlib-only, this reads exactly the subset Style
+    Settings needs and this theme uses: top-level `key: value`, a `settings:`
+    list whose items each begin with a bare `-`, `key: value` inside those
+    items, and a nested list of bare scalars under `options:`.
+
+    NO multi-line scalars. Every description in the block is one line, which is
+    a deliberate constraint on the block rather than a limitation here -- it
+    keeps this forty lines instead of a YAML implementation.
+    """
+    m = re.search(r"/\*\s*@settings\s*\n(.*?)\*/", THEME, re.S)
+    if not m:
+        return None
+    top, items, cur, listkey = {}, [], None, None
+    for raw in m.group(1).split("\n"):
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        indent = len(raw) - len(raw.lstrip())
+        line = raw.strip()
+        if line == "-":                       # a new setting begins
+            cur = {}
+            items.append(cur)
+            listkey = None
+            continue
+        if line.startswith("- "):             # a bare scalar under options:
+            if listkey and cur is not None:
+                cur.setdefault(listkey, []).append(line[2:].strip())
+            continue
+        if ":" not in line:
+            continue
+        key, _, val = line.partition(":")
+        key, val = key.strip(), val.strip()
+        if val == "":                         # a key that introduces a list
+            listkey = key
+            if cur is not None:
+                cur.setdefault(key, [])
+            continue
+        listkey = None
+        if cur is None or indent == 0:
+            top[key] = val
+        else:
+            cur[key] = val
+    top["settings"] = items
+    return top
+
+
 def test_measure():
     """The measure, in characters, and in a unit that survives its consumers.
 
@@ -425,9 +475,111 @@ def test_zen_header_rules_are_gated():
            "conditions app.css negates")
 
 
+def test_settings_block_parses():
+    """The @settings block exists and every entry is well formed.
+
+    A malformed block does not error in Obsidian -- Style Settings simply shows
+    nothing, so the settings silently do not exist. This is the only thing that
+    notices.
+    """
+    b = settings_block()
+    if b is None:
+        bad("no /* @settings */ block in theme.css")
+        return
+    for key in ("name", "id"):
+        if key not in b:
+            bad(f"the @settings block has no top-level {key}")
+            return
+    if not b["settings"]:
+        bad("the @settings block declares no settings")
+        return
+    for s in b["settings"]:
+        for key in ("id", "title", "type"):
+            if key not in s:
+                bad(f"a setting is missing {key}: {s}")
+                return
+        if s["type"] == "variable-number-slider":
+            for key in ("default", "min", "max", "step"):
+                if key not in s:
+                    bad(f"slider {s['id']} is missing {key}, which Style "
+                        f"Settings requires")
+                    return
+        if s["type"] == "class-select":
+            if "allowEmpty" not in s:
+                bad(f"class-select {s['id']} is missing allowEmpty, which "
+                    f"Style Settings requires")
+                return
+            if not s.get("options"):
+                bad(f"class-select {s['id']} declares no options")
+                return
+    ok(f"the @settings block parses: {len(b['settings'])} entries")
+
+
+def test_settings_ids_are_real():
+    """Every control points at something the stylesheet actually defines.
+
+    Style Settings writes `--<id>` for a variable-* control and adds `<id>` as a
+    body class for a class-* one. Either way a typo produces a control that
+    moves nothing, and the UI still looks correct -- which is the failure mode
+    worth a test.
+    """
+    b = settings_block()
+    if b is None:
+        bad("no @settings block to check")
+        return
+    missing = []
+    for s in b["settings"]:
+        t, sid = s["type"], s["id"]
+        if t == "heading":
+            continue
+        if t.startswith("variable-"):
+            if f"--{sid}:" not in THEME:
+                missing.append(f"{t} {sid} -> --{sid} is never declared")
+        elif t == "class-toggle":
+            if f".{sid}" not in THEME:
+                missing.append(f"class-toggle {sid} -> .{sid} is in no selector")
+        elif t == "class-select":
+            for opt in s.get("options", []):
+                if f".{opt}" not in THEME:
+                    missing.append(f"class-select {sid} option {opt} -> "
+                                   f".{opt} is in no selector")
+    if missing:
+        for m in missing:
+            bad(m)
+    else:
+        ok("every @settings control maps to a real variable or class")
+
+
+def test_inputs_are_never_read_by_a_real_property():
+    """An input may only be read by another custom property.
+
+    This is what makes "no setting can break the grid" enforceable rather than
+    aspirational. A user value reaches the page only through a derived variable,
+    and the derivation is where clamping and round() live. The moment a real
+    property reads a --midori-set-* directly, the value has bypassed every
+    guard on the way in.
+    """
+    offenders = []
+    for selector, decls in rules():
+        for decl in decls.split(";"):
+            if "--midori-set-" not in decl:
+                continue
+            name = decl.split(":", 1)[0].strip()
+            if not name.startswith("--"):
+                offenders.append(f"{name} in {' '.join(selector.split())[:52]}")
+    if offenders:
+        for o in offenders:
+            bad(f"a real property reads an input directly: {o}")
+    else:
+        ok("inputs are read only by derived custom properties")
+
+
 if __name__ == "__main__":
     print("== prose typography ==")
     test_measure()
+    test_settings_block_parses()
+    test_settings_ids_are_real()
+    test_inputs_are_never_read_by_a_real_property()
     test_row_is_one_number()
     test_no_stray_grid_literals()
     test_row_has_a_plain_fallback()
