@@ -771,11 +771,28 @@ at the cost of making every h1 two rows tall; that is a real design decision
 and it has not been taken here. Reproduce it with the sweep in "Checking the
 grid in the running app" below.
 
-**No setting can put the note off the dot grid.** The controls write input
-variables; the theme reads derived ones, and everything that can touch vertical
-rhythm passes through `round(up, …, 2px)` on the way. Two pixels rather than
-one because the dot offset adds half the row's growth, so an odd row lands the
-baseline 0.50px off.
+**Not every setting is caught, and one of them is not caught at all.** Line
+length, paragraph indent and dot grid visibility have no path to a row-sized
+property — they change wrap width, horizontal indent and opacity
+respectively — so no value a reader picks can move the grid. Paragraph
+rhythm does move content vertically (`space`/`both` open a
+`margin-block: 0 var(--midori-row)` gap after each paragraph), but the three
+modes only ever select between 0 and one whole row; no reader-chosen number
+reaches that property, so there is nothing for a rounding function to catch.
+Leading is the one input that flows into a row-sized property as a
+continuous value, and it is caught: it reaches the page only through
+`round(up, max(24px, …), 2px)`. Two pixels rather than one because the dot
+offset adds half the row's growth, so an odd row lands the baseline 0.50px
+off.
+
+**Heading scale is the exception, and the note above is what it costs.** It
+multiplies a font-size, not a row, and a line box is
+`max(strut, tallest inline box)` — a glyph box large enough overflows the
+strut no matter what the row is doing, and nothing between the slider and
+the font-size passes through a `round()` to stop it. That is why the h1
+sits a pixel over two rows at the shipped default rather than exactly one,
+and why the slider is capped at 1.1 rather than something larger — the cap
+narrows the exposure; it does not close it.
 
 Line length is in characters because that is the unit a writer thinks in and
 the unit the research is reported in — not because characters is established as
