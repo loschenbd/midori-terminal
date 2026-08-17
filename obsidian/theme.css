@@ -50,6 +50,27 @@ settings:
         min: 40
         max: 100
         step: 1
+    -
+        id: midori-set-indent
+        title: Paragraph indent
+        description: The first-line indent, in em. 0 turns it off without changing the rhythm mode.
+        type: variable-number-slider
+        default: 2
+        min: 0
+        max: 4
+        step: 0.5
+        format: em
+    -
+        id: midori-rhythm
+        title: Paragraph rhythm
+        description: Indent is a novel's; space is the web's; both marks the boundary twice. The evidence review found nothing either way, which is why this is a setting.
+        type: class-select
+        allowEmpty: false
+        default: midori-rhythm-indent
+        options:
+            - midori-rhythm-indent
+            - midori-rhythm-space
+            - midori-rhythm-both
 
 */
 
@@ -1327,7 +1348,8 @@ body.is-ios .midori-title-selection {
    This is a stated preference, and it is in the theme rather than a plugin
    because the grid-correct version cannot live anywhere else. */
 body {
-  --midori-indent: 2em;
+  --midori-set-indent: 2em;
+  --midori-indent: var(--midori-set-indent);
 }
 
 /* Reading view: the indent replaces the paragraph gap, which also gives the
@@ -1360,6 +1382,34 @@ body {
 .markdown-source-view.mod-cm6 .cm-content > .cm-line:first-child:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout),
 .markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) + .cm-line:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout) {
   text-indent: var(--midori-indent);
+}
+
+/* RHYTHM MODES. The default is 'indent': the indent replaces the gap, which is
+   also what gives the grid a row back at every paragraph break. 'space' is the
+   web convention -- one whole row between paragraphs, no indent. 'both' marks
+   the boundary twice, which typographers generally call wrong; it is here
+   because some readers want it, and a setting that only offers the tasteful
+   options is a lecture rather than a setting.
+
+   A GAP IS ONE ROW OR IT IS NOTHING. Any other value is a fraction of the
+   lattice and every block below the paragraph leaves it.
+
+   The default carries an explicit rule rather than relying on the base styles,
+   so all three modes are addressable and switching away and back lands
+   somewhere defined. */
+body.midori-rhythm-indent .markdown-preview-view p {
+  margin-block: 0;
+  text-indent: var(--midori-indent);
+}
+body.midori-rhythm-space .markdown-preview-view p,
+body.midori-rhythm-both .markdown-preview-view p {
+  margin-block: 0 var(--midori-row);
+}
+body.midori-rhythm-space .markdown-preview-view p {
+  text-indent: 0;
+}
+body.midori-rhythm-space .markdown-source-view.mod-cm6 .cm-line {
+  text-indent: 0;
 }
 
 /* Every paragraph is indented, including the first after a heading. That
