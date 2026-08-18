@@ -11,6 +11,17 @@ git rev-parse HEAD > .cleanup-base      # gitignored; the gate needs it
 exists with its items. If you seed the queue *after* this, the gate correctly
 reports the loop as inventing work.
 
+**Re-stamp it whenever you add queue items yourself.** The gate cannot tell
+your edit from the loop's — it only sees `+- [ ]` lines appearing after BASE,
+which is precisely the signal it exists to catch. So after editing the queue:
+
+```sh
+git rev-parse HEAD > .cleanup-base
+```
+
+Forgetting this is not dangerous; the loop simply refuses to proceed and tells
+you which file gained items.
+
 ## Launch
 
 ```
