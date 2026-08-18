@@ -48,9 +48,30 @@ if [ -z "$PY_FILES" ]; then
   bad "no .py files found at all -- FILES() is broken, not the repo"
 else
   ok "$(count "$PY_FILES") python files to check"
-  for py in $PY_FILES; do
-    if python3 -m py_compile "$py" 2>/dev/null; then ok "py_compile $py"; else bad "py_compile $py"; fi
-  done
+  # ONE INTERPRETER, NOT ONE PER FILE. `python3 -m py_compile` in a loop pays
+  # full interpreter startup per file: measured on this repo, 32s for 20 files
+  # against 3s for shellcheck over 13. Batching them is the single biggest win
+  # available in this script.
+  #
+  # The per-file ok/FAIL lines are kept deliberately. A green section that
+  # cannot name what it checked is not evidence, and collapsing 20 lines into
+  # "python ok" would trade a 30s saving for exactly the blindness the count
+  # guard above exists to prevent. Python prints the lines; the shell reads
+  # only the exit status, because bad() cannot be called from inside it.
+  # shellcheck disable=SC2086
+  if python3 - $PY_FILES <<'PYC'
+import py_compile, sys
+bad = 0
+for f in sys.argv[1:]:
+    try:
+        py_compile.compile(f, doraise=True)
+        print(f"  ok   py_compile {f}")
+    except Exception as exc:
+        print(f"  FAIL py_compile {f}: {exc.__class__.__name__}")
+        bad = 1
+sys.exit(bad)
+PYC
+  then :; else FAIL=1; fi
 fi
 
 echo "== shell scripts =="

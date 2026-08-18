@@ -103,7 +103,7 @@ written down.
       helper. Keep each call site's comment explaining *why that file* is
       patched — those differ and are not duplication.
 
-- [ ] **`tests/lint.sh` takes ~60s, and most of it is per-file `py_compile`
+- [x] **`tests/lint.sh` takes ~60s, and most of it is per-file `py_compile`
       subprocesses.** Batch them into one interpreter invocation. Keep the
       count-and-fail-on-empty guard exactly as it is; that is not overhead.
 
@@ -136,6 +136,36 @@ written down.
 The loop appends here. These are NOT work items until a human moves them up.
 
 <!-- loop appends below this line -->
+### lint.sh: 112s -> 46s, and the "~60s" in the item was wrong (iteration 7)
+
+Done. The item's premise held — per-file `py_compile` was the cost — but its
+number did not. Measured end to end:
+
+| | before | after |
+|---|---|---|
+| whole suite | **112s** | **46s** |
+| py_compile section (20 files) | 32s standalone | **1s** |
+| shellcheck section (13 files) | 3s | unchanged |
+
+`python3 -m py_compile` in a loop pays full interpreter startup per file. One
+invocation compiling all 20 costs 1s. Nothing else in the script was touched.
+
+**The per-file `ok py_compile <path>` lines are kept.** Collapsing 20 lines
+into one "python ok" would have saved nothing further and would have traded a
+green section for a green section that cannot say what it checked — the exact
+blindness the count guard above it exists to prevent. Python prints the lines,
+the shell reads only the exit status, because `bad()` cannot be called from
+inside the heredoc.
+
+Sabotage-proved, both directions:
+
+- a syntactically broken file added to the tree: `LINT: failures above`,
+  exit 1, `FAIL py_compile ./tests/_sabotage_probe.py: PyCompileError`, and
+  the count line correctly rose to 21
+- `FILES()` pointed at a nonexistent path on a scratch copy: both
+  `no .py files found at all` and `no .sh files found at all` still fire,
+  so the empty-set guard the item told me to leave alone is intact
+
 ### There is no repeated JSON-patch heredoc to extract (iteration 6)
 
 Rejected. The item said "written three times in `obsidian/install-obsidian.sh`
