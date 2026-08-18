@@ -67,7 +67,7 @@ written down.
       the rest under FINDINGS. `#edeae2` appears in three files and may be a
       deliberate second tint — treat it as a report, not a fix.
 
-- [ ] **Report on the 31 remaining near-misses** (delta 4–8). Unlike the nine
+- [x] **Report on the 31 remaining near-misses** (delta 4–8). Unlike the nine
       above these ARE visible, so they may be deliberate hover states or raised
       surfaces. Produce a table: value, nearest core colour, files, and whether
       a comment or commit message justifies it. **Report only. Change nothing.**
@@ -136,6 +136,55 @@ written down.
 The loop appends here. These are NOT work items until a human moves them up.
 
 <!-- loop appends below this line -->
+### The 31 delta-4-8 near-misses: none need changing (iteration 3)
+
+Report only, as the item required; nothing was changed. Classified by the ROLE
+each value plays in the file that uses it, which iteration 2 established is the
+question that actually decides justification. Distance to the core palette
+decides nothing.
+
+**Deliberate subtle surfaces, states and borders (14).** The role name is the
+justification — each exists to sit just off its own background.
+
+| value | nearest core | d | role |
+|---|---|---|---|
+| `#161513` | `#1a1917` | 4 | `--background-secondary`, `--titlebar-background` (dark) |
+| `#262421` | `#22211e` | 4 | `--m-card`, `--colorBgIntense` — carries the comment "lifted warm card, not black" |
+| `#262521` | `#22211e` | 4 | `userMessageBackground` |
+| `#262a20` | `#2a2825` | 5 | `diffAddedDimmed` — "Dimmed" is in the name |
+| `#292d2a` | `#2a2825` | 5 | `memoryBackgroundColor` |
+| `#2c2520` | `#2a2825` | 5 | `--midori-warm-wash`, `clawd_background` — a wash |
+| `#2e2b28` | `#2a2825` | 4 | `--colorBgIntenser` (night) |
+| `#2f2e2b` | `#2a2825` | 6 | `activityBar.border`, `button.secondaryBackground` |
+| `#302620` | `#2a2825` | 6 | `diffRemovedDimmed` — "Dimmed" is in the name |
+| `#4a463f` | `#524d46` | 8 | `promptBorder` |
+| `#4b4845` | `#524d46` | 7 | `border-color` |
+| `#4f7d75` | `#548373` | 6 | `--stackColorBg` |
+| `#64457b` | `#653f7f` | 6 | `bashBorder` |
+| `#e6e4dc` | `#ebe8e2` | 6 | `editorRuler.foreground` — same class as iteration 2's `#2a2926` |
+| `#f7f5ef` | `#f3f1eb` | 4 | `lock-background`, `textCodeBlock.background` (4 off its own `#f3f1eb`) |
+| `#f8f5ed` | `#f3f1eb` | 5 | `breadcrumbPicker`, `debugToolBar`, `editorHover` backgrounds |
+| `#fffdf9` | `#faf9f6` | 5 | `--colorBgIntenser` (paper) |
+
+**A different colour family, so proximity is coincidence (7).** These are
+foregrounds and syntax colours; being near a *surface* token means nothing.
+
+`#4c473f`, `#744242`, `#a0998b`, `#a0998e`, `#a39c91`, `#e0b364` are
+`foreground` / `symbolIcon.*` / `editorBracketHighlight.*` /
+`editorLineNumber.activeForeground`. `#d4a574` is `--midori-warm-bridge`, a
+declared palette token in its own right.
+
+**README prose (7). Do not touch.** `#262626`, `#e3e1dc`, `#e5e4e2`,
+`#f3f3f3`, `#fafafa`, `#fdfdfc` appear inside recorded measurements.
+`#232323` is not even a Midori colour — it sits in a list of THIRD-PARTY
+values the README notes "have no key".
+
+**Conclusion: 0 of 31 need action**, which is the same verdict as the nine in
+iteration 2 and at four times the sample. Taken together, 40 of 40 flagged
+values were deliberate. The near-miss heuristic as built has produced no true
+positives, and its output should not be treated as a work list until it
+compares each value against its own background.
+
 
 ### measure_palette_drift.py compares against the wrong background (iteration 2)
 
