@@ -90,7 +90,7 @@ written down.
 
 ### Shell and structure
 
-- [ ] **Shared shell helpers across the installers.** `set -e`, `REPO_DIR=`
+- [~] **Shared shell helpers across the installers.** REJECTED — `set -e`, `REPO_DIR=`
       resolution, and running-app detection (`pgrep -x`) are repeated in all
       seven scripts. Extract to `lib/sh-common.sh`, sourced by each.
       DO NOT merge the installers themselves — `install.sh` is already an
@@ -136,6 +136,49 @@ written down.
 The loop appends here. These are NOT work items until a human moves them up.
 
 <!-- loop appends below this line -->
+### Shared installer helpers would add code, not remove it (iteration 5)
+
+Rejected. The shared boilerplate is exactly two lines per script:
+
+```sh
+set -e
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+```
+
+**`REPO_DIR` cannot be extracted — it is the bootstrap.** You cannot move
+"find the repo root" into a file you need the repo root to find. Every script
+would still open with a `dirname "$0"` line, then gain a `source` line:
+
+```sh
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"      # unchanged, still required
+. "$REPO_DIR/../lib/sh-common.sh"              # new
+```
+
+Two lines become two lines. Only `set -e` genuinely moves, and it is one word.
+
+**The source line is not even uniform.** `install.sh` and `sync.sh` sit at the
+repo root; the five installers sit one level down. So the "shared" line is
+`$(dirname $0)/lib/...` for two scripts and `$(dirname $0)/../lib/...` for
+five — the duplication is preserved, just relocated and made depth-dependent.
+
+**Two scripts do not use the name.** `install.sh` and `sync.sh` declare `REPO`,
+not `REPO_DIR` — zero occurrences of `REPO_DIR` in either. Adopting a shared
+helper means renaming a variable throughout two working scripts that write
+into live user data, purchasing nothing.
+
+**`pgrep` is not shared code.** Three sites, two behaviours: `pgrep -xq Vivaldi`
+branches in `install.sh` and `vivaldi/`, while `obsidian/` uses
+`pgrep -x Obsidian >/dev/null 2>&1 && x=1 || x=0` to set a variable it reads
+much later. A helper covering both is longer than either.
+
+**Ledger:** 0 lines removed, ~10 added (the new file), 1 new dependency, and
+every installer stops working if copied out of the repo — which is how they
+are distributed to other machines. CLAUDE.md already warns that these scripts
+"carry target-specific caveats that look like duplication and are not"; this
+is the boilerplate version of the same mistake.
+
+No installer was modified, so no dry-run receipt is needed.
+
 ### `body` in theme.css: 20 bare blocks, one real duplicate (iteration 4)
 
 Report only; nothing changed. Parsed by walking braces and keeping the at-rule
