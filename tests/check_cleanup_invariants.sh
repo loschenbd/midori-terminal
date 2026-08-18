@@ -78,7 +78,12 @@ echo "== each commit is reviewable on its own =="
 # is not.
 CAP=400
 n=0
-for sha in $(git rev-list "$BASE"..HEAD); do
+# --no-merges: a merge commit's diff is the SUM of commits this loop already
+# checked one at a time, so measuring it re-measures reviewed work and reports
+# a 1503-line "commit" nobody wrote. Landing the branch on main is what found
+# this -- the gate was green for every loop iteration and went red the moment
+# the branch was merged, which is the wrong time to learn it.
+for sha in $(git rev-list --no-merges "$BASE"..HEAD); do
   n=$((n + 1))
   changed=$(git show --stat --format= "$sha" | tail -1 | grep -oE '[0-9]+ insertion|[0-9]+ deletion' | grep -oE '[0-9]+' | paste -sd+ - | bc 2>/dev/null || echo 0)
   [ -z "$changed" ] && changed=0
