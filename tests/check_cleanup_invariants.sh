@@ -29,6 +29,24 @@ print(sum(c.count(chr(10)) + 1 for c in re.findall(r"/\*.*?\*/", s, flags=re.S))
 ' 2>/dev/null || echo 0
 }
 
+# A KILLED ITERATION LOOKS EXACTLY LIKE A FINISHED ONE TO EVERY CHECK BELOW.
+# All of them read from git, which is correct -- an uncommitted edit is not yet
+# a loss of comments and not yet an oversized commit. But it means a loop that
+# died mid-item (rate limit, crash, laptop asleep) leaves half an edit in the
+# worktree and this gate reports all green over the top of it. Worse, the next
+# iteration then starts its item on top of the wreckage and commits both.
+# Runs FIRST because every verdict after it is conditional on it.
+echo "== the working tree is clean =="
+if [ -n "$(git status --porcelain)" ]; then
+  bad "uncommitted or untracked changes present -- an iteration was interrupted,
+       or one failed to commit. Everything below reads from git and cannot see
+       this. Inspect, then either finish the item or restore the files before
+       resuming. DO NOT start the next item on top of it:"
+  git status --short | sed 's/^/       /'
+else
+  ok "nothing uncommitted or untracked"
+fi
+
 echo "== the design record survives =="
 # ONE ESCAPE HATCH, AND IT HAS TO BE ARGUED FOR. A comment can be legitimately
 # removed -- when it is false, or when the code it describes is gone. That is a

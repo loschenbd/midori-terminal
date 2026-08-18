@@ -6,3 +6,4 @@ obsidian/.fontenv/
 .playwright-mcp/
 obsidian/extra-vaults.txt
 .cleanup-base
+.claude/ralph-loop.local.md
