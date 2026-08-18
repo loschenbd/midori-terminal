@@ -116,7 +116,7 @@ written down.
       method. Do not delete comments — correct them, and when correcting, say
       what was wrong and why it was believed.
 
-- [ ] **Guards without a sabotage proof.** For each test in
+- [x] **Guards without a sabotage proof.** For each test in
       `tests/test_prose_typography.py`, check whether a sabotage proof is
       recorded in its docstring. List the ones that lack one. Do not
       write the proofs in this pass — just produce the list.
@@ -136,6 +136,47 @@ written down.
 The loop appends here. These are NOT work items until a human moves them up.
 
 <!-- loop appends below this line -->
+### Guards without a sabotage proof: 18 of 21 (iteration 10)
+
+Report only; no proofs written, per the item.
+
+**Three guards carry a concrete recorded proof** — a specific break, and what
+the suite did when it was applied:
+
+- `test_snapped_vars_all_have_plain_fallbacks` — deleting the plain fallback
+- `test_rhythm_modes_all_exist` — `calc(var(--midori-row) / 2)`, the near-miss
+  that kept the token being matched on and changed its meaning
+- `test_accent_derived_roles_follow_the_accent` — "stayed green"
+
+`test_row_is_an_even_number_of_pixels` uses break-language but names no
+specific sabotage, so it is counted as unproven.
+
+**Ranked by the failure shapes this branch actually hit**, not alphabetically.
+Every shape below has produced a real vacuous guard in this repo already.
+
+| priority | guard | risk shape |
+|---|---|---|
+| 1 | `test_row_is_one_number` | **no docstring at all** + `theme_var` + unscoped regex |
+| 2 | `test_row_is_an_even_number_of_pixels` | `theme_var` + unscoped regex |
+| 2 | `test_leading_setting_is_snapped` | substring match + unscoped regex |
+| 3 | `test_measure`, `test_leading_stays_above_the_measured_harm_floor`, `test_heading_ladder_is_optical`, `test_settings_defaults_match_the_css`, `test_dot_alpha_is_split_in_both_modes` | `theme_var` — last-match-wins |
+| 4 | `test_blank_line_keeps_the_grid`, `test_indent_excludes_non_prose` | substring match |
+| 5 | `test_no_stray_grid_literals`, `test_settings_block_parses` | unscoped regex / name-not-scope |
+| — | `test_zen_header_rules_are_gated`, `test_settings_ids_are_real`, `test_inputs_are_never_read_by_a_real_property`, `test_space_rhythm_zeroes_the_indent_variable`, `test_accent_options_are_palette_tokens` | no known-bad shape, still unproven |
+
+Why those shapes: `theme_var()` returns the **textually last** declaration, so
+it cannot see an earlier one being deleted — that is how a deleted plain
+fallback stayed green here. Substring matching is how
+`calc(var(--midori-row) / 2)` passed a whole-row check. Both are recorded in
+`~/.claude/skills/guard-tests-need-a-sabotage-proof-not-a-reading`.
+
+**One of these is mine, from this session.**
+`test_widget_buffer_is_baseline_anchored` WAS sabotage-proved both directions
+— reverted to `text-top`, and the declaration deleted — but the proof went
+into the commit message, not the docstring. A future reader opening the test
+sees no proof. That is a real gap even though the work was done, and it is the
+cheapest one on this list to close.
+
 ### theme.css comments: one false arithmetic claim, corrected (iteration 9)
 
 **Found and corrected.** The `.metadata-container` block stated:
