@@ -85,8 +85,11 @@ else
     bad "$added new unchecked item(s) added to $Q since $BASE -- the loop is
        writing its own work list. Findings belong under FINDINGS FOR REVIEW."
   else
-    done_n=$(grep -c '^- \[x\]' "$Q" 2>/dev/null || echo 0)
-    left_n=$(grep -c '^- \[ \]' "$Q" 2>/dev/null || echo 0)
+    # grep -c PRINTS 0 and EXITS 1 when nothing matches, so `|| echo 0`
+    # emitted a SECOND zero and the count read "0\n0", splitting the
+    # ok line across two lines. `|| true` absorbs the status only.
+    done_n=$(grep -c '^- \[x\]' "$Q" 2>/dev/null || true)
+    left_n=$(grep -c '^- \[ \]' "$Q" 2>/dev/null || true)
     ok "queue: $done_n done, $left_n remaining, 0 items invented"
   fi
 fi
