@@ -670,10 +670,11 @@ Residual gotchas:
   carries the size, not x-height. The strut does not move: every heading
   keeps `line-height: var(--midori-row)`, one row at every base tested
   (14/16/20/24/30px). h2–h4 stay inside it there, in both panes, so for them
-  nothing here moves the grid. **h1 does not** — it is the largest size this
-  compensation produces, and a live sweep found its glyph box overflowing the
-  strut in Live Preview at the shipped scale; see the known open item under
-  Heading scale in the Settings section. What moves for every heading is how
+  nothing here moves the grid. **h1 did not either, and the reason it appeared
+  to was misdiagnosed** — the 1.5px it sat over in Live Preview came from
+  CodeMirror's `img.cm-widgetBuffer` anchoring to the font content area, not
+  from any glyph box overflowing the strut; see the Settings section. What
+  moves for every heading is how
   far the ink reaches into the row of air above — an h1 at a 16px base now
   reaches 7.1px into its 24px margin, against 1.2px before.
 - **A nominal contrast ratio overstates legibility at 1x, but less than the
@@ -763,19 +764,30 @@ compensation is not, because it is M PLUS 1p's x-height over Spectral's.
 | Leading | 1.5 | 1.4–2 |
 | Heading scale | 1 | 0.85–1.1 |
 
-**Known open item, under Heading scale.** A sweep against a running Obsidian
-measured the Live Preview h1's line box at 49px against a 24px row — two rows
-plus one, not one row plus a pixel. `line-height` only sets the strut (one
-row, 24px at the shipped base), but a line box is `max(strut, tallest inline
-box)`, and at heading scale 1 the h1's own 29.92px font produces a glyph box
-that overflows the strut, so the box grows to fill two rows and spills one
-pixel past. It clears at heading scale ≤ 0.9 (font ≤ 26.928px) and fails at
-≥ 0.95 — which brackets the shipped default of 1 on the failing side, so this
-is live at the theme's own defaults, not just at the slider's top end.
-`line-height: calc(var(--midori-row) * 2)` would seat it on two rows exactly,
-at the cost of making every h1 two rows tall; that is a real design decision
-and it has not been taken here. Reproduce it with the sweep in "Checking the
-grid in the running app" below.
+**Closed, and the explanation that stood here was wrong.** This paragraph used
+to record the Live Preview h1 as a known open item: 49px against a 24px row,
+blamed on `max(strut, tallest inline box)` with the 29.92px font's glyph box
+overflowing the strut, said to be fixable only by giving every h1 a two-row
+box — a design decision nobody wanted. The measurement was real; the mechanism
+was invented. It was 1.5px, not 1px, and headings are Spectral, whose
+ascent+descent+lineGap ratio is 1.5220 across hhea, OS/2 typo and OS/2 win
+alike — a 45.5px glyph box at 29.92px, nowhere near the 26px that story needed.
+
+The actual cause was CodeMirror's zero-width `img.cm-widgetBuffer`. The theme
+already zeroed its height, which removes the box's extent but not its
+`vertical-align: text-top`, and `text-top` anchors to the top of the parent's
+font *content area* (font-size × ≈0.90) rather than to its inline box
+(line-height, pinned to one row). At 29.92px that content area stands
+(27−24)/2 = 1.5px proud and drags the line box up to meet it. That is also why
+only the h1 ever showed it: the overshoot is positive only above ≈26.6px, and
+h2 through h6 measured exactly 48px.
+
+`vertical-align: baseline` on the buffer fixes it at no cost — the h1 keeps its
+size. Measured over CDP in two vaults: h1 49.5 → 48, a wrapping h1 73.5 → 72,
+off-lattice lines 3/49 → 0/49 and 1/31 → 0/31, and 6 of 18 heading-scale ×
+leading × base combinations off → 0 of 18. Heading scale still has no `round()`
+in its path and no longer needs one. Re-check it with the per-level measurement
+in "Checking the grid in the running app" below.
 
 **Not every setting is caught, and one of them is not caught at all.** Line
 length, paragraph indent and dot grid visibility have no path to a row-sized
@@ -791,14 +803,15 @@ continuous value, and it is caught: it reaches the page only through
 offset adds half the row's growth, so an odd row lands the baseline 0.50px
 off.
 
-**Heading scale is the exception, and the note above is what it costs.** It
-multiplies a font-size, not a row, and a line box is
-`max(strut, tallest inline box)` — a glyph box large enough overflows the
-strut no matter what the row is doing, and nothing between the slider and
-the font-size passes through a `round()` to stop it. That is why the h1
-sits a pixel over two rows at the shipped default rather than exactly one,
-and why the slider is capped at 1.1 rather than something larger — the cap
-narrows the exposure; it does not close it.
+**Heading scale is still the exception in principle.** It multiplies a
+font-size, not a row, and nothing between the slider and the font-size passes
+through a `round()`, so a large enough glyph box could in principle outgrow
+the strut. In practice nothing does across the shipped 0.85–1.1 range: swept
+against a running Obsidian at three leading/base pairs, every combination
+measures 0 lines off the lattice. This paragraph used to blame the h1's
+overshoot on exactly that mechanism; it was a `vertical-align` anchor
+instead, and fixing that closed all 6 failing combinations. The cap at 1.1
+stays — it bounds a real exposure, now unrealised rather than realised.
 
 Line length is in characters because that is the unit a writer thinks in and
 the unit the research is reported in — not because characters is established as
