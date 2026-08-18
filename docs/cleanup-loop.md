@@ -60,6 +60,33 @@ in the prompt.
 **The completion promise is checkable.** "The repo is clean" is not, and a
 loop cannot be trusted to evaluate it honestly at 4am.
 
+## If the loop stops early
+
+A usage limit, a crash, a closed laptop and a killed terminal are the same
+event: the loop stops between or during an iteration. **Nothing is lost either
+way** — the state lives in git commits and the queue's tick marks, not in the
+conversation. That is the whole reason for one-commit-per-item.
+
+There are exactly two cases, and the gate tells you which:
+
+```sh
+sh tests/check_cleanup_invariants.sh "$(cat .cleanup-base)"
+```
+
+**Clean tree.** It stopped between items. Every finished item is committed and
+ticked. Relaunch the identical `/ralph-loop` command; it reads the queue, finds
+the first unchecked item and continues. No other action.
+
+**Dirty tree.** It died mid-item, leaving a partial edit. The gate fails first
+and names the files. Do NOT relaunch on top of it — the next iteration would
+commit its own item plus the wreckage of the previous one, in one commit, and
+you would not be able to separate them. Read `git diff`, then either finish
+that item by hand or `git checkout --` the files and let the loop redo it from
+scratch. Redoing is usually right; the item is small by construction.
+
+Running out of usage mid-item is therefore a nuisance, not damage. The worst
+case is one item's work discarded.
+
 ## In the morning
 
 ```sh
