@@ -82,7 +82,7 @@ written down.
       deliberately closed and fully named. Deleting them breaks that property
       to save four lines.
 
-- [ ] **Report on `body` being declared 20 times** in `obsidian/theme.css`.
+- [x] **Report on `body` being declared 20 times** in `obsidian/theme.css`.
       Likely correct — each is a different token scope (colour mode, rhythm
       mode, accent choice, `@supports`). Confirm that, and list any two blocks
       that set the SAME property under the same conditions, which would be real
@@ -136,6 +136,48 @@ written down.
 The loop appends here. These are NOT work items until a human moves them up.
 
 <!-- loop appends below this line -->
+### `body` in theme.css: 20 bare blocks, one real duplicate (iteration 4)
+
+Report only; nothing changed. Parsed by walking braces and keeping the at-rule
+stack, so "same conditions" is actually answerable — a split on `}` cannot see
+whether two blocks sit inside different `@supports`.
+
+**The item's premise was half wrong, and that is the interesting part.** It
+guessed each `body` block is "a different token scope (colour mode, rhythm
+mode, accent choice, `@supports`)". True of the *qualified* selectors — 90
+blocks start with `body`, and `body.midori-accent-*`, `body.theme-dark`,
+`body.is-mobile`, `body.zen-mode` are all genuinely distinct scopes. But the
+**20 blocks whose selector is bare `body` at top level are all the SAME
+scope**: identical specificity, identical conditions, split across the file by
+topic so each can carry its own explanatory comment.
+
+That is a reasonable way to author a token-heavy stylesheet, and it is exactly
+why a duplicate is possible — nothing separates block 5 from block 17 except
+distance.
+
+**The one real duplicate:**
+
+| property | lines | value | effect |
+|---|---|---|---|
+| `--inline-title-margin-bottom` | 2068 and 2920 | `0` in both | later wins; line 2068 is dead |
+
+No behaviour differs today, because both say `0`. The hazard is latent: the two
+sit 850 lines apart, each under its own comment explaining why the title adds
+no margin, and the explanations are different. Line 2068 says the sizer's top
+padding already supplies a full grid row. Line 2920 belongs to a later, larger
+treatment that hands the air back through `--inline-title-line-height` and a
+`margin-block-start` on `.metadata-container`. **Editing either comment's
+reasoning and its declaration would silently do nothing if you picked 2068.**
+
+**Not queued as a fix, deliberately.** Both comments record real reasoning and
+CLAUDE.md forbids deleting either. Resolving this means deciding which
+explanation is current, merging what the other still contributes, and removing
+only the redundant declaration — a judgement call about the design record, not
+a cleanup. A human should make it.
+
+**Nothing else overlaps.** Across all 90 `body`-rooted blocks, no other
+property is set twice under the same selector and same at-rule context.
+
 ### The 31 delta-4-8 near-misses: none need changing (iteration 3)
 
 Report only, as the item required; nothing was changed. Classified by the ROLE
