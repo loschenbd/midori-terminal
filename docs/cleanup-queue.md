@@ -121,7 +121,7 @@ written down.
       recorded in its docstring. List the ones that lack one. Do not
       write the proofs in this pass — just produce the list.
 
-- [ ] **`obsidian/plugins/midori-timer/main.js` is 2,119 lines.** Identify
+- [x] **`obsidian/plugins/midori-timer/main.js` is 2,119 lines.** Identify
       natural seams (parsing, formatting, caret colour, settings) and report
       whether a split is worth it. Report only; do not split in this pass.
 
@@ -499,3 +499,49 @@ decide whether it is worth building.
 mostly deliberate lifts too. It is report-only, so it is safe to run, but read
 its output knowing the premise is suspect.
 
+
+### midori-timer split: not viable, and the 2,119 is misleading (iteration 11)
+
+**Verdict: do not split.** Not because the seams are bad — they are unusually
+clean — but because the packaging forbids it, and the failure mode if you did
+it anyway is silent.
+
+`CLAUDE.md` and `obsidian/install-obsidian.sh:118-126` agree: only
+`manifest.json` and `main.js` are copied into a vault. A sibling
+`parsing.js` would resolve fine from the repo (`tests/test_caret_writes.js:58`
+`require()`s `main.js` in place, so the test suite would stay green) and would
+be **absent** in all nine vaults. `require('./parsing')` there throws at plugin
+load, which Obsidian reports as a disabled plugin, not as a missing file. Green
+tests, dead plugin, no message naming the cause — the same shape as the drift
+the installer's own header warns about.
+
+The two ways out are both larger than cleanup: teach the installer to copy a
+directory (giving up the audited "one self-contained file" property that also
+keeps a third-party `styles.css` out), or add a bundler (so the file installed
+stops being the file you read, which is the property this repo's comments
+depend on). Either is a packaging decision for a human, not a tidy-up.
+
+**The line count overstates the logic.** Of 2,119 lines:
+
+| span | what | lines |
+|---|---|---|
+| L1-161 | header comment block | 161 |
+| L164-436 | pure logic: `parseDuration`, `formatClock`, `caretColor`, `parseClockTime`, `secondsUntil`, `endsAtClock`, `formatHuman`, `chime` | 273 |
+| L437-931 | the `STYLE` template literal — injected CSS, not JS | **495** |
+| L937-1275 | display widgets: `Drum`, `FlapBoard`, and their helpers | 339 |
+| L1276-1604 | `DurationModal` | 329 |
+| L1605-2004 | `module.exports = class MidoriTimer` | 400 |
+| L2005-2119 | `MidoriTimerSettings` | 115 |
+
+555 lines match a comment prefix. Between the comments and the CSS literal,
+roughly half the file is not JavaScript logic at all. The largest single
+"unit" of actual code is the plugin class at 400 lines.
+
+**The seams, recorded for whoever revisits the packaging question.** L164-436
+is the one genuinely portable block: no `obsidian` import, no DOM, pure
+functions — which is exactly why `tests/test_midori_timer.js` can strip the
+`require('obsidian')` line and run it. The widget classes (L937-1275) depend
+only on the DOM and on `DRUM_ITEM`, which `STYLE` must agree with — the comment
+at L937 says so, and splitting those two apart would put a stated invariant
+across a file boundary with nothing checking it. That pairing is an argument
+against one of the more obvious cuts, not for it.
