@@ -112,7 +112,7 @@ written down.
       five false claims and one inverted ratio. Correct what is wrong; where a
       claim is unverifiable, say so rather than deleting it.
 
-- [ ] **Verify every numeric claim in `obsidian/theme.css` comments.** Same
+- [x] **Verify every numeric claim in `obsidian/theme.css` comments.** Same
       method. Do not delete comments — correct them, and when correcting, say
       what was wrong and why it was believed.
 
@@ -136,6 +136,41 @@ written down.
 The loop appends here. These are NOT work items until a human moves them up.
 
 <!-- loop appends below this line -->
+### theme.css comments: one false arithmetic claim, corrected (iteration 9)
+
+**Found and corrected.** The `.metadata-container` block stated:
+
+> padding-top + padding-bottom + margin-block-end = inset + 24 + (24 - inset)
+> = 48, always two rows.
+
+Both terms are wrong. The margin is `calc(var(--midori-row) * 2 - inset)` =
+36px, not `24 - inset` = 12px, so the real total is **72px, three rows**.
+
+It was believed because the sentence describes a margin of *one* row minus the
+inset. The margin has always been *two* rows minus the inset — it read
+`calc(48px - var(--midori-metadata-inset))` before the row refactor and
+`calc(var(--midori-row) * 2 - ...)` after, which are the same 36px. **The
+refactor was faithful; the sentence was already wrong when it was written.**
+
+The load-bearing part of the claim is TRUE and was kept: the inset cancels, so
+the widget cannot push the prose below it off the grid. 0, 12 and 24px of inset
+all total 72px. Only the sum and the row count were wrong. **No code changed.**
+
+One boundary marked rather than papered over: the paragraph that follows
+describes removing "a whole row" from that margin and a measured 84px hole.
+`git log -S` finds no earlier `72px - inset` form, so whether the removed row
+came out of this margin or from above it is unrecoverable. That reasoning is
+left exactly as written, with a note saying it was not reconciled and why.
+
+**Method and its limits.** Two mechanical passes: 64 `prop: value` claims
+inside comments checked against the file's own declarations, and 14 comment
+mentions of a declared `--midori-*`/`--dotgrid-*` variable near a number. Both
+produced mostly false positives of the matcher — comments describing `app.css`
+behaviour, or a number that merely sits near a variable name. Matching a
+property by NAME when the claim is about a SCOPE is the trap this repo's own
+guard-test skill names, and it appeared here in the checker rather than the
+comments. Every flagged item was inspected by hand; exactly one was real.
+
 ### README numeric claims: no false ones found (iteration 8)
 
 136 lines carry a number. They split into two kinds, and only one kind is
