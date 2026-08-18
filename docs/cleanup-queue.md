@@ -28,6 +28,68 @@ manufactured by the thing hired to remove it.
 
 ## Queue
 
+### Theme and style consolidation
+
+Measured 2026-08-17. Re-derive any number here with
+`python3 tests/measure_palette_drift.py` — do not trust these figures because they are
+written down.
+
+- **301 distinct hex values across 77 files. 43 of them appear in 4+ files** —
+  the de-facto shared palette — and there is **no canonical definition of it
+  anywhere in the repo.** Sage `#5f6f5e` is hand-copied into 18 files across
+  seven areas; paper `#f3f1eb` into 18; slate `#3a5572` into 19. Changing one
+  accent today means editing up to nineteen files correctly, with nothing to
+  catch the one you miss.
+- **40 near-miss values** sit within 8/255 per channel of a core colour without
+  equalling it. **Nine are within 3/255**, which is below what anyone can see —
+  so those are drift or typos, not design.
+- `obsidian/theme.css` itself is NOT the problem and should not be
+  restructured: 3 selectors appear 3+ times (`body` x20, which is token
+  scoping), and the only declaration blocks shared by 3+ selectors are
+  `line-height: var(--midori-row)` and friends, i.e. the grid discipline
+  working. The duplication is BETWEEN targets, not inside the stylesheet.
+
+- [ ] **Give the palette one definition.** Create `palette.json` holding the 43
+      shared values, each with the role name it already carries in comments
+      (`--accent-warm`, ANSI slot, etc.). Then write a guard test that every
+      hex appearing in 4+ files is present in `palette.json`, and fail on any
+      that is not. **Do not regenerate any theme file from it in this pass** —
+      the source of truth plus the drift detector is the whole item. Generation
+      is a separate, later decision.
+
+- [ ] **Resolve the nine sub-visible values.** These are within 3/255 of a core
+      colour, which no one can see, so each is a typo or a stale copy:
+      `#201f1d` `#282723` `#2a2926` (vscode night), `#282724` `#2b2a27`
+      (README), `#2c2b26` `#ebe8e0` (watcher), `#eceae2` (vscode paper),
+      `#edeae2` (antinote paper, obsidian, vscode paper).
+      For each: check `git log -S<hex>` for when it entered and whether the
+      commit intended a distinct colour. Fix only the unambiguous ones; list
+      the rest under FINDINGS. `#edeae2` appears in three files and may be a
+      deliberate second tint — treat it as a report, not a fix.
+
+- [ ] **Report on the 31 remaining near-misses** (delta 4–8). Unlike the nine
+      above these ARE visible, so they may be deliberate hover states or raised
+      surfaces. Produce a table: value, nearest core colour, files, and whether
+      a comment or commit message justifies it. **Report only. Change nothing.**
+
+- [~] **Remove the four unused `--midori-warm-*` tokens.** REJECTED before
+      queueing, and recorded here so it is not rediscovered as a good idea.
+      `--midori-warm-wash/-light/-deep/-bridge` are defined in
+      `obsidian/theme.css` and never read by `var()`, which makes them look
+      like dead code. They are not: they complete the warm ramp whose siblings
+      `--midori-clay` and `--midori-terracotta` carry `/* --accent-warm */`
+      annotations mapping to the website's token set, and this palette is
+      deliberately closed and fully named. Deleting them breaks that property
+      to save four lines.
+
+- [ ] **Report on `body` being declared 20 times** in `obsidian/theme.css`.
+      Likely correct — each is a different token scope (colour mode, rhythm
+      mode, accent choice, `@supports`). Confirm that, and list any two blocks
+      that set the SAME property under the same conditions, which would be real
+      drift. **Report only.**
+
+### Shell and structure
+
 - [ ] **Shared shell helpers across the installers.** `set -e`, `REPO_DIR=`
       resolution, and running-app detection (`pgrep -x`) are repeated in all
       seven scripts. Extract to `lib/sh-common.sh`, sourced by each.
