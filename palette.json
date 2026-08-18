@@ -1,0 +1,188 @@
+{
+  "_comment": [
+    "The Midori palette, one definition. Every hex appearing in 4+ tracked",
+    "files must appear here -- tests/test_palette_is_defined.py enforces that.",
+    "Names are the ones each value ALREADY carries in the file that uses it;",
+    "none were invented for this file. Values under a role differ by colour",
+    "mode, which is why 17 obsidian tokens carry both a light and a dark hex.",
+    "NOTHING IS GENERATED FROM THIS YET. It is a source of truth and a drift",
+    "detector; regenerating theme files from it is a separate decision."
+  ],
+  "roles": {
+    "background-primary": {
+      "source": "obsidian/theme.css",
+      "light": "#f3f1eb",
+      "dark": "#1a1917"
+    },
+    "background-primary-alt": {
+      "source": "obsidian/theme.css",
+      "light": "#faf9f6",
+      "dark": "#22211e"
+    },
+    "background-secondary": {
+      "source": "obsidian/theme.css",
+      "light": "#edeae2"
+    },
+    "background-secondary-alt": {
+      "source": "obsidian/theme.css",
+      "light": "#faf9f6",
+      "dark": "#22211e"
+    },
+    "code-background": {
+      "source": "obsidian/theme.css",
+      "light": "#faf9f6",
+      "dark": "#22211e"
+    },
+    "code-comment": {
+      "source": "obsidian/theme.css",
+      "light": "#8a8378",
+      "dark": "#9c958a"
+    },
+    "code-normal": {
+      "source": "obsidian/theme.css",
+      "light": "#2a2825",
+      "dark": "#ebe8e2"
+    },
+    "code-punctuation": {
+      "source": "obsidian/theme.css",
+      "light": "#524d46",
+      "dark": "#c5bfb4"
+    },
+    "h1-color": {
+      "source": "obsidian/theme.css",
+      "light": "#2a2825",
+      "dark": "#ebe8e2"
+    },
+    "h2-color": {
+      "source": "obsidian/theme.css",
+      "light": "#2a2825",
+      "dark": "#ebe8e2"
+    },
+    "h3-color": {
+      "source": "obsidian/theme.css",
+      "light": "#524d46",
+      "dark": "#9c958a"
+    },
+    "midori-clay": {
+      "source": "obsidian/theme.css",
+      "light": "#c9916b",
+      "dark": "#d4a07a"
+    },
+    "midori-indigo": {
+      "source": "obsidian/theme.css",
+      "light": "#3a5572",
+      "dark": "#6c87a4"
+    },
+    "midori-indigo-lift": {
+      "source": "obsidian/theme.css",
+      "dark": "#8ba3bd"
+    },
+    "midori-mint": {
+      "source": "obsidian/theme.css",
+      "light": "#548373"
+    },
+    "midori-ochre": {
+      "source": "obsidian/theme.css",
+      "light": "#b88a3a",
+      "dark": "#d8b06a"
+    },
+    "midori-olive": {
+      "source": "obsidian/theme.css",
+      "light": "#6c7d52",
+      "dark": "#9eaf85"
+    },
+    "midori-page-dot": {
+      "source": "obsidian/theme.css",
+      "light": "#9ebfb4",
+      "dark": "#9ebfb4"
+    },
+    "midori-purple": {
+      "source": "obsidian/theme.css",
+      "light": "#653f7f",
+      "dark": "#a079be"
+    },
+    "midori-sage": {
+      "source": "obsidian/theme.css",
+      "light": "#5f6f5e",
+      "dark": "#9aab97"
+    },
+    "midori-terracotta": {
+      "source": "obsidian/theme.css",
+      "light": "#b06d4a"
+    },
+    "midori-wine": {
+      "source": "obsidian/theme.css",
+      "light": "#7a4a4a",
+      "dark": "#b8868a"
+    },
+    "midori-wine-lift": {
+      "source": "obsidian/theme.css",
+      "light": "#9d6161",
+      "dark": "#d0a2a6"
+    },
+    "text-muted": {
+      "source": "obsidian/theme.css",
+      "light": "#524d46",
+      "dark": "#9c958a"
+    },
+    "text-normal": {
+      "source": "obsidian/theme.css",
+      "dark": "#ebe8e2"
+    },
+    "titlebar-background": {
+      "source": "obsidian/theme.css",
+      "light": "#edeae2"
+    },
+    "titlebar-background-focused": {
+      "source": "obsidian/theme.css",
+      "light": "#edeae2"
+    },
+    "titlebar-text-color": {
+      "source": "obsidian/theme.css",
+      "light": "#524d46",
+      "dark": "#9c958a"
+    },
+    "antinote-type-hyperlight": {
+      "source": "antinote/midori-night.json",
+      "dark": "#2f2e2b"
+    },
+    "antinote-type-superlight": {
+      "source": "antinote/midori-paper.json",
+      "light": "#c9c4b8"
+    },
+    "terminal-selection-background": {
+      "source": "ghostty/themes/*",
+      "light": "#ced1c8",
+      "dark": "#40453d"
+    },
+    "terminal-unfocused-split-fill": {
+      "source": "ghostty/themes/*",
+      "light": "#a29f98"
+    },
+    "terminal-split-divider": {
+      "source": "ghostty/themes/*",
+      "light": "#e1dfd9"
+    },
+    "ansi-11-bright-yellow": {
+      "source": "ghostty/themes/*",
+      "light": "#cc9c42",
+      "dark": "#e6c489"
+    },
+    "ansi-12-bright-blue": {
+      "source": "ghostty/themes/*",
+      "light": "#4d7095"
+    },
+    "diff-wash-terracotta": {
+      "source": "tools/patch-claude-diffs.py",
+      "light": "#ddc7b7"
+    },
+    "moshi-muted": {
+      "source": "moshi/import.html",
+      "dark": "#857e72"
+    },
+    "icon-faint": {
+      "source": "vscode/build-icons.py",
+      "light": "#5d574e"
+    }
+  }
+}

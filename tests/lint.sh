@@ -98,6 +98,9 @@ else
   echo "  skip (node not found)"
 fi
 
+echo "== palette has one definition =="
+if python3 tests/test_palette_is_defined.py; then :; else FAIL=1; fi
+
 echo "== prose typography =="
 if python3 tests/test_prose_typography.py; then :; else FAIL=1; fi
 

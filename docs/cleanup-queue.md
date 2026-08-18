@@ -49,7 +49,7 @@ written down.
   `line-height: var(--midori-row)` and friends, i.e. the grid discipline
   working. The duplication is BETWEEN targets, not inside the stylesheet.
 
-- [ ] **Give the palette one definition.** Create `palette.json` holding the 43
+- [x] **Give the palette one definition.** Create `palette.json` holding the 43
       shared values, each with the role name it already carries in comments
       (`--accent-warm`, ANSI slot, etc.). Then write a guard test that every
       hex appearing in 4+ files is present in `palette.json`, and fail on any
