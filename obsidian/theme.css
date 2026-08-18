@@ -2195,14 +2195,42 @@ body {
    what works; display:none does not, because the buffer is not the only
    contributor and hiding it just lets the next one win.
 
-   THE h1 IS STILL 1px OVER and this is the honest limit of the approach: its
-   content box floors at 25px and will not go below that at any line-height,
-   because 1.870em is 29.92px and the glyph box is 26px. That is a cost of the
-   x-height compensation above -- the correction that makes an h1 read at its
-   intended optical size also makes it unable to sit in one row here. Fixing it
-   means giving h1 a two-row box in live preview, which is a design decision,
-   not a patch. One pixel per h1, against 5.91 before. */
-.markdown-source-view.mod-cm6 .cm-line .cm-widgetBuffer { height: 0; }
+   THE RESIDUAL h1 OVERSHOOT IS NOW GONE TOO, AND THE PARAGRAPH THAT USED TO
+   SIT HERE WAS WRONG ABOUT WHY IT EXISTED. It said the h1 content box floored
+   at 25px because the glyph box was 26px, called that an unavoidable cost of
+   the x-height compensation, and concluded the only fix was a two-row h1 --
+   a design decision nobody wanted to make. Every part of that was false. The
+   overshoot was 1.5px, not 1px; and headings are Spectral, whose
+   ascent+descent+lineGap ratio is 1.5220 identically across hhea, OS/2 typo
+   and OS/2 win (USE_TYPO_METRICS is set), i.e. a 45.5px glyph box at 29.92px
+   -- nowhere near the 26px the story needed. The measurement was real and
+   reproduced; the mechanism invented to explain it was not, and it made a
+   free fix look impossible.
+
+   ZEROING THE HEIGHT REMOVES THE BOX'S EXTENT; IT DOES NOT REMOVE ITS ANCHOR.
+   `vertical-align: text-top` ties the buffer to the top of the parent's FONT
+   CONTENT AREA, which is font-size x ~0.90 -- not to the top of its inline
+   box, which is line-height, pinned to one 24px row above. At the h1's
+   29.92px the content area is 27px, standing (27-24)/2 = 1.5px proud, and the
+   anchor drags the line box up to meet it however tall the buffer itself is.
+   Hence `vertical-align: baseline` below, which is the other half of the fix.
+
+   That also explains why only the h1 ever showed it: the overshoot is
+   (font-size x 0.90 - row) / 2, positive only above ~26.6px. Measured per
+   level, h2 (27.04px) through h6 were all exactly 48px; only h1 was 49.5.
+
+   MEASURED live over CDP in two vaults, before/after/revert: h1 49.5 -> 48
+   (two whole rows), a wrapping h1 73.5 -> 72, off-lattice lines 3/49 -> 0/49
+   and 1/31 -> 0/31. Swept over heading scale 0.85..1.1 at three leading/base
+   pairs: 6 of 18 combinations off -> 0 of 18. THE h1 KEEPS ITS SIZE, so this
+   is neither of the options that were on the table -- growing every h1 to
+   three rows, or shaving a pixel of padding in a way that only held at scale
+   1.0. Heading scale still has no round() in its path; it no longer needs
+   one. */
+.markdown-source-view.mod-cm6 .cm-line .cm-widgetBuffer {
+  height: 0;
+  vertical-align: baseline;   /* not text-top: see the anchor note above */
+}
 .markdown-source-view.mod-cm6 .cm-line .cm-fold-indicator {
   height: 0;
   overflow: visible;   /* the chevron still draws and still takes a click */

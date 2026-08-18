@@ -1214,6 +1214,38 @@ def test_accent_derived_roles_follow_the_accent():
        f"mode overrides ({total} declarations checked)")
 
 
+
+def test_widget_buffer_is_baseline_anchored():
+    """CodeMirror's zero-width buffers must not anchor to the font content area.
+
+    `vertical-align: text-top` ties img.cm-widgetBuffer to the top of the
+    parent's FONT CONTENT AREA (font-size x ~0.90), not to the top of its
+    inline box (line-height, pinned to one row). Zeroing the buffer's height
+    removes its extent but NOT that anchor, so at the h1's 29.92px the content
+    area stood 1.5px proud and dragged the line box to 49.5px against a 24px
+    row. Measured 3/49 and 1/31 lines off the lattice; baseline takes both
+    to 0, across heading scale 0.85..1.1.
+
+    THIS GUARD PROVES THE RULE EXISTS, NOT THAT IT TAKES EFFECT -- the whole
+    defect was a rendered line box, invisible to any source check. The
+    instrument that actually catches a regression is
+    tests/check_rendered_headings.py, which needs a running Obsidian.
+    """
+    found = [(sel, d) for sel, d in rules()
+             if "cm-widgetBuffer" in sel and "vertical-align" in d]
+    if not found:
+        bad("no rule sets vertical-align on cm-widgetBuffer; the buffer "
+            "reverts to CodeMirror's text-top and the h1 leaves the lattice")
+        return
+    for sel, decls in found:
+        m = re.search(r"vertical-align:\s*([^;]+)", decls)
+        value = m.group(1).strip() if m else "?"
+        if value != "baseline":
+            bad(f"cm-widgetBuffer sets vertical-align: {value}; only "
+                f"'baseline' keeps the h1 on the row ({sel})")
+            return
+    ok(f"cm-widgetBuffer is baseline-anchored ({len(found)} rule(s) checked)")
+
 if __name__ == "__main__":
     print("== prose typography ==")
     test_measure()
@@ -1236,5 +1268,6 @@ if __name__ == "__main__":
     test_dot_alpha_is_split_in_both_modes()
     test_accent_options_are_palette_tokens()
     test_accent_derived_roles_follow_the_accent()
+    test_widget_buffer_is_baseline_anchored()
     print("prose typography: all green" if not FAIL else "prose typography: failures above")
     sys.exit(1 if FAIL else 0)
