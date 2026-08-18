@@ -107,7 +107,7 @@ written down.
       subprocesses.** Batch them into one interpreter invocation. Keep the
       count-and-fail-on-empty guard exactly as it is; that is not overhead.
 
-- [ ] **Verify every numeric claim in `README.md` against the code.** One pass,
+- [x] **Verify every numeric claim in `README.md` against the code.** One pass,
       listing each claim and whether it still holds. Two prior sweeps found
       five false claims and one inverted ratio. Correct what is wrong; where a
       claim is unverifiable, say so rather than deleting it.
@@ -136,6 +136,46 @@ written down.
 The loop appends here. These are NOT work items until a human moves them up.
 
 <!-- loop appends below this line -->
+### README numeric claims: no false ones found (iteration 8)
+
+136 lines carry a number. They split into two kinds, and only one kind is
+checkable against the code — stating that boundary is part of the result.
+
+**Checkable against the code, all verified, all hold:**
+
+- 42 distinct backticked CSS tokens and declarations, matched against
+  `theme.css` with comments stripped. 16 did not match; every one inspected
+  was a false positive of my matcher, not a false claim: Obsidian's own
+  variables that the theme reads but never declares (`--font-text-size`,
+  `--background-modifier-form-field`), selectors rather than declarations,
+  non-CSS examples from the VS Code and Antinote sections, and behaviour
+  attributed to `app.css` rather than to the theme. Spot-checked the three
+  that could plausibly have been real — `--midori-title-line-box` exists,
+  `color: #FAFAFA` is correctly attributed to `app.css`, and the
+  `vertical-align: text-top` at README:778 is the *historical* cause in the
+  h1 write-up, correctly stated in the past tense.
+- 12 load-bearing typographic constants: the 24px row fallback, `1.870em` /
+  `1.690em` heading sizes, `ascent-override: 45%`, the `0.83em / 0.30em`
+  title slots, `--midori-slot-rise` / `--midori-slot-drop` at 14px / 5px,
+  measure 70, leading 1.5, advance `0.4818`, and the `cm-widgetBuffer`
+  `vertical-align: baseline` fix. All present and correct.
+- No stale counts or timings. README asserts no `theme.css` line count, no
+  comment percentage and no lint runtime, so iteration 7's 112s→46s change
+  and the growth of the file leave nothing to correct.
+
+**Not checkable against the code, and not re-measured here:** contrast ratios
+(`5.00:1`, `10.89:1`, `1.07:1`), hardware observations (81 ppi, stem widths,
+`4 of 8` caret frames), and rendered sweep results (`3/49`, `6 of 18`,
+`25 of 63`). These are recorded measurements of things outside the source; the
+only honest way to verify them is to re-run the instrument, which needs a live
+Obsidian and in some cases specific hardware. Flagged as a boundary, not a
+defect.
+
+**One correction to the item's own framing.** It cites "two prior sweeps found
+five false claims and one inverted ratio" as reason to expect more. Those were
+found *and fixed* earlier in this same branch. A clean pass now is the expected
+outcome of that work, not evidence the pass was shallow.
+
 ### lint.sh: 112s -> 46s, and the "~60s" in the item was wrong (iteration 7)
 
 Done. The item's premise held — per-file `py_compile` was the cost — but its
