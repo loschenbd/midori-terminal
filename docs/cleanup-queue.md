@@ -125,7 +125,7 @@ written down.
       natural seams (parsing, formatting, caret colour, settings) and report
       whether a split is worth it. Report only; do not split in this pass.
 
-- [ ] **Dead files.** Find tracked files referenced by nothing — no import, no
+- [x] **Dead files.** Find tracked files referenced by nothing — no import, no
       script, no doc link. Each candidate must ship with the grep that proves
       it. Report only; delete nothing in this pass.
 
@@ -545,3 +545,43 @@ only on the DOM and on `DRUM_ITEM`, which `STYLE` must agree with — the commen
 at L937 says so, and splitting those two apart would put a stated invariant
 across a file boundary with nothing checking it. That pairing is an argument
 against one of the more obvious cuts, not for it.
+
+### Dead files: 5 candidates, and 25 false positives worth more than them (iteration 12)
+
+Scanned all 178 tracked files, reading every one as a haystack (178 read, 0
+skipped — an empty corpus would have aborted). A file counted as referenced if
+its path or basename appeared in any *other* tracked file. That produced 30
+unreferenced files. **25 of the 30 are alive.** The false positives are the
+finding; the 5 survivors are almost an afterthought.
+
+**Why a name-grep dead-file detector is wrong here, in four distinct ways:**
+
+| mechanism | example | files it hid |
+|---|---|---|
+| glob copy | `install.sh:30` `cp "$REPO/fonts/"*.ttf` | 7 fonts |
+| glob copy | `vivaldi/install-vivaldi.sh:58` `cp "$REPO_DIR/css-mods/"*.css` | 8 css-mods |
+| **constructed name** | `install.sh:46-47` builds `midori-$m-$k@2x.png` from two loop variables | 8 backgrounds |
+| **variable-interpolated path** | `install.sh:102` `render "$REPO/watcher/$LABEL.plist.template"` | 1 plist template |
+| **convention, never named** | `.vscodeignore` is read by `vsce` at package time; nothing in the repo mentions it, and nothing should | 1 |
+
+The last three are the dangerous ones: no amount of improving the *pattern*
+finds them, because the referencing string does not exist anywhere in the repo
+— it is assembled at runtime or known only to an external tool. Any future
+"unused file" tooling here must treat a glob or an interpolated path as a
+reference to everything it can match, and must have a convention allowlist.
+Deleting on this detector's raw output would have removed all eight terminal
+backgrounds and the launchd template.
+
+**The 5 genuine candidates.** Each proof is
+`git grep -I -l -F -- "<basename>" -- ":!<path>"` returning zero files:
+
+| file | size | verdict |
+|---|---|---|
+| `serif-top.png` | 184K | **Deletable.** A screenshot committed to the repo root by `74368ce` ("notices were Obsidian's dark toast on a paper page"). Debugging evidence for a fix that shipped; the commit message already carries the finding. The only file at the root that is not a script, a config, or a doc. |
+| `vivaldi/icons/moon.svg` | 4K | **Keep.** `midori-dark-mode-icon.css:18` inlines this exact path as a `data:` URI, and `install-vivaldi.sh:58` copies only `css-mods/*.css`, never `icons/`. So nothing loads the file — but it is the readable source of an unreadable percent-encoded blob. That is the design record, not dead weight. |
+| `docs/cleanup-loop.md` | 8K | **Keep, and link it.** The runbook for this loop. Written to be found by a human, and currently findable only by knowing it exists. `README.md:526` links a spec under `docs/`, so docs here are linked when someone remembers to. |
+| `docs/superpowers/plans/2026-08-17-theme-settings.md` | 60K | **Keep.** A completed implementation plan. Plans are historical records; being unlinked is their normal end state. |
+| `docs/superpowers/specs/2026-07-15-installer-wizard-design.md` | 8K | **Needs a human.** A design for an installer wizard, unlinked and — unlike the plan above — with no obvious shipped counterpart. Either it was never built (in which case it is an open idea, not dead) or it was and nothing records that. Do not delete on the strength of a zero-reference count; find out which. |
+
+**Net: one file (184K) is safely deletable, and the item's premise — that
+unreferenced means dead — held for 1 of 30 hits.**
