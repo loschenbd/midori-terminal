@@ -57,7 +57,7 @@ written down.
       the source of truth plus the drift detector is the whole item. Generation
       is a separate, later decision.
 
-- [ ] **Resolve the nine sub-visible values.** These are within 3/255 of a core
+- [~] **Resolve the nine sub-visible values.** REJECTED — These are within 3/255 of a core
       colour, which no one can see, so each is a typo or a stale copy:
       `#201f1d` `#282723` `#2a2926` (vscode night), `#282724` `#2b2a27`
       (README), `#2c2b26` `#ebe8e0` (watcher), `#eceae2` (vscode paper),
@@ -136,3 +136,46 @@ written down.
 The loop appends here. These are NOT work items until a human moves them up.
 
 <!-- loop appends below this line -->
+
+### measure_palette_drift.py compares against the wrong background (iteration 2)
+
+All nine flagged values are deliberate, so the item was rejected rather than
+done. The detector's premise — "within 3/255 of a core colour, therefore
+invisible, therefore a typo or stale copy" — does not hold, and the reason is
+a flaw in the tool, not in these nine.
+
+**It measures distance to the global core palette. These values exist to be a
+sub-visible lift off the background of their own file.** `#201f1d` is 2/255
+from core `#22211e`, which is what got it flagged — but it is
+`editor.lineHighlightBackground` in a theme whose `editor.background` is
+`#1a1917`, six steps away. It is doing its job; proximity to an unrelated
+palette entry is coincidence.
+
+Evidence, by role:
+
+| value | role | its own background | verdict |
+|---|---|---|---|
+| `#201f1d` | `editor.lineHighlightBackground` | `#1a1917` | deliberate lift |
+| `#282723` | `list.hoverBackground` | `#1a1917` | deliberate lift |
+| `#2a2926` | `editorRuler.foreground` | `#1a1917` | a ruler is meant to be faint |
+| `#eceae2` | `lineHighlight`, `inlayHint`, `keybindingLabel` | `#f3f1eb` | deliberate lift |
+| `#ebe8e0` | `userMessageBackground` | — | one rung of a ladder: `#ebe8e0` / `#e4e0d6` hover / `#edeae2` bash |
+| `#2c2b26` | `userMessageBackgroundHover` | — | the night half of that same ladder |
+| `#edeae2` | `--background-secondary`, titlebar, sidebar, statusbar | — | a real secondary surface in 4 files |
+| `#282724` | README prose | — | **a recorded measurement**: "`#1a1917 → #282724`, ~1.1:1 either way" |
+| `#2b2a27` | README prose | — | **a recorded measurement**: "the editor background under a uniform +17 white, ~7.4%" |
+
+The last two are measurements in the design record. Editing them would
+falsify what was measured — see CLAUDE.md.
+
+**What a correct detector would do:** compare each value to the background it
+is painted on within its own file, not to the global core set. A lift of 6/255
+off your own background is design; being 2/255 from an unrelated token is
+noise. That is a real tool fix, and it is NOT queued here — a human should
+decide whether it is worth building.
+
+**This also undercuts the next item.** "Report on the 31 remaining near-misses
+(delta 4-8)" inherits the same comparison basis, so its list is likely to be
+mostly deliberate lifts too. It is report-only, so it is safe to run, but read
+its output knowing the premise is suspect.
+

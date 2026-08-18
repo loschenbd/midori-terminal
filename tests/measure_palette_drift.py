@@ -24,7 +24,7 @@ HEX = re.compile(r"#[0-9a-fA-F]{6}\b")
 # drifted values in order to discuss them, which makes every one of them appear
 # in one more file and lists the queue itself as a drift site. A measurement
 # that counts its own write-up is measuring the wrong thing.
-SKIP_FILES = {"docs/cleanup-queue.md"}
+SKIP_FILES = {"docs/cleanup-queue.md", "tests/measure_palette_drift.py"}
 
 # A colour in this many files is palette, not a one-off. 4 is the knee: below
 # it a value is usually one theme's local shade, above it the value is being
@@ -32,9 +32,22 @@ SKIP_FILES = {"docs/cleanup-queue.md"}
 SHARED_AT = 4
 # "Core" is the subset stable enough to measure drift AGAINST.
 CORE_AT = 8
-# Max per-channel delta below which two colours are indistinguishable in use.
-# 3 is conservative -- a 1-3 step is invisible on any display, so a value that
-# close to a core colour is a stale copy or a typo, never a design choice.
+# Max per-channel delta below which two colours are indistinguishable.
+#
+# THE CONCLUSION THIS CONSTANT ORIGINALLY CARRIED WAS FALSE, and it is left
+# here corrected rather than quietly reworded. It read: "a value that close to
+# a core colour is a stale copy or a typo, never a design choice." Checked
+# against all nine values it flagged (see docs/cleanup-queue.md FINDINGS),
+# every one was deliberate.
+#
+# The error is the comparison basis. This measures distance to the GLOBAL core
+# palette, but a line highlight, a hover state or a ruler exists to be a
+# sub-visible lift off THE BACKGROUND OF ITS OWN FILE. #201f1d is 2/255 from
+# core #22211e -- which is what flags it -- and 6/255 from #1a1917, the
+# editor.background it actually sits on and is designed to lift off.
+#
+# So read the DRIFT list as "worth a look", never as a fix list. A correct
+# detector would resolve each value's own background first; that is unbuilt.
 INVISIBLE = 3
 # Above INVISIBLE but still suspiciously close: worth a human look, not a fix.
 SUSPICIOUS = 8
@@ -94,8 +107,9 @@ def main():
         elif d <= SUSPICIOUS:
             suspicious.append((h, c, d))
 
-    print(f"\nDRIFT -- within {INVISIBLE}/255 of a core colour, i.e. invisible, "
-          f"so a stale copy or a typo ({len(invisible)}):")
+    print(f"\nCLOSE TO A CORE COLOUR -- within {INVISIBLE}/255 ({len(invisible)}). "
+          f"NOT a fix list:\n  many are deliberate sub-visible lifts off their "
+          f"own file's background -- see the note on INVISIBLE above.")
     for h, c, d in invisible:
         print(f"  {h} vs {c} (d={d})  {', '.join(sorted(hf[h])[:2])}")
 
