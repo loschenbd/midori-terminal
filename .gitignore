@@ -5,3 +5,4 @@ __pycache__/
 obsidian/.fontenv/
 .playwright-mcp/
 obsidian/extra-vaults.txt
+.cleanup-base
