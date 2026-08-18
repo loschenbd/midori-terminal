@@ -97,7 +97,7 @@ written down.
       orchestrator that dispatches to per-target scripts, and each target's
       caveats are load-bearing. Only the boilerplate moves.
 
-- [ ] **The JSON-patch heredoc is written three times** in
+- [~] **The JSON-patch heredoc is written three times** REJECTED — in
       `obsidian/install-obsidian.sh` (appearance.json, community-plugins.json)
       and once in `vivaldi/install-vivaldi.sh`. Extract one `patch_json`
       helper. Keep each call site's comment explaining *why that file* is
@@ -136,6 +136,46 @@ written down.
 The loop appends here. These are NOT work items until a human moves them up.
 
 <!-- loop appends below this line -->
+### There is no repeated JSON-patch heredoc to extract (iteration 6)
+
+Rejected. The item said "written three times in `obsidian/install-obsidian.sh`
+and once in `vivaldi/`". There are not four instances of one thing. There are
+four different programs that share `import json`.
+
+| site | lines | container | operation | on unreadable input |
+|---|---|---|---|---|
+| `obsidian:80` | 11 | dict | set `cssTheme` **only if** legacy or empty | `sys.exit(0)` — write nothing |
+| `obsidian:131` | 13 | list | append id if absent | start `[]` and **write** |
+| `obsidian:166` | 7 | list | membership test | writes nothing — it is a shell predicate |
+| `vivaldi:63` | 100 | — | enumerate profiles, `/dev/tty` menu, patch Preferences | n/a |
+
+`obsidian:166` is not a patch. It exits 0 or 1 so `||` can catch it in the
+shell; extracting it into a "patch" helper would misname what it does.
+`vivaldi:63` is a hundred-line interactive program that reads `themes.json`
+and `keyboard.json`, resolves a profile by directory or display name, and
+prompts on `/dev/tty`. It shares one import.
+
+**The one difference that looks like inconsistency is a safety boundary.**
+`appearance.json` bails without writing when it cannot parse the file, because
+that file holds settings the user owns and a parse failure must never cost
+them. `community-plugins.json` initialises an empty list and writes, because
+that file legitimately does not exist in a fresh vault. A single helper forces
+one policy onto both, and the failure mode is silently rewriting live user
+settings in nine real vaults.
+
+**Ledger:** the genuinely identical text is about four lines — `import json`,
+`open`, `json.load`, and the `except (OSError, ValueError)` line — shared by
+exactly two sites, whose `except` bodies then differ. A helper covering three
+operations across two container types with two failure policies is longer than
+what it replaces, and it converts inline code you can read in place into a
+dependency you have to go look up.
+
+**One real observation, not queued as work.** `tests/dryrun-installers.sh`
+asserts `theme.css` lands in each sandbox vault but does not assert the
+*contents* of `appearance.json` or `community-plugins.json`, so the two patch
+paths are exercised without being checked. That is a gap in the harness, not
+an argument for extraction — and deciding whether to close it is a human call.
+
 ### Shared installer helpers would add code, not remove it (iteration 5)
 
 Rejected. The shared boilerplate is exactly two lines per script:
