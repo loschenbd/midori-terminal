@@ -26,7 +26,8 @@ import sys
 SKIP_SUFFIX = (".ttf", ".woff2", ".png", ".pdf", ".vsix", ".ico")
 # Files that QUOTE colours in order to discuss them. Counting the write-up
 # inflates every value by one and lists the write-up as a usage site.
-SKIP_FILES = {"docs/cleanup-queue.md", "palette.json"}
+SKIP_FILES = {"docs/cleanup-queue.md", "palette.json",
+              "tests/measure_palette_drift.py"}
 SHARED_AT = 4
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
