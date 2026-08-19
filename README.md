@@ -141,6 +141,9 @@ without colliding with anything.
 | `moshi/` | Midori Paper/Night for [Moshi](https://getmoshi.app) (the phone terminal for agents) — **generated** from the Ghostty themes by `build-moshi-themes.py`, which also publishes them to iCloud for the phone |
 | `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
 | `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
+| `tests/` | `lint.sh` (run before every commit), the prose-typography guards, and `dryrun-installers.sh` — never run an installer to test one, it writes into nine live vaults |
+| `docs/cleanup-queue.md` | Cleanup work list plus FINDINGS: reports from the overnight loop, several of which falsify their own item's premise |
+| `docs/cleanup-loop.md` | How to launch, resume and review the overnight cleanup loop, and what its gate cannot protect against |
 
 Fonts follow the site's semantic split: **Spectral** is the naming voice
 (titles, headers), **M PLUS** is the working voice (text you read and type).
