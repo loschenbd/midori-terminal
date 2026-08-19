@@ -1149,6 +1149,15 @@ def test_dot_alpha_is_split_in_both_modes():
     its own tuned values. Confirmed instead against .theme-light and
     .theme-dark specifically, using rules() the way the accent-role checks
     already do.
+
+    SABOTAGE-PROVED on a scratch copy, both layers:
+      - light's --dotgrid-dot-rgb/-alpha pair deleted -> FAIL "split in 1 mode
+        block(s)".
+      - BOTH real pairs deleted while a comment quotes each property twice ->
+        the n_rgb/n_alpha count is inflated to 2 by the comment (these count
+        THEME, not THEME_NC) and passes, and the per-mode rules() check
+        catches it anyway, naming .theme-light. The count is not load-bearing
+        on its own; the per-mode check is what holds.
     """
     n_rgb = THEME.count("--dotgrid-dot-rgb:")
     n_alpha = THEME.count("--dotgrid-dot-alpha:")
@@ -1305,6 +1314,13 @@ def test_widget_buffer_is_baseline_anchored():
     defect was a rendered line box, invisible to any source check. The
     instrument that actually catches a regression is
     tests/check_rendered_headings.py, which needs a running Obsidian.
+
+    SABOTAGE-PROVED in both directions when the fix landed -- the value
+    reverted to `text-top`, and the whole declaration deleted; each failed
+    naming the selector and the consequence. That proof went into the commit
+    message and not into this docstring, which meant a reader opening the test
+    saw no proof at all. Recording it here is the point: a proof nobody can
+    find from the test is not a proof anyone will trust.
     """
     found = [(sel, d) for sel, d in rules()
              if "cm-widgetBuffer" in sel and "vertical-align" in d]
