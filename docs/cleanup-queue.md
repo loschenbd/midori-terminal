@@ -585,3 +585,47 @@ backgrounds and the launchd template.
 
 **Net: one file (184K) is safely deletable, and the item's premise — that
 unreferenced means dead — held for 1 of 30 hits.**
+
+### Sabotage proofs written for 6 guards, and one was vacuous (2026-08-19)
+
+Worked the iteration-10 list from the top. Every sabotage ran against a
+`git archive HEAD` copy in a scratch directory; the real theme was never
+edited.
+
+**One real defect, in `test_leading_setting_is_snapped`.** Its floor check was
+the substring `"max(24px" not in raw`, and it was wrong in both directions:
+`max(24px * 0, ...)` destroys the floor and kept the whole suite green, while
+merely wrapping the declaration across lines makes it `max( 24px,` and failed
+correct CSS. Fixed with `max_operands()`, which splits the argument list with
+depth tracking. Re-proved after the fix in all four directions.
+
+**Sound, now with their proofs recorded:** `test_row_is_one_number` (had no
+docstring at all), `test_row_is_an_even_number_of_pixels`,
+`test_dot_alpha_is_split_in_both_modes`, `test_widget_buffer_is_baseline_anchored`
+(proof existed, but only in a commit message).
+
+**The iteration-10 ranking was itself wrong, in the shape this repo keeps
+producing.** It flagged five guards as priority 3 for "`theme_var` —
+last-match-wins". The condition that makes `theme_var` dangerous is the
+property being declared **more than once**. Checked against the stylesheet:
+
+| guard | reads via theme_var | declared >1x |
+|---|---|---|
+| `test_leading_stays_above_the_measured_harm_floor` | `--midori-row` | **yes (x2)** |
+| `test_measure` | `--file-line-width`, `--midori-avg-advance` | no |
+| `test_heading_ladder_is_optical` | — uses `theme_vars` | n/a |
+| `test_settings_defaults_match_the_css` | — uses `theme_vars` | n/a |
+| `test_dot_alpha_is_split_in_both_modes` | — uses `theme_vars` | n/a |
+
+Three of the five do not call `theme_var` at all. I ranked them by grepping
+for the helper's NAME instead of checking whether the risk condition was
+present — the same error as matching a property by name when the contract is
+per-scope, which this branch has now produced four times. The remaining
+priority-4/5 entries were ranked the same way and should be re-derived, not
+trusted.
+
+**A trap for anyone sabotaging theme.css:** lines 25 and 232 quote these
+declarations in prose. A `replace(..., 1)` edit hits the COMMENT, the real
+declaration survives, and the suite is correctly green — which reads exactly
+like the guard missing the break. It cost me one false "confirmed exploit"
+here. Any sabotage against this file must assert which line it edited.
