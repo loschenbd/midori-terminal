@@ -577,7 +577,7 @@ backgrounds and the launchd template.
 
 | file | size | verdict |
 |---|---|---|
-| `serif-top.png` | 184K | **Deletable.** A screenshot committed to the repo root by `74368ce` ("notices were Obsidian's dark toast on a paper page"). Debugging evidence for a fix that shipped; the commit message already carries the finding. The only file at the root that is not a script, a config, or a doc. |
+| `serif-top.png` | 184K | **DELETED 2026-08-19.** A screenshot committed to the repo root by `74368ce` ("notices were Obsidian's dark toast on a paper page"). Debugging evidence for a fix that shipped; the commit message already carries the finding. The only file at the root that is not a script, a config, or a doc. |
 | `vivaldi/icons/moon.svg` | 4K | **Keep.** `midori-dark-mode-icon.css:18` inlines this exact path as a `data:` URI, and `install-vivaldi.sh:58` copies only `css-mods/*.css`, never `icons/`. So nothing loads the file — but it is the readable source of an unreadable percent-encoded blob. That is the design record, not dead weight. |
 | `docs/cleanup-loop.md` | 8K | **Keep, and link it.** The runbook for this loop. Written to be found by a human, and currently findable only by knowing it exists. `README.md:526` links a spec under `docs/`, so docs here are linked when someone remembers to. |
 | `docs/superpowers/plans/2026-08-17-theme-settings.md` | 60K | **Keep.** A completed implementation plan. Plans are historical records; being unlinked is their normal end state. |
