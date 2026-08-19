@@ -228,6 +228,27 @@ def test_measure():
 
 
 def test_row_is_one_number():
+    """The grid is one variable, and no rule re-hardcodes the number.
+
+    SABOTAGE-PROVED on a scratch copy of the repo:
+      - `line-height: 24px` added to a new rule -> FAIL "1 rules still
+        hardcode line-height: 24px". Also caught as `line-height:24px`.
+      - dot grid reverted to `background-size: 24px 24px` -> FAIL "the dot
+        grid still hardcodes 24px 24px".
+      - both --midori-row declarations deleted -> FAIL "not defined", plus
+        three sibling guards.
+
+    WHAT IT DOES NOT CATCH, BY DESIGN: deleting only the plain `24px`
+    fallback. theme_var() returns the textually LAST declaration -- the
+    round() one inside @supports -- so this guard cannot see the fallback go.
+    test_snapped_vars_all_have_plain_fallbacks is the guard for that, and it
+    was proved on exactly that break.
+
+    SABOTAGING THIS FILE HAS A TRAP: theme.css:25 and :232 quote these
+    declarations in prose. A replace-first edit hits the COMMENT, the real
+    declaration survives, and the suite is correctly green -- which reads as
+    "the guard missed it". Any sabotage here must assert which line it edited.
+    """
     raw = theme_var("--midori-row")
     if raw is None:
         bad("--midori-row is not defined; the grid is still a literal in every rule")
@@ -514,6 +535,11 @@ def test_row_is_an_even_number_of_pixels():
     match would fail on correctly-wrapped source and read as a missing
     round(). The constraint belongs on the regex, not on how the next person
     is allowed to format the CSS.
+
+    SABOTAGE-PROVED on a scratch copy: dropping round() for a bare
+    `max(24px, var(--font-text-size) * 1.5)` -> FAIL quoting the value and
+    naming the 0.5px baseline error; changing the 2px step to 1px -> FAIL
+    "must round UP to 2px, not 1px".
     """
     raw = " ".join((theme_var("--midori-row") or "").split())
     if re.search(r"round\(\s*up\s*,.*,\s*2px\s*\)", raw):
@@ -534,6 +560,41 @@ def test_row_is_an_even_number_of_pixels():
         ok(f"all rows across {BASES[0]}-{BASES[-1]}px are even")
 
 
+def max_operands(expr):
+    """Top-level comma-separated operands of the first max(...) in expr.
+
+    A SUBSTRING TEST FOR "max(24px" IS WRONG IN BOTH DIRECTIONS, and this
+    guard shipped with it. `max(24px * 0, ...)` contains the substring while
+    the floor is gone -- sabotaged on a scratch copy, the whole suite stayed
+    green. And the declaration is allowed to wrap (the sibling even-row guard
+    normalises whitespace and says so), but wrapping turns the text into
+    `max( 24px,`, which does NOT contain "max(24px" -- so correct CSS failed
+    with "must floor at 24px" while flooring at exactly 24px.
+
+    Splitting into operands answers the question actually being asked: is 24px
+    a whole argument of the max, rather than a substring inside one? Depth
+    tracking keeps a nested `min(...)` or `calc(...)` comma from splitting an
+    operand in half.
+    """
+    i = expr.find("max(")
+    if i < 0:
+        return []
+    depth, start, out = 0, i + 4, []
+    for j in range(i + 4, len(expr)):
+        c = expr[j]
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            if depth == 0:
+                out.append(expr[start:j].strip())
+                return out
+            depth -= 1
+        elif c == "," and depth == 0:
+            out.append(expr[start:j].strip())
+            start = j + 1
+    return out
+
+
 def test_leading_setting_is_snapped():
     """The leading slider reaches the row only through round(..., 2px).
 
@@ -550,6 +611,19 @@ def test_leading_setting_is_snapped():
     only reads the real declaration by accident, because the real one happens
     to sit later in the file. Add a later comment that also says "round" and
     the guard would silently start reading prose instead of CSS.
+
+    THE FLOOR CHECK WAS A SUBSTRING TEST AND WAS WRONG BOTH WAYS. It read
+    `"max(24px" not in raw`. Sabotaged on a scratch copy:
+      - `max(24px * 0, ...)` -- the floor destroyed, the row free to collapse
+        below 24px -- kept the substring, and the WHOLE SUITE STAYED GREEN.
+      - the same declaration merely wrapped across lines (which the sibling
+        even-row guard explicitly permits, and normalises for) becomes
+        `max( 24px,`, which does not contain "max(24px", so correct CSS FAILED
+        with "must floor at 24px" while flooring at exactly 24px.
+    It now asks max_operands() whether 24px is a whole argument. Re-proved
+    after the fix: `24px * 0` FAILs and prints the operand list, `20px` FAILs,
+    while the wrapped form and `max(var(...), 24px)` -- the floor as second
+    operand, equally valid CSS -- both stay green.
     """
     raw = None
     for m in re.finditer(r"--midori-row\s*:\s*([^;]+);", THEME_NC):
@@ -566,8 +640,9 @@ def test_leading_setting_is_snapped():
         bad(f"--midori-row is {raw!r}: must round UP to 2px, not 1px -- "
             "the dot offset adds half the row's growth")
         return
-    if "max(24px" not in raw:
-        bad(f"--midori-row is {raw!r}: must floor at 24px")
+    if "24px" not in max_operands(raw):
+        bad(f"--midori-row is {raw!r}: must floor at 24px "
+            f"(max() operands are {max_operands(raw)})")
         return
     b = settings_block()
     s = next((x for x in (b or {}).get("settings", [])
