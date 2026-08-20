@@ -35,7 +35,13 @@ WHY THE TERMINAL CURSOR IS NOT ghostty's cursor-color. In ghostty/themes/*
 `cursor-color` is set to the EXACT background hex as a sentinel -- the shader
 detects it and substitutes the indigo ink. Copying that value here would
 render an invisible cursor while looking perfectly faithful to the source.
-The real ink is what is used below: #3a5572 on paper, #6c87a4 on night.
+The real ink is used instead: #6c87a4, the lifted indigo, in BOTH modes.
+
+  That line previously read "#3a5572 on paper, #6c87a4 on night", which was
+  true when written and stopped being true the moment the paper terminal
+  moved onto the night ground -- #3a5572 is the indigo tuned for a cream
+  bed, and it is the wrong ink on #1a1917. Both modes now share one dark
+  terminal, so both share one cursor.
 """
 import argparse
 import json
@@ -128,12 +134,26 @@ PAPER = {
     "sidebarRowActive": "#ced1c8",
     "sidebarRowSelected": "#ced1c8",
     "sidebarBorder": "#e1dfd9",
-    "terminalBackground": "#f3f1eb",
-    "terminalForeground": "#2a2825",
-    "terminalCursor": "#3a5572",            # the real ink; see the header
-    "terminalSelection": "#ced1c8",
-    "terminalScrollbar": "#e1dfd9",
-    "terminalScrollbarHover": "#ced1c8",
+    # THE PAPER TERMINAL IS DARK ON PURPOSE. t3 hardcodes its ANSI palette --
+    # there is no ansi role among the 57, and no --ansi-* CSS variable, so the
+    # 16 colours a shell prompt paints with are out of a theme's reach. Both
+    # palettes it ships are bright-on-dark. Measured against 4.5:1:
+    #
+    #   VGA      on paper #f3f1eb  median 2.33  11 of 16 fail
+    #   VGA      on night #1a1917  median 6.78   5 of 16 fail
+    #   VS Code  on paper #f3f1eb  median 2.48  13 of 15 fail
+    #   VS Code  on night #1a1917  median 6.28   4 of 15 fail
+    #
+    # No choice of terminalForeground fixes that, because the prompt does not
+    # use it. Giving the pane the night ground is the only lever that moves
+    # the number, and it roughly triples the median. This is the one place
+    # Paper deliberately stops matching the rest of the app.
+    "terminalBackground": "#1a1917",
+    "terminalForeground": "#ebe8e2",
+    "terminalCursor": "#6c87a4",            # night ink; correct on a dark bed
+    "terminalSelection": "#40453d",
+    "terminalScrollbar": "#2f2e2b",
+    "terminalScrollbarHover": "#40453d",
 }
 
 NIGHT = {
