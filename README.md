@@ -131,7 +131,7 @@ without colliding with anything.
 |---|---|
 | `ghostty/` | Main config, `midori-paper`/`midori-night` themes, background PNGs, rounded-cursor shader |
 | `watcher/` | Appearance/display watcher script + launchd plist template |
-| `prompt/midori.omp.json` | Manuscript-style oh-my-posh prompt (ANSI names only, no powerline blocks) |
+| `prompt/midori.omp.json` | Manuscript-style oh-my-posh prompt (24-bit hex, no powerline blocks). It named ANSI colours until 2026-08-20; see `t3/README.md` for why pinning them was necessary and what it costs |
 | `shell/zshrc.midori` | omp init, fzf ANSI palette, eza aliases, zoxide, zsh autosuggestions/highlighting, cursor-color reset (sourced from `.zshrc`) |
 | `tmux/midori.tmux.conf` | Pane borders, status/message styles (sourced from `.tmux.conf`) |
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |

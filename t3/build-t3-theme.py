@@ -35,13 +35,13 @@ WHY THE TERMINAL CURSOR IS NOT ghostty's cursor-color. In ghostty/themes/*
 `cursor-color` is set to the EXACT background hex as a sentinel -- the shader
 detects it and substitutes the indigo ink. Copying that value here would
 render an invisible cursor while looking perfectly faithful to the source.
-The real ink is used instead: #6c87a4, the lifted indigo, in BOTH modes.
+The real ink is used instead: #3a5572 on paper, #6c87a4 on night.
 
-  That line previously read "#3a5572 on paper, #6c87a4 on night", which was
-  true when written and stopped being true the moment the paper terminal
-  moved onto the night ground -- #3a5572 is the indigo tuned for a cream
-  bed, and it is the wrong ink on #1a1917. Both modes now share one dark
-  terminal, so both share one cursor.
+  This line has now been wrong twice, in opposite directions, because the
+  paper terminal briefly moved onto the night ground and moved back. The
+  rule that survives both: the cursor ink must match the ground it is drawn
+  on, not the mode it is named after. #3a5572 is tuned for cream, #6c87a4
+  for #1a1917 -- read the terminalBackground beside it before changing it.
 """
 import argparse
 import json
@@ -134,26 +134,33 @@ PAPER = {
     "sidebarRowActive": "#ced1c8",
     "sidebarRowSelected": "#ced1c8",
     "sidebarBorder": "#e1dfd9",
-    # THE PAPER TERMINAL IS DARK ON PURPOSE. t3 hardcodes its ANSI palette --
-    # there is no ansi role among the 57, and no --ansi-* CSS variable, so the
-    # 16 colours a shell prompt paints with are out of a theme's reach. Both
-    # palettes it ships are bright-on-dark. Measured against 4.5:1:
+    # THE PAPER TERMINAL IS LIGHT, AND THAT ONLY WORKS BECAUSE THE PROMPT
+    # STOPPED USING ANSI. t3 hardcodes its ANSI palette -- no ansi role among
+    # the 57, no --ansi-* variable -- and both palettes it ships are
+    # bright-on-dark, so a prompt painting with ANSI names is unreadable here:
     #
-    #   VGA      on paper #f3f1eb  median 2.33  11 of 16 fail
-    #   VGA      on night #1a1917  median 6.78   5 of 16 fail
+    #   VGA      on paper #f3f1eb  median 2.33  11 of 16 fail 4.5:1
     #   VS Code  on paper #f3f1eb  median 2.48  13 of 15 fail
-    #   VS Code  on night #1a1917  median 6.28   4 of 15 fail
     #
-    # No choice of terminalForeground fixes that, because the prompt does not
-    # use it. Giving the pane the night ground is the only lever that moves
-    # the number, and it roughly triples the median. This is the one place
-    # Paper deliberately stops matching the rest of the app.
-    "terminalBackground": "#1a1917",
-    "terminalForeground": "#ebe8e2",
-    "terminalCursor": "#6c87a4",            # night ink; correct on a dark bed
-    "terminalSelection": "#40453d",
-    "terminalScrollbar": "#2f2e2b",
-    "terminalScrollbarHover": "#40453d",
+    # The escape is that t3 passes 24-bit truecolor through VERBATIM -- its
+    # SGR parser returns the literal rgb for `38;2;R;G;B` and only falls back
+    # to the hardcoded table for named and 256-colour codes. So
+    # prompt/midori.omp.json now names hex instead of `green`/`cyan`, and the
+    # prompt renders in exact Midori ink on any ground. Nothing else in the
+    # pane is under this theme's control; `ls` and friends still emit ANSI and
+    # will still look wrong on cream.
+    # THE LIGHTEST GROUND WINS, WHICH IS BACKWARDS FROM THE INSTINCT. The
+    # prompt inks are mid-tone (L 52-66), so a deeper paper REDUCES their
+    # contrast. Measured worst-ink across candidate grounds:
+    #   #faf9f6 alt 2.96 | #f3f1eb canvas 2.76 | #edeae2 2.59 | #ced1c8 2.02
+    # so the pane uses the alt paper, not the canvas -- which also separates
+    # the terminal from the app body without a border.
+    "terminalBackground": "#faf9f6",
+    "terminalForeground": "#2a2825",        # 13.96:1 on the ground above
+    "terminalCursor": "#3a5572",            # indigo tuned for a cream bed
+    "terminalSelection": "#ced1c8",
+    "terminalScrollbar": "#e1dfd9",
+    "terminalScrollbarHover": "#ced1c8",
 }
 
 NIGHT = {
