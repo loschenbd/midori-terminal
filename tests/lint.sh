@@ -156,6 +156,14 @@ else
   echo "  skip (node not found)"
 fi
 
+# The t3 theme is GENERATED, and t3 validates it strictly on import -- an
+# unknown role or a non-hex value throws by name. Catching that here means the
+# failure lands at commit time rather than in a dialog inside someone's
+# browser, and the --check half fails if the committed JSON was hand-edited
+# away from the source that produced it.
+echo "== t3 theme matches its source =="
+if python3 t3/build-t3-theme.py --check; then :; else FAIL=1; fi
+
 echo
 [ "$FAIL" -eq 0 ] && echo "LINT: all green" || echo "LINT: failures above"
 exit "$FAIL"

@@ -27,7 +27,9 @@ SKIP_SUFFIX = (".ttf", ".woff2", ".png", ".pdf", ".vsix", ".ico")
 # Files that QUOTE colours in order to discuss them. Counting the write-up
 # inflates every value by one and lists the write-up as a usage site.
 SKIP_FILES = {"docs/cleanup-queue.md", "palette.json",
-              "tests/measure_palette_drift.py"}
+              "tests/measure_palette_drift.py",
+              "docs/superpowers/specs/2026-08-19-palette-generation-scope.md",
+              "t3/README.md"}
 SHARED_AT = 4
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -45,7 +47,16 @@ def bad(msg):
 
 
 def used_hexes(root):
-    files = subprocess.run(["git", "-C", str(root), "ls-files"],
+    # --others --exclude-standard so a file that is NEW but not yet committed
+    # counts. Plain `ls-files` sees only tracked paths, which meant lint went
+    # green on the very commit that introduced a violation and failed on the
+    # NEXT one -- the new file was invisible while it was still untracked.
+    # That is exactly how docs/superpowers/specs/2026-08-19-palette-generation
+    # -scope.md pushed two values over the threshold unnoticed. gitignored
+    # scratch stays excluded, so this widens the scan without dragging in
+    # build output.
+    files = subprocess.run(["git", "-C", str(root), "ls-files",
+                            "--cached", "--others", "--exclude-standard"],
                            capture_output=True, text=True).stdout.split()
     out = collections.defaultdict(set)
     for f in files:
