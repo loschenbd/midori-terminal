@@ -77,19 +77,44 @@ bundle's own role-to-variable table, where none of the 57 points anywhere
 else. Two visible things therefore sit outside a theme's reach in 0.0.33:
 
 **The terminal's 16 ANSI colours.** There is no ansi role and no `--ansi-*`
-CSS variable. t3 hardcodes two palettes and both are bright-on-dark. Measured
-against a 4.5:1 floor:
+CSS variable, and t3 hardcodes two palettes, both bright-on-dark. Against a
+4.5:1 floor on paper `#f3f1eb`: the VGA palette medians 2.33 with 11 of 16
+failing, the VS Code one medians 2.48 with 13 of 15 failing. A shell prompt
+painting with ANSI names is therefore unreadable in Paper, and no choice of
+`terminalForeground` fixes it, because the prompt never uses that value.
 
-| palette | on paper `#f3f1eb` | on night `#1a1917` |
-|---|---|---|
-| VGA | median 2.33, **11 of 16 fail** | median 6.78, 5 of 16 fail |
-| VS Code | median 2.48, **13 of 15 fail** | median 6.28, 4 of 15 fail |
+**The way out is truecolor.** t3's SGR parser returns the literal rgb for
+`38;2;R;G;B` and only falls back to the hardcoded table for named and
+256-colour codes, so a 24-bit colour renders exactly as named. That is why
+`prompt/midori.omp.json` now pins hex instead of `green`/`cyan`/`yellow`/
+`red`/`lightGreen`/`darkGray`. Verified from the rendered escape sequence, not
+assumed: `oh-my-posh print primary` emits 5 truecolor codes and **0** legacy
+ANSI colour codes.
 
-That is why a shell prompt is unreadable in Paper and why no choice of
-`terminalForeground` fixes it — the prompt paints with ANSI, not with the
-theme's foreground. **So Paper's terminal deliberately uses the night ground.**
-It is the only lever that moves the number, and it roughly triples the median.
-One pane in the light theme is dark on purpose.
+The cost is that one pinned value must serve both the cream and the night
+ground, and **no colour clears 4.5:1 on both** — a light ground needs dark ink
+and a dark ground needs light ink. So the prompt no longer adapts between
+ghostty Paper and Night; each value is chosen for the best worst-case:
+
+| role | Midori token | on cream | on night |
+|---|---|---|---|
+| path, prompt arrow | olive `#6c7d52` | 3.96 | 3.93 |
+| git clean | mint `#548373` | 3.82 | 4.08 |
+| ahead | sage `#5f6f5e` | 4.74 | 3.28 |
+| conflict, error | terracotta `#b06d4a` | 3.62 | 4.29 |
+| separator | faint `#8a847b` | 3.28 | 4.74 |
+| dirty, behind | ochre `#b88a3a` | **2.96** | 5.63 |
+
+**Ochre is the known-weak one and is deliberate.** It is Midori's real ANSI
+yellow, and nothing darker exists in the palette; inventing one would put a
+colour in the prompt that appears nowhere else. It carries the highest chroma
+in the set (C 11.1 in OKLCh, against 1.5–7.8 for the rest), so it reads as
+*coloured* rather than as faint — the standard trade when a token has no
+lightness room left. It is also the state you see most often, so if it grates,
+the honest fix is a darker ochre added to the palette proper.
+
+Anything that is not the prompt still emits ANSI — `ls`, `git` output, compiler
+diagnostics — and those remain at the mercy of t3's hardcoded palette.
 
 **Status labels.** "Working", "Awaiting Input", "Plan Ready" and friends are
 Tailwind utilities baked into the components — `text-sky-600
