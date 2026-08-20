@@ -104,8 +104,14 @@ labels onto theme roles, or a CSS injection mechanism that does not exist yet.
 **The terminal cursor is not `cursor-color`.** In `ghostty/themes/*` that key
 is set to the *exact background hex as a sentinel* — the shader detects it and
 substitutes the indigo ink. Copying it here would have produced an invisible
-cursor that looked perfectly faithful to the source. The real ink is
-`#3a5572` on paper and `#6c87a4` on night, and that is what this theme uses.
+cursor that looked perfectly faithful to the source. The real ink is used
+instead: `#6c87a4`, the lifted indigo, in **both** modes.
+
+> That last sentence read "`#3a5572` on paper and `#6c87a4` on night" until
+> the paper terminal moved onto the night ground. It was true when written and
+> false immediately after — `#3a5572` is the indigo tuned for a cream bed and
+> is the wrong ink on `#1a1917`. Both modes now share one terminal, so both
+> share one cursor.
 
 **Three roles are derived, not Midori tokens.** `errorSurface`,
 `warningSurface` and `updateSurface` are washes, and Midori has no hand-tuned
