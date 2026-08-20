@@ -70,6 +70,35 @@ malformed values, substituting the built-in default. The same typo is a loud
 error through one door and an invisible no-op through the other. Import the
 file.
 
+## What a theme file cannot reach
+
+The 57 roles map **only** to `--app-theme-*` variables — verified against the
+bundle's own role-to-variable table, where none of the 57 points anywhere
+else. Two visible things therefore sit outside a theme's reach in 0.0.33:
+
+**The terminal's 16 ANSI colours.** There is no ansi role and no `--ansi-*`
+CSS variable. t3 hardcodes two palettes and both are bright-on-dark. Measured
+against a 4.5:1 floor:
+
+| palette | on paper `#f3f1eb` | on night `#1a1917` |
+|---|---|---|
+| VGA | median 2.33, **11 of 16 fail** | median 6.78, 5 of 16 fail |
+| VS Code | median 2.48, **13 of 15 fail** | median 6.28, 4 of 15 fail |
+
+That is why a shell prompt is unreadable in Paper and why no choice of
+`terminalForeground` fixes it — the prompt paints with ANSI, not with the
+theme's foreground. **So Paper's terminal deliberately uses the night ground.**
+It is the only lever that moves the number, and it roughly triples the median.
+One pane in the light theme is dark on purpose.
+
+**Status labels.** "Working", "Awaiting Input", "Plan Ready" and friends are
+Tailwind utilities baked into the components — `text-sky-600
+dark:text-sky-400`, `text-indigo-600`, `text-violet-600`. They resolve to
+`var(--color-sky-600)` and similar, which a theme file has no way to set, and
+0.0.33 exposes no custom-CSS hook. Recolouring "Working" to Midori indigo is
+not possible from a theme; it needs either an upstream change mapping those
+labels onto theme roles, or a CSS injection mechanism that does not exist yet.
+
 ## Two things that would have shipped wrong
 
 **The terminal cursor is not `cursor-color`.** In `ghostty/themes/*` that key
