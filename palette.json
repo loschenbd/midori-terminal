@@ -127,7 +127,13 @@
     },
     "text-normal": {
       "source": "obsidian/theme.css",
-      "dark": "#ebe8e2"
+      "dark": "#ebe8e2",
+      "light": "#3d3933"
+    },
+    "text-faint": {
+      "source": "obsidian/theme.css",
+      "light": "#8a847b",
+      "dark": "#6e685f"
     },
     "titlebar-background": {
       "source": "obsidian/theme.css",
