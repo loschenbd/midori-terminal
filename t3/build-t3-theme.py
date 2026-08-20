@@ -79,6 +79,22 @@ ROLES = [
     "terminalSelection", "terminalScrollbar", "terminalScrollbarHover",
 ]
 
+# WHY PAPER'S INK IS #2a2825 AND NOT --text-normal #3d3933. It was #3d3933
+# and read washed out. Nothing was broken -- sampled from a retina screenshot,
+# the prose ground came back #f3f1ec and the darkest glyph #3d3934, i.e. the
+# token rendering exactly as set. The value itself was the wrong one to pick.
+#
+# theme.css calls #3d3933 "--foreground lifted a step": it is Obsidian's BODY
+# text, softened on purpose for long-form reading on paper. t3 is a UI at
+# ~15px, not a writing surface, and that lift reads as faint here.
+#
+# It was also an asymmetry of my own making. Night took #ebe8e2 -- ghostty's
+# night FOREGROUND, the un-lifted ink -- while Paper took Obsidian's lifted
+# body value. Both modes now take the ghostty ink for their ground:
+#
+#   paper  #2a2825 on #f3f1eb  13.01:1   (was #3d3933, 10.15:1)
+#   night  #ebe8e2 on #1a1917  14.37:1   (unchanged)
+#
 # ---------------------------------------------------------------------------
 # Midori values. Every hex here already exists in this repo -- these are the
 # same tokens obsidian/theme.css and ghostty/themes/* ship, not new colours
@@ -89,15 +105,15 @@ PAPER = {
     "canvas": "#f3f1eb",                    # --background-primary
     "chrome": "#edeae2",                    # --background-secondary
     "toolbar": "#edeae2",
-    "toolbarForeground": "#3d3933",         # --text-normal
+    "toolbarForeground": "#2a2825",         # ghostty paper foreground
     "toolbarBorder": "#e1dfd9",             # ghostty split divider
     "toolbarControl": "#faf9f6",            # --background-primary-alt
-    "toolbarControlForeground": "#3d3933",
+    "toolbarControlForeground": "#2a2825",
     "toolbarControlHover": "#e4e0d6",       # the light hover rung
     "surface": "#faf9f6",
     "surfaceRaised": "#faf9f6",
     "surfaceOverlay": "#faf9f6",
-    "text": "#3d3933",
+    "text": "#2a2825",
     "textMuted": "#524d46",                 # --text-muted
     "border": "#e1dfd9",
     "input": "#faf9f6",
@@ -105,7 +121,7 @@ PAPER = {
     "accent": "#5f6f5e",
     "accentForeground": "#f3f1eb",
     "secondary": "#edeae2",
-    "secondaryForeground": "#3d3933",
+    "secondaryForeground": "#2a2825",
     "muted": "#edeae2",
     "mutedForeground": "#524d46",
     "placeholder": "#8a847b",               # --text-faint
@@ -118,16 +134,16 @@ PAPER = {
     "update": "#3a5572",                    # indigo
     "updateForeground": "#3a5572",
     "accentSurface": "#ced1c8",             # ghostty selection-background
-    "accentSurfaceForeground": "#3d3933",
+    "accentSurfaceForeground": "#2a2825",
     "messageSurface": "#ebe8e0",            # the userMessage rung
-    "messageForeground": "#3d3933",
+    "messageForeground": "#2a2825",
     "messageAction": "#5f6f5e",
     "messageActionForeground": "#f3f1eb",
     "messageActionHover": "#6c7d52",        # olive, one step off sage
     "codeBackground": "#faf9f6",
     "codeForeground": "#2a2825",
     "sidebar": "#edeae2",
-    "sidebarForeground": "#3d3933",
+    "sidebarForeground": "#2a2825",
     "sidebarMutedForeground": "#524d46",
     "sidebarControlSurface": "#faf9f6",
     "sidebarRowHover": "#e4e0d6",

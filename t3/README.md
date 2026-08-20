@@ -138,6 +138,17 @@ instead: `#6c87a4`, the lifted indigo, in **both** modes.
 > is the wrong ink on `#1a1917`. Both modes now share one terminal, so both
 > share one cursor.
 
+**Paper's ink is `#2a2825`, not `--text-normal` `#3d3933`.** The first cut
+used `#3d3933` and read washed out. Sampling a retina screenshot showed the
+token rendering exactly as set — ground `#f3f1ec`, darkest glyph `#3d3934` —
+so nothing was broken; the value was simply the wrong one to borrow.
+`theme.css` calls `#3d3933` "`--foreground` lifted a step": it is Obsidian's
+*body* text, softened on purpose for long-form reading. t3 is a UI at ~15px,
+not a writing surface, and that lift reads as faint. It was also an asymmetry
+— Night had taken ghostty's un-lifted ink `#ebe8e2` while Paper took the
+lifted body value. Both now take the ghostty foreground for their ground:
+Paper 13.01:1 (was 10.15:1), Night 14.37:1 (unchanged).
+
 **Three roles are derived, not Midori tokens.** `errorSurface`,
 `warningSurface` and `updateSurface` are washes, and Midori has no hand-tuned
 value for them. Rather than invent three hexes and let them read as part of
