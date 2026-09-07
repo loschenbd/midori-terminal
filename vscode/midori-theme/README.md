@@ -113,6 +113,15 @@ colour or style, and re-resolving the same stream as `typescript` changes 0 of
 `variable.readonly:python` from a scratch copy drops the count to 45, naming
 exactly the 30 tokens that stopped being coloured.
 
+Then confirmed in the rendered buffer, because a resolver agreeing with itself
+is not the same evidence: character cells sampled out of two Cursor screenshots
+after install. Constants terracotta, builtins italic in their own hue, and
+`typing` / `fastapi` / `pydantic` / `app.config` all measuring `#625649` beside
+a wine `BaseModel`. That last one is the case worth checking by eye — every
+other rule here wins its selector contest 210 to 100 on a modifier, while
+`namespace:python` wins 110 to 100 on the language bonus alone, so it is the
+only one whose outcome the scoring rules above could have got wrong.
+
 **`self` is a parameter here, not a `this`.** The `variable.language` rule
 below is captioned "this / self" and never fires for Python: `cursorpyright`
 declares `selfParameter` with `superType: parameter`, so VS Code resolves it
