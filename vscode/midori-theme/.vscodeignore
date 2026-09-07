@@ -9,6 +9,12 @@ media/icon-raw.png
 media/finish_icon.py
 media/measure_bars.py
 
+# Bytecode for the two media/ scripts above. It is gitignored, so it never
+# shows up in a diff -- but vsce reads .vscodeignore, NOT .gitignore, so it was
+# shipping in every VSIX (11.35 KB, visible only in the `vsce ls` tree) while
+# the .py files it compiles were being excluded two lines up.
+**/__pycache__/**
+
 # Screenshot source + brief: needed in git so the images can be reshot,
 # but not shipped to users.
 media/SCREENSHOTS.md
