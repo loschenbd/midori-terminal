@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.22.0 — Python reads like Python
+
+Python is coloured by the language server, not by the TextMate grammar: on a
+real FastAPI file, 40 tokens carry no scope past `source.python`, so semantic
+tokens do all the work and *override* every rule below them. Six new
+`:python`-scoped rules give back the roles that override was flattening. Nothing
+outside Python changes — re-resolving the same 252 tokens as `typescript`
+changes 0 of them.
+
+- **Module names step back.** `namespace` was the same wine as the class beside
+  it, so `from pydantic import BaseModel` had no tiers. Modules now take the
+  parameter neutral, upright.
+- **Builtins are italic.** `dict`, `str`, `len` and `.values()` were
+  indistinguishable from your own classes and functions. They keep their hue and
+  gain italic — the ladder had no free rung to spend (a search over all eight
+  hues × L 43–56 × C 0.5–20 found no candidate below C 14.5, above this theme's
+  C 12.0 ceiling), and italic already means "provided, not declared" here.
+- **Module constants are terracotta again.** `MAX_RETRIES` and `_ITEMS` matched
+  `constant.other.caps` and still rendered as plain ink, because the semantic
+  type `variable.readonly` resolved onto a scope this theme's `variable` rule
+  caught first.
+- **Enum members are terracotta.** `Color.RED` was rendering as an ordinary
+  variable.
+- The `variable.language` caption said "this / self"; Python's `self` is a
+  `selfParameter` with `superType: parameter` and lands on the parameter rule
+  instead. Left as-is — it reads better — and the caption now says so.
+
 ## 1.21.0 — first public release
 
 Midori Paper and Midori Night, plus a matching file icon set, workbench

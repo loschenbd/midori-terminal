@@ -76,6 +76,50 @@ tiers. The palette is an OKLCh lightness ladder with hues left alone.
 functions, methods, classes, interfaces, enums, types, namespaces — and control
 flow. Not call sites, and not variables.
 
+**Python is coloured by the language server, not by the grammar.** Measured on
+`main.py` from python-starter: 40 of its tokens carry no TextMate scope past
+`source.python` — MagicPython leaves imported names, annotation positions and
+attribute access to `meta.*` containers with no leaf scope — so the whole file
+would be flat ink if the grammar were all there was. Cursor's `cursorpyright`
+fills the gap with semantic tokens, and those *win over* the grammar. That has
+two consequences worth writing down. First, every TextMate rule below is a
+fallback in Python, not the answer: `_ITEMS` matched `constant.other.caps` and
+still rendered as plain ink, because the semantic type `variable.readonly` was
+resolving through VS Code's default map onto `variable.other.constant`, which
+this theme's own `variable` rule caught. Second, the six `:python`-scoped
+semantic rules are the only place Python-specific colour can be set at all.
+
+**The syntax ladder is full — Python's extra roles had to reuse rungs.**
+`cursorpyright` distinguishes four things the theme was painting one colour:
+user classes, builtin classes, modules and type parameters, all wine. A search
+over all eight Midori hues × L 43–56 × C 0.5–20, requiring 4.45:1 against the
+paper ground and the ΔL≥6-or-ΔC≥3 separation rule against every other syntax
+role, returned **zero candidates below C 14.5** — every free cell needs more
+chroma than any colour in this theme (the ceiling is C 12.0, control flow), and
+the paragraph above records why lifting chroma was rejected. So the roles were
+given existing rungs and the second axis instead:
+
+| Python role | treatment | why |
+|---|---|---|
+| module (`namespace`) | the parameter neutral, upright | recedes behind the class it imports; italic keeps it apart from parameters |
+| builtin class / function / method | its own hue, *italic* | says "the language provides this" without spending a rung |
+| module constant (`variable.readonly`) | terracotta | restores what `constant.other.caps` used to do before semantic tokens took over |
+| enum member | terracotta | it is a constant; it was rendering as an ordinary variable |
+
+All six are scoped `:python`. Verified on the real token stream rather than by
+reading: 75 of 252 semantic tokens in `main.py` plus a 70-line probe change
+colour or style, and re-resolving the same stream as `typescript` changes 0 of
+252 — the scoping is measured, not assumed. Deleting `namespace:python` and
+`variable.readonly:python` from a scratch copy drops the count to 45, naming
+exactly the 30 tokens that stopped being coloured.
+
+**`self` is a parameter here, not a `this`.** The `variable.language` rule
+below is captioned "this / self" and never fires for Python: `cursorpyright`
+declares `selfParameter` with `superType: parameter`, so VS Code resolves it
+through the hierarchy to the theme's `parameter` rule. That is the better
+result — `self.width` reads as neutral-italic plus purple rather than one
+purple blob — so it is left alone, but the caption is only true of JS and TS.
+
 **Markup inside template literals is coloured.** TypeScript's grammar gives a
 template literal one scope end to end, so `<div class="muted">` normally has no
 tags or attributes to colour. A grammar injection emits the missing scopes, and
