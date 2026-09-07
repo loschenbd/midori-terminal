@@ -629,3 +629,190 @@ declarations in prose. A `replace(..., 1)` edit hits the COMMENT, the real
 declaration survives, and the suite is correctly green — which reads exactly
 like the guard missing the break. It cost me one false "confirmed exploit"
 here. Any sabotage against this file must assert which line it edited.
+
+---
+
+## Queue — guard sabotage proofs (added 2026-09-01)
+
+`tests/test_prose_typography.py` holds 21 guards. **Nine carry a sabotage
+proof; twelve do not.** This queue is those twelve, one per iteration.
+
+A proof here means what the skill means: a specific break, applied to a
+scratch copy, and a record of what the suite did — not a reading of the
+assertion, and not a note that some *earlier version* of the test was green
+under it. Five of the twelve already name their break in the docstring; for
+those the sabotage is chosen and only the outcome is missing.
+
+### The iteration-10 ranking is NOT used here
+
+That ranking is discredited in its own follow-up: it was built by grepping
+for the helper's NAME rather than checking whether the risk condition was
+present. This ordering was re-derived from the stylesheet on 2026-09-01.
+Re-derive it again rather than trusting the table below.
+
+`theme_var()` returns the textually last declaration, so it cannot see an
+earlier one being deleted. **The risk condition is the property being
+declared more than once** — not the call appearing. Measured:
+
+| guard | reads via `theme_var` | declared >1x |
+|---|---|---|
+| `test_row_is_one_number` | `--midori-row` | **yes (2x)** — proved |
+| `test_row_is_an_even_number_of_pixels` | `--midori-row` | **yes (2x)** — proved |
+| `test_leading_stays_above_the_measured_harm_floor` | `--midori-row` | **yes (2x)** — item 1 below |
+| `test_measure` | `--file-line-width`, `--midori-avg-advance` | no (1x each) |
+| `test_heading_ladder_is_optical` | `--h1..h4-size` (f-string) | no (1x each) |
+| `test_settings_defaults_match_the_css` | `--{id}` (f-string, every control) | no — see below |
+
+Two corrections to the earlier account, both found by measurement:
+
+- `test_measure` **does** call `theme_var`; the earlier note said the
+  priority-3 group did not call it at all. It does — harmlessly, on two
+  singly-declared properties. "Does not call it" and "calls it without
+  exposure" are different findings and only the second is true here.
+- `test_settings_defaults_match_the_css` and `test_heading_ladder_is_optical`
+  call `theme_var` through an **f-string**, which a literal-argument grep
+  cannot see. Both are clean anyway: the heading sizes are declared once
+  each, and the defaults guard filters to `variable-*` controls, all five of
+  which are declared exactly once. `--midori-accent` is declared 10x but is a
+  `class-select` and is skipped.
+
+So exactly **one** unproved guard carries the last-match-wins exposure, not
+five. The rest are ranked by the other shapes this repo has actually shipped:
+substring matching (which produced the one real defect found so far, in
+`test_leading_setting_is_snapped`), unscoped regex, and rule-exists-but-does-
+not-take-effect (the specificity-contest shape, hit at least twice).
+
+### The trap that costs a false "confirmed exploit"
+
+`obsidian/theme.css` quotes whole declarations in its own prose. Measured:
+`--midori-row:` matches **4** times in the raw file and **2** with comments
+stripped — half the textual matches are commentary. A `replace(..., 1)`
+sabotage edits the comment, the real declaration survives, the suite is
+correctly green, and it reads exactly like the guard missing the break.
+
+**Every sabotage in this queue must assert which line it edited**, and must
+re-read the file after editing to confirm the live declaration changed.
+
+### Extra rules for this queue
+
+The 8 steps in "How to do an item" apply unchanged. Three additions:
+
+- Sabotage a `git archive HEAD` copy in a scratch directory. **Never edit the
+  real theme**, and never `git checkout` over an edit to undo it.
+- Prove in **both** directions: the break must FAIL *naming what broke*, and
+  the unmodified copy must pass. A break that fails with an unrelated message
+  is a different defect, not a proof.
+- Record the proof in the **docstring**, not only the commit message. A future
+  reader opens the test, not the log. That gap is why
+  `test_widget_buffer_is_baseline_anchored` was counted unproven for a week
+  after the work was done.
+- If a guard turns out to be vacuous, **fix it and re-prove all four
+  directions** — that is still one item, and it is the outcome that makes this
+  queue worth running.
+
+### Tier 1 — the measured last-match-wins exposure
+
+- [ ] **`test_leading_stays_above_the_measured_harm_floor` (L436).** The only
+      unproved guard reading a property declared twice. `theme_var` returns
+      the `@supports` `round(up, max(24px, ...), 2px)` form, so the plain
+      `--midori-row: 24px` fallback above it is invisible to this guard.
+      Sabotage: (a) delete the plain fallback declaration only — record
+      whether this guard notices, and if it does not, say so plainly rather
+      than treating another guard's coverage as this one's; (b) set the
+      leading slider's `min` in @settings below the Rello floor (0.9) — must
+      FAIL naming the floor and the computed leading; (c) remove the `max(24px,
+      ...)` clamp so the row can collapse. State which line each edit hit.
+
+### Tier 2 — substring matching and unscoped regex
+
+- [ ] **`test_settings_ids_are_real` (L870).** Three substring operations, and
+      its docstring makes a testable claim: that matching `THEME_NC` rather
+      than `THEME` stops a comment from satisfying the check. Sabotage: (a)
+      typo one control's `id` — must FAIL naming that id; (b) point a control
+      at an id that appears **only inside a comment** in theme.css — must
+      still FAIL. (b) is the one that proves the docstring, and it is the one
+      a reading cannot verify.
+
+- [ ] **`test_no_stray_grid_literals` (L273).** Substring plus the only
+      unscoped regex left among the unproved. Sabotage: (a) replace one
+      `line-height: var(--midori-row)` consumer with a literal `48px` — must
+      FAIL naming the selector; (b) put `48px` inside a **comment** — must NOT
+      fail. Then record the guard's real boundary: it checks 24/48/72/96 only,
+      so a grid literal at another multiple passes. That is documented intent,
+      but it has never been demonstrated — demonstrate it.
+
+- [ ] **`test_measure` (L162).** Three substring operations against the
+      @settings block. Sabotage: (a) change `--file-line-width` from the
+      `calc(var(--font-text-size) * N)` form to a bare `34em` — must FAIL
+      naming the em-resolves-against-own-font-size trap the docstring
+      describes; (b) widen the measure slider's bounds past the evidence band
+      — must FAIL naming the bound. Note whether (a) actually fails: the
+      docstring says the subject changed when measure became a setting, and a
+      guard that now asserts only default-and-bounds may no longer look at the
+      unit at all.
+
+### Tier 3 — the break is already named; only the outcome is missing
+
+These four are the cheapest on the list. The sabotage is written in the
+docstring; apply it verbatim and record what the suite did.
+
+- [ ] **`test_accent_options_are_palette_tokens` (L1198).** Apply the exact
+      break its docstring names: `body.midori-accent-wine { --midori-accent:
+      var(--midori-clay); }` — a class and token that both exist, pointing at
+      each other wrongly. Must FAIL naming the mismatched pair.
+
+- [ ] **`test_zen_header_rules_are_gated` (L757).** Apply both halves the
+      docstring names: gate on `.show-view-header` alone (satisfied by
+      `body.zen-mode.show-view-header`, which is how the earlier version
+      passed), then gate on `.is-phone` alone. Each must FAIL naming the
+      missing condition — a single failure for both is not a proof that the
+      guard distinguishes them.
+
+- [ ] **`test_settings_block_parses` (L794).** Apply the break its docstring
+      names: set the heading-scale slider's `max` to `3`, which shipped green
+      under the old version. Must FAIL naming the cap. Then delete a
+      `default:` from one control and confirm the well-formedness half still
+      fires — the docstring claims two independent jobs and only one has ever
+      been exercised.
+
+- [ ] **`test_space_rhythm_zeroes_the_indent_variable` (L1106).** Apply the
+      break its docstring names: replace the `--midori-indent` override with a
+      plain `text-indent: 0` on a body class, which loses the specificity
+      contest against the eleven-component Live Preview selector and shipped
+      green. Must FAIL naming the property. This is the repo's signature
+      failure shape; a proof here is worth more than the item's size suggests.
+
+### Tier 4 — rule-exists-but-may-not-take-effect, no break named anywhere
+
+- [ ] **`test_blank_line_keeps_the_grid` (L706).** Five-line docstring, and it
+      scans for one specific bad declaration: `.cm-line` with `line-height:
+      normal`. Sabotage: (a) add exactly that — must FAIL; (b) add
+      `line-height: 1.2` on `.cm-line` instead, which leaves the grid just as
+      surely — record whether it passes. If it does, this guard proves the
+      absence of one known pattern, not that the blank line keeps the grid,
+      and the docstring should say which of the two it is.
+
+- [ ] **`test_inputs_are_never_read_by_a_real_property` (L961).** Seven-line
+      docstring, no break named, and it carries the branch's central promise —
+      "no setting can break the grid" — as an enforceable rule. Sabotage: make
+      a real property read `var(--midori-set-leading)` directly, bypassing the
+      derived variable where the clamping lives. Must FAIL naming the
+      property. Try it once in a rule and once inside a `calc()`.
+
+- [ ] **`test_settings_defaults_match_the_css` (L910).** Verified clean of the
+      `theme_var` exposure above, so this is about the comparison itself.
+      Sabotage: (a) change one control's `default:` without touching the CSS —
+      must FAIL naming which; (b) change it to a numerically equal but
+      differently written value (`1` vs `1.0`) — must NOT fail, which is what
+      the numeric-compare branch exists for and has never been shown to do;
+      (c) delete a `variable-*` control's CSS declaration entirely — must FAIL
+      with "declared nowhere".
+
+- [ ] **`test_heading_ladder_is_optical` (L664).** Five-line docstring.
+      `OBSIDIAN_H` covers levels 1–4 only; `--h5-size` and `--h6-size` are
+      declared nowhere, which is consistent, not a gap — confirm that before
+      anything else so the item is not spent on a false alarm. Sabotage: (a)
+      change one `--hN-size` so the optical step moves more than 0.02 — must
+      FAIL naming the level and both ratios; (b) wrap a size in
+      `calc(... * var(--midori-set-heading-scale))` — must still pass, which is
+      what `em_value()` unwrapping is for and has never been demonstrated.
