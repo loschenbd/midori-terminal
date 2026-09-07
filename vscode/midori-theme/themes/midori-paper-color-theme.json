@@ -444,7 +444,7 @@
       }
     },
     {
-      "name": "this / self \u2014 purple italic",
+      "name": "this / self \u2014 purple italic (JS/TS only; Python's self is a selfParameter, superType parameter, so it lands on the parameter rule)",
       "scope": [
         "variable.language"
       ],
@@ -632,6 +632,21 @@
   "semanticTokenColors": {
     "parameter": {
       "foreground": "#625649",
+      "italic": true
+    },
+    "variable.readonly:python": "#773913",
+    "enumMember:python": "#773913",
+    "namespace:python": "#625649",
+    "class.defaultLibrary:python": {
+      "foreground": "#744242",
+      "italic": true
+    },
+    "function.defaultLibrary:python": {
+      "foreground": "#906613",
+      "italic": true
+    },
+    "method.defaultLibrary:python": {
+      "foreground": "#906613",
       "italic": true
     },
     "property": "#71647c",
