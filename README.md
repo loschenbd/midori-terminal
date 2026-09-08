@@ -33,6 +33,21 @@ see `herdr/README.md`, which explains why herdr is the one component with no
 Safe to re-run `./install.sh` any time (it's idempotent) — that's also the
 update path: `git pull && ./install.sh`.
 
+**But `install.sh` is not all of it.** It covers Homebrew deps, fonts, Ghostty,
+the prompt, the shell/tmux fragments, the appearance watcher, the Claude Code
+theme and binary patch, Vivaldi and herdr. It does **not** touch Cursor/VS Code,
+Obsidian or Antinote — those are the three targets that write into another
+app's own extension or vault directory, and each has its own script listed
+above. So `git pull && ./install.sh` will silently leave an editor or vault
+theme on the previous version. To update everything:
+
+```sh
+git pull && ./install.sh
+./vscode/install-vscode.sh      # Cursor + VS Code
+./obsidian/install-obsidian.sh  # writes into your vaults
+./antinote/install-antinote.sh  # then Settings -> Visuals -> Reload Custom Themes
+```
+
 ## How it works — two layers
 
 **Layer 1 — infrastructure (theme-agnostic).** The seam is ANSI-16: the
