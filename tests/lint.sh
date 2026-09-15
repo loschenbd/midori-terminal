@@ -106,7 +106,7 @@ else
 fi
 
 echo "== patcher unit tests =="
-if python3 tests/test_patch_claude_diffs.py; then :; else FAIL=1; fi
+if python3 tests/test_patch_claude_binary.py; then :; else FAIL=1; fi
 
 echo "== moshi themes are current =="
 if python3 tests/test_moshi_themes.py; then :; else FAIL=1; fi

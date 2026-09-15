@@ -91,12 +91,13 @@ unset _midori_bp
 # zoxide: `z foo` jumps to the most-used directory matching "foo".
 command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
 
-# Midori Claude Code diff patch — self-heal after any Claude Code update.
-# The binary hardcodes diff colours; we patch it (see midori tools/). Updates
-# (the native installer's updater, or a brew upgrade) restore the stock binary
-# AND retarget the versioned path, so when the resolved path differs from the
-# last-patched one, re-apply — here in an interactive shell (node/npx on PATH),
-# only at launch, only after an update.
+# Midori Claude Code patch (inline code + tips) — self-heal after any Claude Code
+# update. Those two render paths ignore the theme file, so we patch the binary
+# (tools/apply-claude-midori-patch.sh). Updates (the native installer's updater,
+# or a brew upgrade) restore the stock binary AND retarget the versioned path, so
+# when the resolved path differs from the last-patched one, re-apply — only at
+# launch, only after an update. (This used to need node/npx on PATH for tweakcc;
+# the current patch needs python3 and codesign.)
 if [ -f "$HOME/.config/midori/apply-claude-midori-patch.sh" ]; then
   claude() {
     # `whence -p`, NOT `command -v`: we are INSIDE a function named claude, and

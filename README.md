@@ -1289,28 +1289,36 @@ Two things worth carrying to any future port:
   undocumented escape hatch that disables the clamp). Either alone still renders
   256-color — you need both, exported from the shell (the clamp reads them at
   module load). Ghostty-direct is unaffected (no `$TMUX`, no clamp).
-- **Some colours are a binary patch, not a theme token.** Three render paths
-  bypass `~/.claude/themes` entirely, so a value you set there silently does
-  nothing and the binary is the only lever (upstream issues #66937/#69445):
-  (1) **diff bands** — hardcoded RGB triples since ~2.1.186; (2) **inline code**
-  (`` `codespan` ``) and (3) **the `suggestion` token** (tips, ghost-text — e.g.
-  the blue `ultracode` keyword) both go through a helper that resolves via
-  `UX(mode)`, which switches on the base-mode *name* and **discards custom
-  overrides**, so your `permission`/`suggestion` values never apply and stock
-  ansi-blue/periwinkle shows. `tools/apply-claude-midori-patch.sh` unpacks the
-  binary (via `tweakcc`), and `tools/patch-claude-diffs.py` rewrites the eight
-  diff-band constants to the Midori washes *and* injects per-mode `#`-literals
-  into the codespan + suggestion call sites (a `#`-prefixed value bypasses the
-  broken `UX` lookup), then repacks + re-signs it — so diffs, inline code, and
-  tips all stay Midori *with syntax highlighting on*. Needs
-  node/npx/python3. **Any** Claude Code update reverts it — the native installer's
-  updater (`~/.local/share/claude/versions/<v>`, the default now) or a
-  `brew upgrade` on older brew-cask installs — because it restores the stock
+- **Inline code and tips are a binary patch, not a theme token.** Two render
+  paths bypass `~/.claude/themes`, so a value you set there silently does
+  nothing: **inline code** (`` `codespan` ``, drawn with the `permission` token)
+  and **the `suggestion` token** (tips, ghost-text — e.g. the blue `ultracode`
+  keyword). Both go through a helper that looks the token up in the stock preset
+  for the base-mode *name* (`UX(mode)` in 2.1.202, `_H` in 2.1.272), which
+  **discards custom overrides**, so stock periwinkle shows. The helper does pass
+  `ansi:`, `#` and `rgb(` values straight through, so
+  `tools/patch-claude-binary.py` rewrites every such call to `"ansi:blue"` —
+  padded to the same byte length, so nothing in the file moves — and
+  `tools/apply-claude-midori-patch.sh` re-signs the result, checks it, and
+  renames it over the binary. ANSI blue is palette 4, which the Midori terminal
+  themes set to exactly what those tokens were meant to be (`#3a5572` paper,
+  `#6c87a4` night), so the terminal does the light/dark switch. Needs python3
+  (plus `codesign` on macOS). **Any** Claude Code update reverts it — the native
+  installer's updater (`~/.local/share/claude/versions/<v>`, the default now) or
+  a `brew upgrade` on older brew-cask installs — because it restores the stock
   binary. The `claude` shell wrapper in `shell/zshrc.midori` self-heals on next
   launch, re-patching whenever the resolved binary path changes (works for both
   update mechanisms). Opt out with `MIDORI_SKIP_CC_PATCH`; restore stock by
   copying back the per-version backup under `~/.config/midori/claude-backup/`
   (or `brew reinstall claude-code` if you're on the brew cask).
+- **Diff bands need no patch from Claude Code 2.1.247.** They were hardcoded RGB
+  triples (since ~2.1.186) that ignored the theme, and the patch used to rewrite
+  eight of them. From 2.1.247 the diff renderer lays the theme's
+  `diffAdded`/`diffRemoved`/`*Word` tokens over its own palette, so the watcher's
+  theme file colours them: an unpatched 2.1.272 `/theme` preview draws the exact
+  Midori washes. Across the stock backups kept locally the merge is absent in
+  2.1.243 and present from 2.1.247. The upstream reports (#66937, #69445) were
+  closed as not planned and duplicate, so this changed without an announcement.
 - **The self-heal wrapper must use `whence -p`, not `command -v`.** Inside a
   zsh function *named* `claude`, `command -v claude` resolves the function and
   returns the bare word `claude`; `readlink` of that is empty, the guard
@@ -1319,15 +1327,24 @@ Two things worth carrying to any future port:
   measuring a screenshot's pixels (inline code at hue 233° — Midori's blue is
   211° and its purple 274°, so it was neither), not by the tooling. If Midori
   colours ever quietly revert, check this first.
-- **Currently blocked upstream: 2.1.229+ cannot be unpacked.** `tweakcc` 4.3.1
-  and 4.3.2 both fail to extract the embedded JS from 2.1.229 and 2.1.231,
-  while the same tool handles 2.1.226–228 cleanly — the binary packaging
-  changed (it also grew 279 MB → 295 MB). The patch script records the specific
-  binary path in `~/.config/midori/claude-unpatchable` and skips it silently,
-  so the wrapper doesn't retry-and-fail on every launch; a new Claude Code
-  version lifts the block by itself, and a successful patch clears it. Until
-  tweakcc catches up, **inline code and tips render stock blue** — everything
-  else in the theme is unaffected. Delete that file to force a retry.
+- **Editing the text alone does nothing: Bun runs precompiled bytecode.** Every
+  module in the binary ships as source *plus* JavaScriptCore bytecode. With only
+  the text rewritten, a real reply still drew `` `ls -la` `` in stock
+  `38;2;87;105;247`. The patcher also zeroes the bytecode length of the modules
+  holding the call sites (three on 2.1.272, found through Bun's module table at
+  the end of the file), and the same reply then drew SGR 34 — ANSI blue. No
+  measurable startup cost: the banner came up in 2.39 s against 2.47 s stock.
+  A build whose table or call sites don't look the way the patcher expects is
+  refused, recorded in `~/.config/midori/claude-unpatchable`, and skipped quietly
+  until the next Claude Code version; delete that file to force a retry.
+- **Why this replaced tweakcc.** The previous patch unpacked the embedded JS with
+  `tweakcc`, edited it, and repacked. tweakcc 4.3.1 and 4.3.2 both failed to
+  extract 2.1.229 and 2.1.231 while handling 2.1.226–228 cleanly, and this note
+  put that down to "the binary packaging changed (it also grew 279 MB → 295 MB)".
+  tweakcc's own tracker has the specifics: an extraction break on 2.1.231+
+  (#945) and a 4.3.3 regression that breaks ESM bundles (#981), the form Claude
+  Code's modules now take. No Midori patch landed from 2.1.229 through 2.1.272,
+  so inline code and tips rendered stock blue that whole time.
 
 ## Shell & tmux fragments are additive
 
@@ -1347,19 +1364,21 @@ updates silently revert to stock diffs — so keep the `source` line, don't inli
 ## Tests
 
 Most of the repo is declarative (themes, fragments, shaders) and validated by
-eye. The one piece with real, fragile logic — `tools/patch-claude-diffs.py`,
-which silently breaks when Claude Code's minified binary changes — has unit
-tests:
+eye. The one piece with real, fragile logic — `tools/patch-claude-binary.py`,
+which breaks when Claude Code's minified code or Bun's module table changes —
+has unit tests:
 
 ```sh
-python3 tests/test_patch_claude_diffs.py   # patcher logic (idempotency, fail-loud, name-capture)
+python3 tests/test_patch_claude_binary.py  # patcher logic (same-length rewrite, bytecode drop, idempotency, refusal, name capture)
 sh tests/lint.sh                           # + shellcheck, py_compile, zsh/tmux fragment parse
 ```
 
 CI (`.github/workflows/ci.yml`) runs the portable subset (unit tests, py_compile,
-shellcheck) on every push. The patcher tests build their fixtures from the
-module's own `TRIPLE_PATCHES`, so they track palette changes instead of going
-stale.
+shellcheck) on every push. The patcher tests build a synthetic Bun module table
+rather than ship a 200 MB binary, so they can't prove the layout matches a real
+build; that was checked by rendering (see the patcher's docstring). One of them
+fails if Ghostty's palette 4 stops matching the watcher's `suggestion` and
+`permission` values, because the patch depends on those being the same colour.
 
 ## Keeping machines in sync
 

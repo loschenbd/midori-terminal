@@ -19,7 +19,7 @@ jobs:
           python-version: "3.12"
 
       - name: Patcher unit tests
-        run: python3 tests/test_patch_claude_diffs.py
+        run: python3 tests/test_patch_claude_binary.py
 
       # Portable: re-derives in memory and compares against the committed
       # files. Writes nothing, so it never touches iCloud or the working tree.

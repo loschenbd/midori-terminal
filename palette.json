@@ -179,7 +179,7 @@
       "light": "#4d7095"
     },
     "diff-wash-terracotta": {
-      "source": "tools/patch-claude-diffs.py",
+      "source": "watcher/midori-claude-theme.sh",
       "light": "#ddc7b7"
     },
     "moshi-muted": {
