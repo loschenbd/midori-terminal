@@ -18,14 +18,15 @@ the deep link on that page (the schema is not documented):
   * Moshi restyles its whole UI from the theme, not just the terminal grid,
     so these colours have to survive as chrome as well as as text
 
-THE CURSOR TRAP. Both Ghostty themes set cursor-color to the EXACT background
-hex as a sentinel: Ghostty composites the native cursor after the custom shader
-and cursor-opacity=0 does not hide the hollow unfocused cursor, so bg-on-bg is
-how they make it invisible and the shader substitutes the indigo. Copied
-verbatim into Moshi — which has no such shader — that sentinel is just an
-invisible cursor. So when cursor == background we substitute palette 4, which
-IS the indigo ink in both themes (#3a5572 paper, #6c87a4 night) and is exactly
-what the shader draws.
+THE CURSOR TRAP. Neither Ghostty theme's cursor-color is a colour. Both set
+`cell-background` (until Sept 2026, the EXACT background hex as a sentinel):
+Ghostty composites the native cursor after the custom shader and
+cursor-opacity=0 does not hide the hollow unfocused cursor, so matching the
+cell under it is how they make it invisible, and the shader draws the indigo.
+Copied verbatim into Moshi — which has no such shader — the hex is an invisible
+cursor and the keyword is not a colour at all. So when cursor is a cell-*
+keyword or == background we substitute palette 4, which IS the indigo ink in
+both themes (#3a5572 paper, #6c87a4 night) and is exactly what the shader draws.
 """
 
 import base64
@@ -80,7 +81,7 @@ def build(slug, name, mode):
     bg = named["background"]
     cursor = named.get("cursor-color", "")
     # See the cursor trap in the module docstring.
-    if cursor == bg or not cursor:
+    if cursor == bg or not cursor or cursor.startswith("cell-"):
         cursor = palette[4]
 
     colors = {

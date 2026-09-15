@@ -32,9 +32,11 @@ is a loud error through one door and an invisible no-op through the other.
 Always import the file.
 
 WHY THE TERMINAL CURSOR IS NOT ghostty's cursor-color. In ghostty/themes/*
-`cursor-color` is set to the EXACT background hex as a sentinel -- the shader
-detects it and substitutes the indigo ink. Copying that value here would
-render an invisible cursor while looking perfectly faithful to the source.
+`cursor-color` is not a colour: it is `cell-background` (until Sept 2026, the
+EXACT background hex as a sentinel), so every native cursor draw matches the
+cell under it and vanishes, and the shader draws the indigo ink itself. Copying
+that value here would render an invisible cursor (the hex) or an invalid one
+(the keyword) while looking perfectly faithful to the source.
 The real ink is used instead: #3a5572 on paper, #6c87a4 on night.
 
   This line has now been wrong twice, in opposite directions, because the

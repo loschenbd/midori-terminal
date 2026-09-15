@@ -12,7 +12,10 @@
 //   iCurrentCursor.xy = BOTTOM-left corner of the cursor cell, .zw = w/h.
 //   The coordinate space is y-DOWN: SUBTRACT to move up-screen.
 //   For a block cursor, .w (height) = one cell = the dot pitch.
-//   iCurrentCursorColor = live cursor color (follows the midori themes).
+//   iCurrentCursorColor = the NATIVE cursor's colour. The themes set
+//   cursor-color = cell-background, so this is the colour of the cell under
+//   the cursor, not an ink — the cursor draw below does not read it.
+//   iBackgroundColor = the live terminal background; follows light/dark.
 //   iCurrentCursorStyle.x = 1 -> hollow (unfocused window) -> draw outline.
 //   iCursorVisible = DECTCEM (CSI ?25l/h) only — NOT blink phase or focus.
 //   When hidden, Ghostty leaves iCurrentCursor at its last (stale) value, so
@@ -37,12 +40,20 @@ const vec3  NIGHT_DOT = vec3(154.0, 189.0, 179.0) / 255.0;
 const float PAPER_DOT_ALPHA = 0.46;
 const float NIGHT_DOT_ALPHA = 0.1748;  // site dark dot alpha x overlay opacity
 
-// The themes set cursor-color to the EXACT background hex: the native cursor
-// is composited AFTER this shader (so it can't be erased here) and
-// cursor-opacity=0 does NOT hide the hollow unfocused cursor — bg-on-bg makes
-// every native cursor draw invisible. When the reported cursor color IS that
-// sentinel, substitute the intended indigo ink; any other color (e.g. an
-// app's OSC 12) passes through untouched.
+// Cursor ink. The native cursor is composited AFTER this shader (so it can't be
+// erased here) and cursor-opacity=0 does NOT hide the hollow unfocused cursor,
+// so the themes set cursor-color = cell-background: every native draw takes the
+// colour of the cell under it and vanishes. The ink is therefore chosen from
+// the live background, never from the cursor colour.
+//
+// Previously the themes set the EXACT background hex and this shader decoded it
+// as a sentinel, passing any other colour (an app's OSC 12) through. On Ghostty
+// 1.3.1 an OSC 112 reset copies the current default into a sticky override that
+// a light/dark flip never updates, so the sentinel could be the OTHER mode's
+// hex: in paper mode the shader drew the night indigo and the native hollow
+// cursor showed as a black box. See ghostty/themes/midori-paper. Dropping the
+// passthrough is deliberate: an app recolouring the cursor was already treated
+// as a bug to undo (shell/zshrc.midori resets it before every prompt).
 const vec3 PAPER_CURSOR = vec3( 58.0,  85.0, 114.0) / 255.0;  // #3a5572
 const vec3 NIGHT_CURSOR = vec3(108.0, 135.0, 164.0) / 255.0;  // #6c87a4
 
@@ -118,11 +129,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         shape = 1.0 - smoothstep(-0.75, 0.75, d);
     }
 
-    // bg-sentinel cursor color -> indigo ink (tolerances cover the uniform
-    // arriving in either sRGB or linear encoding)
-    vec3 ink = iCurrentCursorColor.rgb;
-    if (bgMatch(ink, PAPER_BG, 0.02, 0.04) != 0)      ink = PAPER_CURSOR;
-    else if (bgMatch(ink, NIGHT_BG, 0.02, 0.005) != 0) ink = NIGHT_CURSOR;
+    // Ink by ground: light background -> paper indigo, dark -> night indigo.
+    // 0.5 is safe in either encoding: #f3f1eb is 0.95 sRGB / 0.89 linear
+    // luminance, #1a1917 is 0.10 / 0.01.
+    float groundLum = dot(iBackgroundColor, vec3(0.2126, 0.7152, 0.0722));
+    vec3 ink = (groundLum > 0.5) ? PAPER_CURSOR : NIGHT_CURSOR;
 
     // 0.9 alpha: a hint of the glyph shows through a block cursor over text
     fragColor = mix(fragColor, vec4(ink, 1.0), shape * 0.9);
