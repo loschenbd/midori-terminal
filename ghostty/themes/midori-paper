@@ -31,11 +31,24 @@ palette = 15=#faf9f6
 
 background = #f3f1eb
 foreground = #2a2825
-# cursor: set to the EXACT background hex as a sentinel. The native cursor is
-# composited AFTER the custom shader, and cursor-opacity=0 does NOT hide the
-# hollow unfocused cursor — bg-on-bg makes every native cursor draw invisible.
-# The shader detects this sentinel and substitutes the indigo ink (#3a5572).
-cursor-color = #f3f1eb
+# cursor: cell-background, NOT a colour. The native cursor is composited AFTER
+# the custom shader, and cursor-opacity=0 does NOT hide the hollow unfocused
+# cursor — so every native cursor draw takes the colour of the cell it sits on,
+# which is invisible on any ground. The shader draws the indigo ink (#3a5572
+# here), choosing it from the live background colour, not from this key.
+#
+# This used to be the EXACT background hex, as a sentinel the shader decoded.
+# That broke in a way only Ghostty's source explains. In 1.3.1 an OSC 112 cursor
+# reset does not clear the override — it COPIES the current default into it
+# (src/terminal/color.zig, DynamicRGB.reset: override = default) — and a
+# light/dark flip updates only the default. shell/zshrc.midori sends OSC 112
+# before every prompt, so the last prompt drawn in dark mode pinned #1a1917,
+# and a full-screen app launched from it (herdr) never prompts again. In paper
+# mode the hollow unfocused cursor then showed as a near-black box, and the
+# shader, seeing the night sentinel, drew the night indigo. cell-background has
+# no RGB default, so a reset leaves nothing to pin. Upstream main now resets to
+# null (not in any release as of 1.3.1).
+cursor-color = cell-background
 cursor-text = #f3f1eb
 # selection: sage wash (~25% --accent over --background)
 selection-background = #ced1c8

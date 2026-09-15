@@ -217,11 +217,15 @@ Residual gotchas:
   no anchor) — a known trade-off.
 - Box-drawing rules (TUI separators) render at cell *center* and can never
   share the baseline lattice — expected, not a bug.
-- The themes set `cursor-color` to the exact background hex **on purpose**:
-  the native cursor composites after the shader and the hollow unfocused one
-  ignores `cursor-opacity`, so bg-on-bg hides every native draw and the
-  shader substitutes the indigo ink when it sees that sentinel. Don't "fix"
-  the cursor color in the theme files.
+- The themes set `cursor-color = cell-background` **on purpose**: the native
+  cursor composites after the shader and the hollow unfocused one ignores
+  `cursor-opacity`, so every native draw takes the colour of the cell under it
+  and vanishes, and the shader draws the indigo ink itself, chosen from the
+  live background. Don't "fix" the cursor color in the theme files. It used to
+  be the exact background hex; on Ghostty 1.3.1 an OSC 112 reset copies that
+  hex into an override the next light/dark flip never updates, which showed as
+  a black hollow box around the unfocused cursor in paper mode (mechanism in
+  `ghostty/themes/midori-paper`).
 
 ## How the dot grid stays aligned (Obsidian)
 
@@ -1208,13 +1212,14 @@ repo. Full format notes — the schema is undocumented — are in `moshi/README.
 
 Two things worth carrying to any future port:
 
-- **A sentinel value is not a colour.** Both Ghostty themes set `cursor-color`
-  to the exact background hex on purpose: Ghostty composites the native cursor
-  *after* the custom shader and `cursor-opacity=0` doesn't hide the hollow
-  unfocused cursor, so bg-on-bg is how they kill it and the shader draws the
-  indigo instead. Ported verbatim to a renderer with no shader, that is simply
-  an invisible cursor. The generator detects `cursor == background` and
-  substitutes palette 4 — the indigo the shader was drawing. Before copying a
+- **A sentinel value is not a colour.** Neither Ghostty theme's `cursor-color`
+  is one: it is `cell-background` (formerly the exact background hex), because
+  Ghostty composites the native cursor *after* the custom shader and
+  `cursor-opacity=0` doesn't hide the hollow unfocused cursor, so matching the
+  cell is how they kill it and the shader draws the indigo instead. Ported
+  verbatim to a renderer with no shader, that is an invisible or invalid
+  cursor. The generator detects a `cell-*` keyword or `cursor == background`
+  and substitutes palette 4 — the indigo the shader draws. Before copying a
   theme value anywhere, check whether it's a colour or a hack exploiting one
   renderer's quirk.
 - **ANSI 7/15 are reverse-video on a light theme**, so they belong *near* the

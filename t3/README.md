@@ -127,9 +127,10 @@ labels onto theme roles, or a CSS injection mechanism that does not exist yet.
 ## Two things that would have shipped wrong
 
 **The terminal cursor is not `cursor-color`.** In `ghostty/themes/*` that key
-is set to the *exact background hex as a sentinel* — the shader detects it and
-substitutes the indigo ink. Copying it here would have produced an invisible
-cursor that looked perfectly faithful to the source. The real ink is used
+is not a colour: `cell-background` now, and when this was written *the exact
+background hex as a sentinel*. Either way the shader draws the indigo ink
+itself. Copying it here would have produced an invisible cursor that looked
+perfectly faithful to the source. The real ink is used
 instead: `#6c87a4`, the lifted indigo, in **both** modes.
 
 > That last sentence read "`#3a5572` on paper and `#6c87a4` on night" until

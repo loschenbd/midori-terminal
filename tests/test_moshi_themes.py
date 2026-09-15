@@ -55,24 +55,25 @@ def main():
             bad(f"{path.name} is stale (differs at: {', '.join(diff) or 'top level'}) "
                 f"— re-run moshi/build-moshi-themes.py")
 
-        # The cursor sentinel must not survive into a Moshi theme. Assert on the
+        # The non-colour cursor (cell-background; formerly a background-hex
+        # sentinel) must not survive into a Moshi theme. Assert on the
         # SOURCE as well as the output: checking only the output is vacuous,
         # since the generator always substitutes. This way, deleting the
-        # substitution fails the test, and Ghostty dropping the sentinel tells
+        # substitution fails the test, and Ghostty moving to a real colour tells
         # us the substitution is no longer needed rather than silently passing.
         _, named = gen.parse_ghostty(gen.GHOSTTY / slug)
         src_cursor, src_bg = named.get("cursor-color"), named["background"]
         out_cursor, out_bg = want["colors"]["cursor"], want["colors"]["background"]
-        if src_cursor != src_bg:
-            bad(f"{slug}: ghostty no longer sets cursor-color == background; the "
-                f"sentinel substitution in the generator may be obsolete")
-        elif out_cursor == out_bg:
+        if not (src_cursor == src_bg or (src_cursor or "").startswith("cell-")):
+            bad(f"{slug}: ghostty's cursor-color is now a real colour ({src_cursor}); "
+                f"the substitution in the generator may be obsolete")
+        elif out_cursor == out_bg or out_cursor.startswith("cell-"):
             bad(f"{slug}: sentinel leaked through — the ported cursor is invisible")
         elif out_cursor != want["colors"]["blue"]:
             bad(f"{slug}: cursor is {out_cursor}, expected the indigo ink "
                 f"{want['colors']['blue']} the shader draws")
         else:
-            ok(f"{slug} cursor sentinel replaced with the indigo ink ({out_cursor})")
+            ok(f"{slug} non-colour cursor ({src_cursor}) replaced with the indigo ink ({out_cursor})")
 
         url = (MOSHI / f"{slug}.url").read_text().strip()
         if url == gen.deep_link(want):

@@ -77,14 +77,15 @@ on that page):
 
 ## The cursor trap
 
-Both Ghostty themes set `cursor-color` to the **exact background hex** as a
-sentinel — Ghostty composites the native cursor after the custom shader and
-`cursor-opacity=0` does not hide the hollow unfocused cursor, so bg-on-bg is
-how they make every native cursor draw invisible, and the shader substitutes
-the indigo.
+Neither Ghostty theme's `cursor-color` is a colour. Both set
+**`cell-background`** (until Sept 2026, the exact background hex as a
+sentinel) — Ghostty composites the native cursor after the custom shader and
+`cursor-opacity=0` does not hide the hollow unfocused cursor, so matching the
+cell under it is how they make every native cursor draw invisible, and the
+shader draws the indigo.
 
-Copied verbatim into Moshi, which has no such shader, that sentinel is simply
-an invisible cursor. So the generator detects `cursor == background` and
+Copied verbatim into Moshi, which has no such shader, either form is a broken
+cursor. So the generator detects a `cell-*` keyword or `cursor == background` and
 substitutes **palette 4**, which is the indigo ink in both themes
 (`#3a5572` paper, `#6c87a4` night) — exactly what the shader draws.
 
