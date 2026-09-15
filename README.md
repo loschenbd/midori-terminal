@@ -60,10 +60,14 @@ cd midori-terminal
 ./install.sh
 ```
 
-Don't do it from your own account with `sudo`. Home folders are private
-(`drwxr-x---`), files written that way end up owned by root, and the appearance
-watcher registers with launchd in the account's own login session
-(`gui/<uid>`), which exists only while that account is logged in.
+Don't do it from your own account with `sudo`. Another account's home is
+readable from yours but not writable: `drwxr-x---` with group `staff`, and
+every local account is in `staff`. So installing into it from outside takes
+`sudo`, which leaves files owned by root. And the appearance watcher registers
+with launchd in the account's own login session (`gui/<uid>`), which exists
+only while that account is logged in. (This paragraph first called home
+folders private — read off the mode bits without checking the group. Listing
+`/Users/<other account>/.config` from the first account works.)
 
 What is shared and what isn't:
 
