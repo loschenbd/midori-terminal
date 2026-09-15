@@ -48,6 +48,45 @@ git pull && ./install.sh
 ./antinote/install-antinote.sh  # then Settings -> Visuals -> Reload Custom Themes
 ```
 
+### Another account on the same Mac
+
+Log in as that account (fast user switching is fine) and run the same three
+lines there: its own clone, its own `./install.sh`. Then quit and reopen
+Ghostty in that account.
+
+```sh
+git clone https://github.com/loschenbd/midori-terminal.git
+cd midori-terminal
+./install.sh
+```
+
+Don't do it from your own account with `sudo`. Home folders are private
+(`drwxr-x---`), files written that way end up owned by root, and the appearance
+watcher registers with launchd in the account's own login session
+(`gui/<uid>`), which exists only while that account is logged in.
+
+What is shared and what isn't:
+
+- **Shared, installed once:** everything Homebrew installed (Ghostty, tmux,
+  herdr, oh-my-posh, eza, …). `/opt/homebrew` belongs to whoever installed
+  Homebrew, and a second account usually doesn't have it on PATH. `install.sh`
+  finds it anyway, *checks* the Brewfile instead of installing (it can't write
+  there), and names the owning account if something is missing. The shell
+  fragment puts `/opt/homebrew/bin` on that account's PATH the same way.
+- **Per account:** fonts, the Ghostty themes and config, the prompt, the shell
+  and tmux fragments, the watcher, the Claude Code theme, herdr's config — and
+  the Cursor/VS Code, Obsidian and Antinote scripts above, which each account
+  runs for itself.
+- **Claude Code's diff patch** rewrites the binary, so it applies only where
+  the account can write it: its own install under `~/.local`, or the shared
+  cask patched from the account that owns it. Otherwise that step says the
+  binary isn't writable and skips.
+
+Update that account the same way, as that account: `git pull && ./install.sh`.
+If it already had an older Midori with Ghostty tabs open, a tab showing a black
+hollow box around the unfocused cursor keeps it until its next shell prompt; a
+new tab is clean (mechanism in `ghostty/themes/midori-paper`).
+
 ## How it works — two layers
 
 **Layer 1 — infrastructure (theme-agnostic).** The seam is ANSI-16: the
