@@ -1,103 +1,151 @@
 # herdr — Midori
 #
-# herdr is the ONE component of midori-terminal that does not wear the Midori
-# palette. That is deliberate, and it is a workaround — see below.
+# As of herdr 0.9.0 herdr's chrome wears the Midori palette in both appearances.
+# Through 0.8.x it was the one component of midori-terminal that could not, and
+# ran vesper / solarized-light instead; README.md keeps that record, the index-8
+# proof, and the measurements behind every value below.
 #
-# The obvious setup is name = "terminal", which derives herdr's UI from the host
-# terminal so Ghostty's light:midori-paper,dark:midori-night pair stays the
-# single source of truth. It produces exactly correct Midori colors. It is also
-# unusable, because herdr hardcodes ANSI index 8 for two UI roles:
+# The base is name = "terminal": herdr derives its UI from the host terminal, so
+# every NAMED colour below is emitted as a raw ANSI code that Ghostty resolves
+# against light:midori-paper,dark:midori-night. The Ghostty palette stays the
+# single source of truth for everything that has an ANSI slot.
 #
-#   * selected sidebar row BACKGROUND   -> emitted as [100m
-#   * active tab label FOREGROUND       -> emitted as [90m
+# "terminal" was unusable in 0.8.0 because of what the base assigns, not the
+# idea: it hardcodes these roles to ANSI slots that mean something else in
+# Midori, and 0.8.0 exposed none of them as keys.
 #
-# herdr assumes index 8 is a dark surface gray, as it is in Catppuccin, one-dark
-# and friends. Midori maps index 8 to --muted: #9c958a on night, #524d46 on
-# paper — a mid/light warm gray, because Midori uses that slot for dim TEXT.
-# Surface-vs-text mismatch, so under "terminal" you get a glaring light slab on
-# the selected workspace and an active tab number at 1.22:1 (sage on sage).
+#   active_row_bg, surface1, surface_dim   DarkGray  [100m / [90m   ANSI 8
+#   overlay0, subtext0, mauve              Gray      [37m           ANSI 7
+#   overlay1                               White     [97m           ANSI 15
+#   selection_bg                           Reset     no background at all
 #
-# Not fixable from config. Verified by setting sentinel colors: selection,
-# surface and muted all leave the row at [100m; black and dim are not valid
-# [theme.custom] keys at all; panel_bg = "reset" changes nothing; and per-mode
-# blocks ([theme.custom.dark]) are rejected as unknown keys, so one override set
-# cannot serve both appearances.
-#
-# So: use built-in themes, which carry their own palette and therefore render
-# the index-8 role as a proper dark surface. Measured under vesper — selected
-# row #101010 bg with #ffffff bold text (17.9:1) instead of the slab.
-#
-# COST: herdr's chrome is vesper/solarized-light, not Midori. Pane *contents*
-# are unaffected — those are the terminal, and stay exactly Midori.
-# REVERT: when herdr stops hardcoding index 8, set all three names back to
-# "terminal" and delete this comment.
+# ANSI 8 is Midori's dim TEXT (#524d46 paper, #9c958a night): as a row surface
+# under body text it measured 1.76:1 paper / 2.43:1 night, and as the active tab
+# label on sage 1.22:1. ANSI 7 and 15 are near-white — right on night, 1.54:1 and
+# 1.07:1 on cream. 0.9.0 exposes all nineteen palette keys plus per-appearance
+# blocks, so each role is re-pointed: to a named slot that means the right thing
+# in both appearances where one exists, and per appearance where none does.
+# Source: src/app/state.rs Palette::terminal() in herdr v0.9.0.
 
 [theme]
-# There is no "midori" theme name to set, and there is no way to add one.
-# herdr 0.8.0 has a FIXED built-in theme list (catppuccin, catppuccin-latte,
-# terminal, tokyo-night, tokyo-night-day, dracula, nord, gruvbox,
-# gruvbox-light, one-dark, one-light, solarized, solarized-light, kanagawa,
-# rose-pine, vesper) and no themes directory or theme-file loader.
+# Still a fixed built-in list with no theme-file loader, so there is no "midori"
+# name to set — "terminal" is how Midori gets in. 0.9.0's `herdr config check`
+# now reports an unknown name ("unknown theme name ... using catppuccin"), where
+# 0.8.0 printed "config: ok" and silently rendered Catppuccin Mocha. It still
+# cannot tell you a valid name with wrong overrides looks right: capture a
+# render (README.md, "Verifying").
 #
-# An unrecognized name does NOT error. `herdr config check` prints "config: ok"
-# and `herdr server reload-config` reports applied with zero diagnostics — and
-# herdr silently renders Catppuccin Mocha. Verified: name = "midori" produced
-# #1e1e2e / #cdd6f4 / #a6e3a1 / #cba6f7. So `dark_name = "midori-night"` would
-# look like it worked and quietly be wrong. Always confirm a theme change by
-# capturing a render; neither check nor reload can tell you the name took.
-name = "vesper"
-
-# Follow macOS appearance. vesper is the near-black dark side; solarized-light
-# (#eee8d5) is the warm cream light side, the closest built-in to midori-paper's
-# #f3f1eb. No Midori *hex* overrides below — [theme.custom] is global, so a hex
-# tuned for night would follow you into paper and wreck it. NAMED colors are
-# fine and are used: they emit ANSI, which the terminal resolves per appearance.
+# auto_switch must stay true even though both names are the same. The
+# [theme.custom.light] / [theme.custom.dark] blocks are applied ONLY when
+# auto_switch picks an appearance (src/app/mod.rs resolve_effective_theme); with
+# it false they are silently ignored and every surface below falls back to the
+# ANSI 8 slab. Appearance comes from the terminal's background colour (OSC 11)
+# or colour-scheme report; if neither answers, herdr assumes dark.
+name = "terminal"
 auto_switch = true
-dark_name = "vesper"
-light_name = "solarized-light"
+dark_name = "terminal"
+light_name = "terminal"
 
 [theme.custom]
 # Let Ghostty's baked dot-grid + glow background image show through herdr's
 # chrome. Without this, the sidebar and tab row paint an opaque fill over the
 # 24pt mint dot grid and the top halo — the single most Midori thing on screen.
+# It has a second effect that is easy to miss: with panel_bg = "reset", herdr
+# routes two more roles to surface_dim. See surface_dim below.
 panel_bg = "reset"
 
-# Midori's accent is the sage at ANSI 2/10 (--accent: #5f6f5e paper,
-# #9aab97 night). NAMED, not hex — and this is the one place Midori survives
-# the switch to a built-in base: a named color is emitted as a raw ANSI code
-# ([42m), which the terminal resolves against the Ghostty palette. So the
-# accent is real Midori sage in both appearances even though the surrounding
-# chrome is vesper. A hex here would freeze it and lose that.
+# The terminal's DEFAULT foreground: Midori --foreground in both appearances
+# (#2a2825 paper, #ebe8e2 night). "white" would pin ANSI 7 and vanish on cream.
+text = "reset"
+
+# Midori's accent is the sage at ANSI 2 (#5f6f5e paper, #9aab97 night).
 accent = "green"
 
-# Every remaining token, named. The reasoning that used to sit here said these
-# were unnecessary because "under theme terminal they already resolve to ANSI
-# 1/2/3" — true, but this file stopped using theme "terminal" when it moved to
-# vesper, so they were coming from VESPER's palette instead. Naming them puts
-# them back on the Ghostty palette in both appearances, same trick as accent.
-#
-# ANSI 1/2/3/4 are wine / sage / ochre / indigo — already the roles the design
-# language assigns: ochre is the "needs you" warm (blocked), sage is progress
-# (working), wine is failure.
+# Agent state on ANSI 1/2/3/4 — wine / sage / ochre / indigo, the roles the
+# design language assigns: ochre is "needs you" (blocked), sage is progress
+# (working), wine is failure. The terminal base already names green, yellow and
+# blue; red is needed because the base uses LightRed (ANSI 9, the lifted wine).
+# All four stay explicit so a change of base can't silently move them — that
+# exact failure happened once, when this file moved from "terminal" to vesper.
 red    = "red"
 green  = "green"
 yellow = "yellow"
 blue   = "blue"
 
-# text = "reset" is the terminal's DEFAULT foreground, which is Midori's
-# --foreground in both appearances (#2a2825 paper, #ebe8e2 night). "white"
-# would pin ANSI 7 — a light warm gray that is right on night and far too
-# light on cream — which is the auto_switch trap this file avoids everywhere
-# else. Measured: reset gives 125 terminal-resolved emissions against 122 for
-# both "white" and leaving it unset, and drops vesper's #ffffff.
-text   = "reset"
+# Secondary text: sidebar labels and counts, inactive tab names, hints — and,
+# because upstream couples them, inactive pane borders too (herdr Discussion
+# #3156). darkgray is ANSI 8, which is precisely what Midori assigns that slot:
+# dim text, 7.41:1 on paper, 5.92:1 on night.
+overlay0 = "darkgray"
+subtext0 = "darkgray"
 
-# These seven are the COMPLETE [theme.custom] surface in 0.8.0 — panel_bg,
-# accent, red, green, yellow, blue, text. Enumerated by feeding candidate keys
-# to `herdr config check`, which reports "unknown config key theme.custom.<k>"
-# for anything else; magenta, cyan, white, black, fg, bg, border, selection,
-# surface, muted, warning, error and success are all rejected. So the vesper
-# greys and surfaces that remain are simply not addressable.
+# Brighter secondary text: inactive tab labels, the "+" new-tab button, settings
+# values. The default foreground; the base's White is invisible on cream.
+overlay1 = "reset"
+
+# Per appearance. Midori has no ANSI slot that is a surface (0 is ink on paper,
+# 8 is dim text), so the four surfaces are hex — and hex is safe now only because
+# it is per appearance; one global hex had to serve both, which is why 0.8.0
+# couldn't. Every hex already exists in the Midori palette; none is invented here.
+#
+# mauve          Named, but still per appearance. The focused workspace's second
+#                row (branch / git status), key names in overlays, the resize-mode
+#                bar. Its real background is the FOCUS WASH, not the page —
+#                sidebar.rs draws it only on the focused row — and no single
+#                purple slot reads on that wash in both appearances: magenta
+#                (ANSI 5) is 5.28:1 paper but 2.80:1 night; lightmagenta
+#                (ANSI 13) is 3.76:1 night but 3.61:1 paper. So each appearance
+#                takes its better slot. Night's 3.76:1
+#                is the ceiling for any purple there; the alternatives were
+#                darkgray (3.31:1, and the cue disappears) and reset (8.04:1, but
+#                identical to the row's first line).
+#
+# active_row_bg  Focused workspace row and focused agent row. Ghostty's own
+#                selection wash. Body text on it: 9.50:1 paper, 8.04:1 night.
+#
+# selection_bg   The NAVIGATE-mode cursor row. It is NOT a fallback for
+#                active_row_bg: src/client/shell/sidebar.rs paints selected rows
+#                with selection_bg and focused rows with active_row_bg, and the
+#                base leaves selection_bg Reset — so unset, the cursor has no
+#                background. One step heavier than the focus wash so it stays
+#                findable on a different row: 1.71:1 against the focus wash on
+#                paper, 1.78:1 on night; body text 5.56:1 / 4.51:1. Paper is
+#                ghostty's unfocused-split-fill, night is palette.json text-faint.
+#
+# surface1       A row being dragged, and hairline rules in overlays. The split
+#                divider tone from both Ghostty themes.
+#
+# surface_dim    Two roles that pull apart. With panel_bg = "reset" herdr uses it
+#                for the sidebar separator line AND for the ACTIVE TAB label and
+#                mode-bar label drawn on sage (ui/widgets.rs panel_contrast_fg).
+#                A line wants distance from the page; a label on mid-tone sage
+#                wants the page colour. The split divider tone is the compromise:
+#                the separator matches Ghostty's own split divider exactly
+#                (1.18:1 paper, 1.29:1 night — quiet by design), and the tab
+#                label reads 4.02:1 paper, 5.59:1 night, bold. Upstream ask to
+#                split coupled roles like this: herdr Discussion #3802.
+#
+#                Rejected: the selection wash (#ced1c8 / #40453d), chosen at
+#                first on the belief that surface_dim is also the background of
+#                a mouse selection in a pane (ui/panes.rs
+#                selection_palette_background). It is only the input to a
+#                fallback: when the terminal answers OSC 11, as Ghostty does,
+#                herdr mixes the PAGE colour 28% toward black/white and never
+#                reads surface_dim (automatic_selection_bg). Believing that cost
+#                the tab label: 3.46:1 on paper instead of 4.02:1.
+[theme.custom.light]
+active_row_bg = "#ced1c8"
+selection_bg  = "#a29f98"
+surface1      = "#e1dfd9"
+surface_dim   = "#e1dfd9"
+mauve         = "magenta"
+
+[theme.custom.dark]
+active_row_bg = "#40453d"
+selection_bg  = "#6e685f"
+surface1      = "#2f2e2b"
+surface_dim   = "#2f2e2b"
+mauve         = "lightmagenta"
 
 [ui]
 # Highlights, borders and navigation UI on the same sage accent.
