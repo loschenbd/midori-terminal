@@ -130,10 +130,27 @@ render "$REPO/watcher/$LABEL.plist.template" "$HOME/Library/LaunchAgents/$LABEL.
 if [ -n "$MIDORI_SKIP_LAUNCHD" ]; then
   echo "   skipping launchd registration (MIDORI_SKIP_LAUNCHD set)"
 else
+  # bootout can return before launchd has finished removing the job, and a
+  # bootstrap landing in that window fails. A re-run in Sept 2026 printed
+  # "Bootstrap failed: 5: Input/output error" right after the bootout; under
+  # set -e that aborted the install with the watcher stopped, so steps 7-10 never
+  # ran and the watcher stayed down. The same bootstrap run by hand moments later,
+  # with nothing loaded, worked first time. That points at the race, though it
+  # was not reproduced in isolation. So: wait for the job to be gone (up to ~5 s),
+  # and never let a failed registration take the remaining steps with it.
   launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-  launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/$LABEL.plist"
-  launchctl kickstart "gui/$(id -u)/$LABEL"
-  echo "   watcher running (writes ~/.claude/themes/midori.json within ~3s)"
+  i=0
+  while launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1 && [ "$i" -lt 50 ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  if launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/$LABEL.plist" &&
+     launchctl kickstart "gui/$(id -u)/$LABEL"; then
+    echo "   watcher running (writes ~/.claude/themes/midori.json within ~3s)"
+  else
+    echo "   !! watcher registration failed — continuing with the rest. To retry:"
+    echo "      launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/$LABEL.plist"
+  fi
 fi
 
 # --- 7. Claude Code theme -----------------------------------------------------
