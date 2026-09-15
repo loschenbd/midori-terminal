@@ -9,6 +9,18 @@
 [ -n "$_MIDORI_ZSHRC_SOURCED" ] && return
 _MIDORI_ZSHRC_SOURCED=1
 
+# Homebrew on PATH for a second account on the same Mac. /etc/paths lists
+# /usr/local/bin but not /opt/homebrew/bin (checked Sept 2026, Darwin 25.6), so
+# only a `brew shellenv` line in an account's own profile puts Apple-silicon
+# Homebrew on PATH, and nothing adds one for an account that didn't install it.
+# Without it every `command -v` below misses the shared tools: no oh-my-posh
+# prompt, no eza, no zoxide, and tmux/herdr "not found". Prepended only when
+# brew is absent, so a profile that already sets PATH keeps its own order.
+# install.sh does the same for its own run (step 1).
+if (( ! $+commands[brew] )) && [[ -x /opt/homebrew/bin/brew ]]; then
+  path=(/opt/homebrew/bin /opt/homebrew/sbin $path)
+fi
+
 # Truecolor for Claude Code inside tmux. TWO env vars are required — one alone
 # does nothing:
 #   1. COLORTERM=truecolor — chalk/supports-color (which Claude's diff renderer

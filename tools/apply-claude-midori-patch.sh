@@ -54,6 +54,22 @@ if [ -z "$CLAUDE_BIN" ] || [ ! -f "$CLAUDE_BIN" ]; then
   exit 0
 fi
 
+# Another account's binary? The patch rewrites the file in place, so it can only
+# land where this account can write. On a Mac shared between accounts, Homebrew's
+# claude-code cask sits under the prefix of whoever installed Homebrew. Going by
+# this script (not by running it as a second account), that account would back
+# up and unpack the binary, then fail at repack; with no stamp written, the
+# `claude` wrapper would repeat all of it on every launch. A -w test is cheap
+# enough to sit ahead of the ~3 s checks below. Nothing is recorded, so the patch
+# applies as soon as the binary on PATH is one this account can write.
+if [ ! -w "$CLAUDE_BIN" ]; then
+  if [ "$AUTO" != "1" ]; then
+    echo "-- $CLAUDE_BIN is not writable by this account; Midori diff patch skipped."
+    echo "   If the account that owns it has patched it, this account sees the patch too."
+  fi
+  exit 0
+fi
+
 # Known-unpatchable build? Bail before anything expensive. This has to come
 # FIRST: the wrapper runs us on every `claude` launch, and the checks below cost
 # ~3 s on a 295 MB binary (two full-file greps plus a `--version` launch). Claude

@@ -15,13 +15,40 @@ render() {  # __HOME__ -> real home
 echo "== Midori terminal theme system =="
 
 # --- 1. Homebrew deps -------------------------------------------------------
+# Homebrew is per MACHINE but this installer runs per ACCOUNT, and a second
+# account on the same Mac differs in two ways (checked Sept 2026, Darwin 25.6):
+#   * /opt/homebrew/bin is not on its PATH. /etc/paths lists /usr/local/bin but
+#     not /opt/homebrew/bin; only a `brew shellenv` line in an account's own
+#     profile adds it, and nothing puts one in a second account's. Left alone,
+#     every `command -v` in this run misses the shared install: brew reads as
+#     "not found" and the herdr step skips itself as not installed.
+#   * It cannot write the prefix, which belongs to whoever installed Homebrew,
+#     so `brew bundle` there can only fail. The apps are shared, though, so
+#     check the Brewfile instead. `--no-upgrade` asks "installed?" rather than
+#     "up to date?": plain `check` fails on any outdated formula, and did on the
+#     owning account when this was written (tmux, fzf, gh, glow), nothing missing.
+if ! command -v brew >/dev/null 2>&1 && [ -x /opt/homebrew/bin/brew ]; then
+  PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+  export PATH
+  echo "-- Homebrew is at /opt/homebrew but not on this account's PATH — using it for this run"
+fi
+
 if [ -n "$MIDORI_SKIP_BREW" ]; then
   echo "-- skipping brew (MIDORI_SKIP_BREW set)"
-elif command -v brew >/dev/null 2>&1; then
+elif ! command -v brew >/dev/null 2>&1; then
+  echo "-- Homebrew not found. Install the Brewfile deps manually."
+elif brew_owner=$(stat -f %Su "$(brew --prefix)") && [ "$brew_owner" != "$(id -un)" ]; then
+  echo "-- Homebrew belongs to $brew_owner — checking the Brewfile instead of installing"
+  if HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --no-upgrade --file "$REPO/Brewfile" >/dev/null 2>&1; then
+    echo "   every Brewfile dep is already installed"
+  else
+    echo "   !! brew bundle check did not pass from this account: a dep is missing, or"
+    echo "      this Homebrew won't run for a non-owner. From $brew_owner's account, run"
+    echo "      brew bundle --file <that account's midori-terminal clone>/Brewfile"
+  fi
+else
   echo "-- brew bundle (Brewfile: ghostty, tmux, fzf, oh-my-posh, eza, zoxide, ...)"
   brew bundle --file "$REPO/Brewfile" || echo "   (brew bundle had failures — continuing)"
-else
-  echo "-- Homebrew not found. Install the Brewfile deps manually."
 fi
 
 # --- 2. Fonts ---------------------------------------------------------------
