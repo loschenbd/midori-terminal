@@ -9,11 +9,15 @@
 #
 # DECOY TOKENS: `suggestion` (tips / ghost-text) and `permission` (inline
 # `codespan`) are written here for completeness but DO NOTHING via this file —
-# Claude Code resolves them through UX(mode), which discards custom overrides,
-# so the stock periwinkle/ansi-blue shows regardless of the value below. They're
-# enforced by the BINARY PATCH instead (tools/patch-claude-diffs.py). To recolor
-# tips or inline code, edit the #-literals there and re-run
-# tools/apply-claude-midori-patch.sh; changing them here has no effect.
+# Claude Code looks them up in the stock preset for the base mode (UX(mode) in
+# 2.1.202, _H in 2.1.272), which discards custom overrides, so stock periwinkle
+# shows regardless of the value below. The BINARY PATCH
+# (tools/patch-claude-binary.py) points both at the terminal's ANSI blue instead:
+# palette 4 in the Ghostty themes, which is these same values. They are kept
+# equal on purpose, and tests/test_patch_claude_binary.py fails if they drift, so
+# to recolor tips or inline code change palette 4 and these together; changing
+# only these has no effect. (Until Sept 2026 the patch injected these hexes as
+# #-literals through tweakcc; see the patcher's docstring for why that stopped.)
 # Also retints live tmux pane borders on appearance change.
 # Managed by: ~/Library/LaunchAgents/com.benjaminloschen.midori-claude-theme.plist
 

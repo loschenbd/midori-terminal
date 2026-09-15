@@ -192,26 +192,27 @@ else:
 EOF
 fi
 
-# --- 8. Claude Code theme-bypass binary patch --------------------------------
-# Three render paths ignore ~/.claude/themes and read hardcoded colours from the
-# compiled binary — diff bands, inline `codespan`, and the `suggestion` token
-# (tips / ghost-text). The suggestion + codespan helper resolves via UX(mode),
-# which drops custom overrides, so those theme values are decoys without this.
-# We patch the binary to render the Midori colours while keeping syntax
-# highlighting on. Idempotent + version-aware; needs node/npx.
-# Any Claude Code update reverts it (the native updater or a brew upgrade both
-# restore the stock binary) — re-run ./install.sh, or the `claude` shell wrapper
-# self-heals on next launch. Opt out with MIDORI_SKIP_CC_PATCH; restore stock from
-# the backup under ~/.config/midori/claude-backup/ (or brew reinstall on the cask).
+# --- 8. Claude Code inline code + tips (binary patch) -------------------------
+# Two render paths ignore ~/.claude/themes: inline `codespan` and the `suggestion`
+# token (tips / ghost-text). Their helper looks the token up in the stock preset
+# for the base mode, dropping custom overrides, so those theme values are decoys
+# without this. The patch points both at the terminal's ANSI blue — Midori
+# palette 4, the colour those tokens were meant to be. Diff bands need no patch
+# from Claude Code 2.1.247: the theme file colours them. Idempotent +
+# version-aware; needs python3 (and codesign on macOS). Any Claude Code update
+# reverts it (the native updater or a brew upgrade both restore the stock binary)
+# — re-run ./install.sh, or the `claude` shell wrapper self-heals on next launch.
+# Opt out with MIDORI_SKIP_CC_PATCH; restore stock from the backup under
+# ~/.config/midori/claude-backup/ (or brew reinstall on the cask).
 if [ -n "$MIDORI_SKIP_CC_PATCH" ]; then
-  echo "-- skipping Claude Code diff patch (MIDORI_SKIP_CC_PATCH set)"
+  echo "-- skipping Claude Code patch (MIDORI_SKIP_CC_PATCH set)"
 else
   # Install the patch scripts next to each other so the shell `claude` wrapper
   # (zshrc.midori) can self-heal after any Claude Code update, then run once now.
-  cp -f "$REPO/tools/apply-claude-midori-patch.sh" "$REPO/tools/patch-claude-diffs.py" \
+  cp -f "$REPO/tools/apply-claude-midori-patch.sh" "$REPO/tools/patch-claude-binary.py" \
         "$HOME/.config/midori/"
   chmod +x "$HOME/.config/midori/apply-claude-midori-patch.sh"
-  sh "$HOME/.config/midori/apply-claude-midori-patch.sh" || echo "   (diff patch skipped/failed — non-fatal)"
+  sh "$HOME/.config/midori/apply-claude-midori-patch.sh" || echo "   (Claude Code patch skipped/failed — non-fatal)"
 fi
 
 # --- 9. Vivaldi themes + hotkeys ---------------------------------------------
@@ -248,7 +249,7 @@ cat <<'EOF'
 == Done ==
 Next steps:
   1. Restart Ghostty (or Cmd+Shift+, to reload if already themed once).
-  2. Restart Claude Code to pick up the Midori binary patch (diffs, inline code, tips).
+  2. Restart Claude Code to pick up the Midori binary patch (inline code, tips).
   3. Vivaldi: applied to the Default profile above (if it was closed). To pick a
      specific profile, quit Vivaldi and run  ./vivaldi/install-vivaldi.sh
   4. New display? See README "Calibrating the dot phase" + tools/bake-backgrounds.py
