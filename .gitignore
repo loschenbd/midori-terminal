@@ -7,3 +7,4 @@ obsidian/.fontenv/
 obsidian/extra-vaults.txt
 .cleanup-base
 .claude/ralph-loop.local.md
+.claude/worktrees/
