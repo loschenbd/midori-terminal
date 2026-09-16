@@ -622,7 +622,7 @@ EOF
 
 **Interfaces:**
 - Consumes: `tests/check_rendered_blocks.py` from Task 1, axis `table-rows`.
-- Produces: `tests/test_block_geometry.py` with module-level `REPO`, `THEME`, `THEME_NC`, `rules`, `theme_var`, `ok`, `bad`, `FAIL` imported from `test_prose_typography`, and a `__main__` block listing every test in this plan. Later tasks append tests and register them there. Test names produced here: `test_table_border_vars_are_zero`.
+- Produces: `tests/test_block_geometry.py` with `rules`, `theme_var`, `ok`, `bad`, `FAIL` imported from `test_prose_typography`, and a `__main__` block listing every test in this plan. Later tasks append tests and register them there; a task whose test needs `REPO`, `THEME` or `THEME_NC` adds that name to the import line itself. Test names produced here: `test_table_border_vars_are_zero`. **Corrected after Task 2:** this line previously promised module-level `REPO`, `THEME`, `THEME_NC` as well. That was false in both directions — Step 1's own code block never imports them, and grep finds those three names nowhere else in this plan, so no task consumes them. It was believed because the sibling file `test_prose_typography.py` does define them, and an Interfaces block listing "what the helper module gives you" reads naturally as the sibling's full surface rather than the subset actually imported. Adding the unused names to satisfy the promise would have been the wrong repair: this file is stdlib-only and wired into lint, where an unused import is a drift signal.
 
 - [ ] **Step 1: Write the failing static test**
 
@@ -1041,9 +1041,25 @@ Expected: exit 1 naming `--midori-cell-pad`; exit 1 naming the widget rule; then
 
 Run: `/tmp/cdpenv/bin/python tests/check_rendered_blocks.py`
 Expected: `table-rows` still `ok` in both views, with the tables now TALLER by
-one row per table (a five-row table becomes 6 rows = 144px, because every cell
-gained half a row top and bottom). The number must still be a whole multiple of
-the row; that is the assertion. `paragraph-phase` must stay `ok`.
+half a row per cell edge — which is half a row per ROW, not per table. A
+five-row table of single-line cells becomes **10 rows = 240px**, because each
+24px row gains 12px above and 12px below and so becomes 48px. The number must
+still be a whole multiple of the row; that is the assertion. `paragraph-phase`
+must stay `ok`.
+
+**Corrected after Task 3:** this step previously said "a five-row table becomes
+6 rows = 144px", applying the padding once per table instead of once per row.
+That was wrong, and it contradicted the spec this plan argues from — spec line
+102 states "Every cell gets half a row of padding on all four sides, so a row
+is `row × (lines + 1)` tall", which for a one-line cell is 24 × 2 = 48px. The
+shipped CSS and the static test's own `row × (n + 1)` formula both agree with
+the spec; only this prose did not. It was believed because "half a row of
+padding" reads at a glance like an amount added to the block, and a table is
+the visible block — the padding is in fact applied to every cell. Note that
+`table-rows` cannot catch this class of error: 240 and 144 are both whole
+multiples of 24, so the guard stays green either way. It surfaced only because
+Task 3's implementer reported the contradiction rather than matching one number
+to the other.
 
 - [ ] **Step 9: Lint and commit**
 
