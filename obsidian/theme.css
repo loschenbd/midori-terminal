@@ -1901,8 +1901,37 @@ body {
    per row, so no combination of line-height and padding can reach a whole
    multiple while it is in the layout. So paint it instead of laying it out —
    an inset box-shadow draws the same 1px rule at zero layout cost, and an
-   outline (also layout-free) closes the outer edge. Cell height is then
-   exactly 24n. Verified: the widget went 7.042 -> 8.000 rows. */
+   outline (also layout-free) closes the outer edge.
+
+   THE LINE THAT USED TO END THIS COMMENT WAS FALSE, AND CONFIDENTLY SO. It
+   read: "Cell height is then exactly 24n. Verified: the widget went
+   7.042 -> 8.000 rows." The measurement was almost certainly real when it was
+   taken; the conclusion does not hold on Obsidian 1.13.7, where a five-row
+   table measures 122px against a wanted 120 and a dense four-column one 410
+   against 408 — in reading view as well as live preview. Zeroing the cell's
+   own border-width is not sufficient, because the app re-adds the outer edges
+   from four variables of its own; see the block below. Whether those variables
+   existed when that line was written and this regressed, or whether the
+   original measurement was of something else, is NOT established — what is
+   measured is the behaviour on 1.13.7. The lesson is the one this repo keeps
+   paying for: the number was checked and the mechanism beside it was not. */
+
+/* THE LAST TWO PIXELS ARE OBSIDIAN'S, NOT THE BORDER WE ALREADY REMOVED.
+   Four variables, all 1px in 1.13.7, feed app.css rules -- `thead tr > th`,
+   `tbody tr:last-child > td`, `td:first-child`, `td:last-child` -- whose
+   specificity beats the `border-width: 0` below, so the outer edges come back
+   however thoroughly the cell rule zeroes its own border. In a collapsed
+   table each 1px edge adds half its width to its row and half to the table.
+   Measured: 122px against a wanted 120 on a five-row table and 410 against
+   408 on a dense four-column one, in BOTH views; at 0px, exactly 120 and 408.
+   Zeroing the variables is better than out-specifying four app.css selectors,
+   which is what the previous attempt did and lost. */
+body {
+  --table-header-border-width: 0px;
+  --table-row-last-border-width: 0px;
+  --table-column-first-border-width: 0px;
+  --table-column-last-border-width: 0px;
+}
 .markdown-rendered td,
 .markdown-rendered th {
   line-height: var(--midori-row);
