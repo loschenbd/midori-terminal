@@ -150,9 +150,40 @@ LIVE = r"""
   // changed. Walking forward to real content sidesteps that: whatever height the
   // spacer ends up with, the first line with actual text is always the right thing
   // to check for lattice alignment.
+  // SECOND correction, and the walk above was half the story. Skipping every
+  // sibling with no text rects also skips .cm-gap -- CodeMirror 6's placeholder
+  // for lines it has not rendered -- and hopping one produces a confident number
+  // measured against nothing. Caught when this axis reported "the line after
+  // table 0 is 7.66px off the lattice" while table-rows said the table was
+  // exactly 240px = 10 whole rows and every element in the chain had zero
+  // margin, zero padding, zero border and line-height 24px. The DOM said why:
+  //
+  //   .cm-table-widget   h=240      phase=0.47
+  //   .cm-gap            h=1807.2   (no text -- the old walk hopped it)
+  //   .cm-line           h=24       phase=7.66   <- what got phased
+  //
+  // A .cm-gap's height is an ESTIMATE from average line heights, under no
+  // obligation to land on a row. The arithmetic closes exactly: 1807.2 mod 24
+  // = 7.2, plus the widget's own 0.47, is 7.67 against 7.66 measured. So the
+  // axis was reporting CodeMirror's height estimator, not the theme -- and the
+  // line it phased was 1807px away, past content that was never rendered.
+  //
+  // Why the original looked right: it was written to skip blank spacer LINES,
+  // which it does correctly, and "has no text" is a true description of both a
+  // blank line and a gap. The difference is that a blank line is real laid-out
+  // content whose neighbours are genuinely adjacent, while a gap is an
+  // accounting entry for content that is absent. Only the first can be walked
+  // past without changing what "the line after this block" means.
+  //
+  // So: stop at a gap and return null. The axis then reports nothing measurable
+  // through the existing fail-on-empty branch rather than inventing a value.
+  // Refusing to measure is the correct behaviour when the neighbour is unknown.
   const nextMeasurable = (el) => {
     let cur = el ? el.nextElementSibling : null;
     for (let i = 0; i < 4 && cur; i++) {
+      // A virtualization placeholder means the real neighbour is not rendered.
+      // Never phase across one; scroll it into view and measure again instead.
+      if (cur.classList.contains('cm-gap')) return null;
       if (textRects(cur).length) return cur;
       cur = cur.nextElementSibling;
     }
