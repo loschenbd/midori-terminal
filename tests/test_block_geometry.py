@@ -333,6 +333,103 @@ def test_block_width_has_a_query_container():
        f"container ({len(containers)} selector(s))")
 
 
+CODE_LINE = ".cm-line.HyperMD-codeblock"
+
+
+def code_padding_rules():
+    """Every rule that pads a live-preview code line, selector by selector."""
+    out = []
+    for sel, decls in rules():
+        if CODE_LINE not in sel:
+            continue
+        if re.search(r"padding-inline-(start|end):", decls):
+            out.append((sel, decls))
+    return out
+
+
+def test_code_lines_pad_both_sides():
+    """A code line pads BOTH sides, and the wrap hangs by two characters.
+
+    MEASURED before this rule: padding-left 16px, padding-right 0, and wrapped
+    text ending 2.2px from the right edge of its own background -- which is what
+    "the text overruns" turned out to mean. Nothing overflows; it wraps and then
+    touches the edge. A wrapped line also continued flush left, so a
+    continuation read as a new line of code.
+
+    MEASURED after: first line at 16px, continuations at 30px (2ch = 14px in the
+    code face), right gap >= 21px, every line still a whole number of rows.
+
+    SABOTAGE-PROVED: deleting padding-inline-end fails naming the right edge;
+    dropping the negative text-indent fails naming the hang.
+    """
+    pad = theme_var("--midori-code-pad")
+    if pad is None:
+        bad("--midori-code-pad is not set; a code line's right padding has no "
+            "value to match its left")
+        return
+    found = code_padding_rules()
+    if not found:
+        bad(f"no rule sets padding-inline-start/end on {CODE_LINE}; wrapped "
+            "code text lands against the right edge of its background")
+        return
+    for sel, decls in found:
+        end = re.search(r"padding-inline-end:\s*([^;]+)", decls)
+        start = re.search(r"padding-inline-start:\s*([^;]+)", decls)
+        indent = re.search(r"text-indent:\s*([^;]+)", decls)
+        if not end:
+            bad(f"a code-line rule pads only one side: {sel[:70]}")
+            return
+        if "var(--midori-code-pad)" not in end.group(1):
+            bad(f"padding-inline-end is {end.group(1).strip()!r}, not "
+                "var(--midori-code-pad); the two sides must match")
+            return
+        if not start or "2ch" not in start.group(1):
+            bad("padding-inline-start does not add 2ch, so a wrapped line has "
+                "nothing to hang from")
+            return
+        if not indent or "-2ch" not in indent.group(1).replace(" ", ""):
+            bad("text-indent is not -2ch, so the FIRST line is pushed in with "
+                "the continuations instead of hanging")
+            return
+    ok(f"code lines pad both sides and hang wrapped lines by 2ch "
+       f"({len(found)} rule(s))")
+
+
+def test_hanging_indent_keeps_the_list_exclusion():
+    """:not(.HyperMD-list-line) is load-bearing on every code-padding selector.
+
+    app.css sets padding-inline-start on
+    `.markdown-source-view.mod-cm6 .cm-line.HyperMD-codeblock:not(.HyperMD-list-line)`,
+    which is ONE CLASS more specific than the same selector without the :not().
+    MEASURED without it: the padding never applied (computed 16px) while
+    text-indent did, so the first line moved LEFT to 2px and continuations
+    stayed at 16 -- worse than no rule, and invisible to any guard that only
+    checks the declaration exists.
+
+    CHECK EACH SELECTOR, NOT THE RULE: rules() hands back a comma-separated
+    list as one string, so asking whether the exclusion appears anywhere in
+    it asks whether ANY selector carries it -- the trap
+    test_indent_excludes_non_prose documents.
+
+    SABOTAGE-PROVED: removing the :not() from the selector fails this test.
+    """
+    found = code_padding_rules()
+    if not found:
+        bad("no code-line padding rule to check for the list exclusion")
+        return
+    for sel, _ in found:
+        for one in sel.split(","):
+            if CODE_LINE not in one:
+                continue
+            if ":not(.HyperMD-list-line)" not in one:
+                bad("a code-line padding selector omits "
+                    ":not(.HyperMD-list-line), so app.css out-specifies it and "
+                    f"the padding silently does nothing: {' '.join(one.split())[:80]}")
+                return
+    ok(f"every code-line padding selector keeps :not(.HyperMD-list-line) "
+       f"({len(found)} rule(s))")
+
+
 if __name__ == "__main__":
     print("== block geometry ==")
     test_table_border_vars_are_zero()
@@ -340,5 +437,7 @@ if __name__ == "__main__":
     test_table_colours_derive_from_theme_vars()
     test_blocks_get_a_row_of_air()
     test_block_width_has_a_query_container()
+    test_code_lines_pad_both_sides()
+    test_hanging_indent_keeps_the_list_exclusion()
     print("block geometry: all green" if not FAIL else "block geometry: failures above")
     sys.exit(1 if FAIL else 0)

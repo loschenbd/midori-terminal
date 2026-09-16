@@ -1834,6 +1834,43 @@ body {
   line-height: var(--midori-row);
 }
 
+/* CODE TEXT STOPS AT ITS PADDING, AND A WRAPPED LINE HANGS.
+   "The text overruns" turned out to be four separate things, none of them an
+   overflow — code wraps in both views. Measured in live preview: a code line
+   pads 16px on the left and NOTHING on the right, so wrapped text ended 2.2px
+   from the edge of its own background; a wrapped line continued flush left, so
+   a continuation read as a new line of code; long tokens break anywhere; and
+   the language label overlapped the first line (that last one is the rule
+   below this).
+
+   Right padding matches the left. The hang is two characters of the code face:
+   padding-inline-start carries it and a negative text-indent pulls the FIRST
+   line back out, which is the standard hanging-indent pair. Measured after:
+   first line at 16px, continuations at 30px (2ch = 14px here), right gap
+   >= 21px, every line still a whole number of rows.
+
+   :not(.HyperMD-list-line) IS LOAD-BEARING, NOT DECORATION. app.css sets
+   padding-inline-start on exactly this selector WITH the :not(), which is one
+   class more specific than the same selector without it. Measured without it:
+   the padding never applied (computed 16px) while text-indent did, so the
+   first line moved LEFT to 2px and the continuations stayed at 16 — a worse
+   result than no rule at all, and invisible to any check that only asks
+   whether the declaration is present.
+
+   Reading view needs none of this: its `pre` already pads both sides, and it
+   renders a block as one run of text with no element per line, so there is
+   nothing to hang. */
+body {
+  /* Matches app.css's own padding-inline-start on a code line, so the two
+     sides agree by construction rather than by coincidence. */
+  --midori-code-pad: 16px;
+}
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-codeblock:not(.HyperMD-list-line) {
+  padding-inline-start: calc(var(--midori-code-pad) + 2ch);
+  padding-inline-end: var(--midori-code-pad);
+  text-indent: -2ch;
+}
+
 /* Callouts: padding in whole rows, and the 1px border is absorbed by
    box-sizing rather than added on top. */
 body {
