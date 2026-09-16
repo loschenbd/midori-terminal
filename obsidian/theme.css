@@ -1954,6 +1954,42 @@ body {
   --table-border-color: color-mix(in srgb, var(--text-normal) 28%, transparent);
   --midori-table-header-bg: color-mix(in srgb, var(--text-normal) 9%,
                                       var(--background-primary));
+
+  /* HOW WIDE A BLOCK MAY GET. At least the prose column, so a table is never
+     narrower than the paragraph beside it. Past that it grows symmetrically
+     about the column to 1.6x the column, capped at the pane less 96px so it
+     never reaches the pane's edge; and when that cap is BELOW the column — a
+     pane narrower than the column plus 96px — the column wins, which is what
+     the outer max() is for. Past the ceiling, Obsidian's own sideways scroll
+     inside the block applies.
+
+     100cqi IS THE PANE, BUT ONLY WITH A CONTAINER. A container query unit with
+     no query container does not fail loudly: it resolves against the small
+     viewport, which is the whole window, and a table would break out past the
+     edge of its own pane with a clipped column as the only symptom. Hence the
+     container-type rule below, on BOTH views' scrollers.
+
+     Measured: 100cqi = 1364px in each view (the 1428px pane less 32px of
+     scroller padding each side) against 1728px — the window — with no
+     container; layout byte-identical before, during and after; scrolling
+     intact; and no new re-anchoring of fixed descendants, because
+     .workspace-leaf is already contain: strict and was their containing block
+     already.
+
+     THE cqi RESOLVES AT THE USE SITE, NOT HERE. A custom property is a token
+     stream, so the unit is resolved when a real property substitutes it —
+     which is inside the container, on the block. That is also the constraint:
+     only elements inside a container may read this. */
+  --midori-block-max: max(var(--file-line-width),
+                          min(calc(var(--file-line-width) * 1.6),
+                              calc(100cqi - 96px)));
+}
+
+/* One query container per view's scroller. Measured on both: the layout is
+   byte-identical with and without it, and scrolling is unaffected. */
+.markdown-source-view.mod-cm6 .cm-scroller,
+.markdown-reading-view .markdown-preview-view {
+  container-type: inline-size;
 }
 .markdown-rendered td,
 .markdown-rendered th {
@@ -2018,6 +2054,24 @@ body {
 .markdown-source-view.mod-cm6 .cm-table-widget {
   padding-block: 0;
   margin-block: 0;
+  /* The widget is the block: it takes the ceiling width and is pulled out
+     symmetrically, so its centre stays the column's centre whatever the
+     ceiling resolves to. Obsidian sets `margin: 0 calc(-1 * var(--size-4-4))
+     !important` here, so the inline margins need !important to replace it at
+     all. The widget paints nothing, so a widget wider than its table is
+     invisible. */
+  width: var(--midori-block-max);
+  margin-inline: calc((var(--file-line-width) - var(--midori-block-max)) / 2) !important;
+}
+/* The table inside is content-sized — measured 487.7px in a 655.2px column —
+   so without this it ignores the room the widget just gained and the breakout
+   is invisible. At least the column, as wide as its content needs, never wider
+   than the widget. */
+.markdown-source-view.mod-cm6 .cm-table-widget table {
+  width: max-content;
+  min-width: var(--file-line-width);
+  max-width: 100%;
+  margin-inline: auto;
 }
 .markdown-rendered table {
   border-width: 0;
@@ -2055,6 +2109,23 @@ body {
    so the gap is one row rather than two — either way a whole number. */
 .markdown-reading-view .markdown-preview-sizer > .el-table {
   margin-block: var(--midori-row);
+  /* Reading view's block wrapper is .el-table — the sizer's direct child, not
+     .table-wrapper and not the table itself. It already carries
+     overflow-x: auto, which is where Obsidian's own sideways scroll comes from
+     once a table passes the ceiling.
+
+     Measured: widened to 1040px it centred at 494-1534 inside the 1428px view,
+     grew 384.8px, cells went 101.2 -> 216.1px, height unchanged, no sideways
+     scroll on the view or the document, and both far edges hit-tested as th —
+     nothing clips a block wider than the column here. */
+  width: var(--midori-block-max);
+  margin-inline: calc((var(--file-line-width) - var(--midori-block-max)) / 2);
+}
+.markdown-reading-view .markdown-preview-sizer > .el-table > table {
+  width: max-content;
+  min-width: var(--file-line-width);
+  max-width: 100%;
+  margin-inline: auto;
 }
 
 /* Images and embeds cannot be fixed — their height is whatever the asset is.
