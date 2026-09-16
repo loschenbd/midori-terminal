@@ -1979,6 +1979,35 @@ body {
   line-height: var(--midori-row);
   min-height: var(--midori-row);
 }
+/* THE ICON ALIGNS TO THE LETTERS, NOT TO THE LINE BOX. Centring the icon on the
+   title row is what every box measurement says is correct — icon box centre and
+   title box centre both land on the same pixel, delta 0.00 — and it still reads
+   low, because the letters do not sit in the middle of their own line box.
+
+   WHY. "Midori Text" is metric-normalised to A = D = 0.45em (see the <mark>
+   note further down), so its em box is centred on the BASELINE and the baseline
+   lands at exactly half the row. The ink, though, runs ~0.72em above the
+   baseline and only ~0.22em below, and for a title in caps and lowercase there
+   are usually no descenders at all. So the visible letters occupy the TOP HALF
+   of the row while the icon is centred on the WHOLE row.
+
+   MEASURED, with the baseline taken from layout (a zero-size inline-block on
+   the baseline) rather than from font metrics, and with the canvas font
+   cross-checked against the live text width to within 0.02px: baseline offset
+   12px in a 24px row, ink ascent 12px — so the cap band runs from the row's top
+   edge to its middle, and its centre is at row/4. The icon's centre is at
+   row/2. The gap was 6.00, 6.33, 6.00, 6.00 and 6.00px across the note, tip,
+   warning, info and example callouts.
+
+   Hence row/4, derived rather than dialled in. It rests on two measured facts —
+   the baseline sitting at row/2, and the ink ascent equalling that same 12px —
+   so if the text face or the row changes, re-measure instead of scaling this.
+   A transform, not a margin: the callout's height is pinned to
+   48 + 24 x (title + body lines) just above, and a transform moves the ink
+   without touching that arithmetic. */
+.callout-title .callout-icon svg {
+  transform: translateY(calc(-1 * var(--midori-row) / 4));
+}
 .callout-content {
   padding-block: 0;
 }
@@ -2073,12 +2102,24 @@ body {
                                       var(--background-primary));
 
   /* HOW WIDE A BLOCK MAY GET. At least the prose column, so a table is never
-     narrower than the paragraph beside it. Past that it grows symmetrically
-     about the column to 1.6x the column, capped at the pane less 96px so it
-     never reaches the pane's edge; and when that cap is BELOW the column — a
-     pane narrower than the column plus 96px — the column wins, which is what
-     the outer max() is for. Past the ceiling, Obsidian's own sideways scroll
-     inside the block applies.
+     narrower than the paragraph beside it. Past that it grows RIGHTWARD to
+     1.6x the column — not symmetrically about it.
+
+     THE SYMMETRIC VERSION WAS WRONG, AND MEASURABLY SO. Pulling the block out
+     by half the excess on each side put the table's left edge 180.56px left of
+     every heading, code block and paragraph (all of which measure left = 0 from
+     the editor's content box). That reads as a misalignment, not as emphasis.
+     Anchoring the left edge to the text and spending the extra width on the
+     right keeps one vertical line down the page.
+
+     THE CAP FOLLOWS FROM THAT ANCHOR. The column's left edge already sits
+     (100cqi - column) / 2 from the pane's left, so the room to the right of it
+     is (100cqi + column) / 2 — a bigger allowance than the symmetric case had,
+     and a different one, so the old `100cqi - 96px` cap does not transfer. Less
+     64px, so the block never reaches the pane's edge. When that cap falls BELOW
+     the column — a narrow pane — the column wins, which is what the outer max()
+     is for. Past the ceiling, Obsidian's own sideways scroll inside the block
+     applies.
 
      100cqi IS THE PANE, BUT ONLY WITH A CONTAINER. A container query unit with
      no query container does not fail loudly: it resolves against the small
@@ -2099,7 +2140,7 @@ body {
      only elements inside a container may read this. */
   --midori-block-max: max(var(--file-line-width),
                           min(calc(var(--file-line-width) * 1.6),
-                              calc(100cqi - 96px)));
+                              calc((100cqi + var(--file-line-width)) / 2 - 64px)));
 }
 
 /* One query container per view's scroller. Measured on both: the layout is
@@ -2116,9 +2157,37 @@ body {
   /* Opaque, so the dot grid stops showing through the table. The paper colour,
      not a tint: the table is on the page, not floating over it. */
   background: var(--background-primary);
-  box-shadow:
+  /* Held in a variable because the perimeter rules below have to RESTATE these
+     two edges: box-shadow does not accumulate across rules, so a rule that adds
+     the top edge would otherwise drop the bottom and right ones. */
+  --midori-cell-edges:
     inset 0 -1px 0 var(--table-border-color),
     inset -1px 0 0 var(--table-border-color);
+  box-shadow: var(--midori-cell-edges);
+}
+/* THE TWO EDGES NO CELL DRAWS. Every cell draws its own bottom and right, which
+   covers all the interior lines and the table's own bottom and right edges. The
+   table's TOP and LEFT belong to no cell's bottom or right, so they were left to
+   an outline that never painted (see the table rule below). Drawing them as
+   inset shadows on the first row and first column puts each perimeter line
+   inside the table, at the same 1px and the same colour as every other line, and
+   draws each exactly ONCE — giving every cell all four edges would paint the
+   interior lines twice and composite them to roughly double alpha, making the
+   inside of the table heavier than its border.
+
+   thead, NOT tr:first-child ALONE. :first-child is relative to its own parent,
+   so a bare `tr:first-child` matches the first row of thead AND the first row of
+   tbody, which would draw a second line under the header band. */
+.markdown-rendered thead tr:first-child > * {
+  box-shadow: var(--midori-cell-edges), inset 0 1px 0 var(--table-border-color);
+}
+.markdown-rendered tr > :first-child {
+  box-shadow: var(--midori-cell-edges), inset 1px 0 0 var(--table-border-color);
+}
+.markdown-rendered thead tr:first-child > :first-child {
+  box-shadow: var(--midori-cell-edges),
+              inset 0 1px 0 var(--table-border-color),
+              inset 1px 0 0 var(--table-border-color);
 }
 /* The header keeps the body face — a band and weight 600 separate it, not a
    different family or small caps, both of which were tried in the rendered
@@ -2196,35 +2265,74 @@ body {
    This padding is also the air around the table, which is why the blank-line
    rule below no longer names a table widget. The total is unchanged — 24 + 240
    + 24 either way — and unlike a blank line it still works for a table that
-   has no blank line beside it. The outline draws the outer edge at no layout
-   cost; a real border would put 2px back. */
+   has no blank line beside it. */
 .markdown-source-view.mod-cm6 .cm-table-widget {
   padding-block: var(--midori-row);
   margin-block: 0;
-  /* The widget is the block: it takes the ceiling width and is pulled out
-     symmetrically, so its centre stays the column's centre whatever the
-     ceiling resolves to. Obsidian sets `margin: 0 calc(-1 * var(--size-4-4))
-     !important` here, so the inline margins need !important to replace it at
-     all. The widget paints nothing, so a widget wider than its table is
-     invisible. */
-  width: var(--midori-block-max);
-  margin-inline: calc((var(--file-line-width) - var(--midori-block-max)) / 2) !important;
+  /* ANCHORED TO THE TEXT'S LEFT EDGE, not centred on the column. app.css pads
+     this widget by --table-drag-handle-size on every side — the room for the
+     editing affordances described above — so the table inside starts one
+     handle-width in from the widget's edge. Pulling the widget back by exactly
+     that padding lands the TABLE's left edge on the same line as every heading
+     and code block, and the width carries the two paddings so the table still
+     gets a full --midori-block-max of usable room.
+
+     MEASURED BEFORE, from the editor content box: widget left -196.56, table
+     left -180.56, heading and code line and paragraph all left 0 — and the
+     table was 655.23px, exactly the column width. So the old symmetric pull
+     displaced the block 180.56px without ever widening it; the breakout was
+     invisible and only the misalignment showed.
+
+     THE FALLBACK IS LOAD-BEARING. --table-drag-handle-size is NOT defined on
+     body — reading it there returns the empty string — only in the widget's own
+     scope, where it measures 16px. A var() with no fallback would collapse the
+     whole calc() to invalid and silently drop the pull-back.
+
+     Obsidian sets `margin: 0 calc(-1 * var(--size-4-4)) !important` here, so
+     the inline margins need !important to replace it at all. The widget paints
+     nothing, so a widget wider than its table is invisible. */
+  width: calc(var(--midori-block-max) + 2 * var(--table-drag-handle-size, 16px));
+  margin-inline: calc(-1 * var(--table-drag-handle-size, 16px)) auto !important;
 }
 /* The table inside is content-sized — measured 487.7px in a 655.2px column —
-   so without this it ignores the room the widget just gained and the breakout
-   is invisible. At least the column, as wide as its content needs, never wider
-   than the widget. */
+   so without this it ignores the room the widget just gained. At least the
+   column, as wide as its content needs, never wider than the widget.
+
+   FLUSH LEFT, NOT AUTO. The widget is wider than most tables, so `auto` on both
+   sides centres the table inside it and undoes the anchor the widget's margin
+   just established — the table would drift right by half the unused room. It
+   looked correct under the old rule only because something else was already
+   beating that `auto`; a rule that works because it is being overridden is luck,
+   not design, so the flush-left margin is now stated here. */
 .markdown-source-view.mod-cm6 .cm-table-widget table {
   width: max-content;
   min-width: var(--file-line-width);
   max-width: 100%;
-  margin-inline: auto;
+  margin-inline: 0 auto;
 }
+/* NO OUTLINE HERE, AND THE COMMENT THAT PROMISED ONE WAS FALSE. The rule used
+   to carry `outline: 1px solid var(--table-border-color); outline-offset: -1px`
+   and a note saying it "draws the outer edge at no layout cost". It drew
+   nothing. A negative outline-offset puts the line INSIDE the table's border
+   box — exactly where the first row and first column paint their own
+   backgrounds — and those backgrounds became opaque when the cells stopped
+   letting the dot grid through. The outline has been painted over ever since.
+
+   It was believable because it was true when written: against transparent cells
+   the outline showed, and `getComputedStyle` kept reporting `solid 1px`
+   afterwards, so every style readout agreed with the comment. An outline that
+   computes is not an outline that paints.
+
+   MEASURED at 8x on the rendered table: the bottom-right corner shows two crisp
+   1px lines; the top-left corner shows only the header band's tonal edge, with
+   no line on either side. Those two edges are precisely the ones no cell draws.
+   The perimeter is completed by the cell rules above instead, which keeps every
+   line inside the table where no overflow can clip it — reading view's .el-table
+   carries overflow-x: auto, so a line drawn just OUTSIDE the table's left edge
+   would be clipped there and the fix would work in one view only. */
 .markdown-rendered table {
   border-width: 0;
   margin-block: 0;
-  outline: 1px solid var(--table-border-color);
-  outline-offset: -1px;
 }
 
 /* AIR AROUND A BLOCK, TAKEN FROM THE BLANK LINE THAT IS ALREADY THERE.
@@ -2268,15 +2376,24 @@ body {
      Measured: widened to 1040px it centred at 494-1534 inside the 1428px view,
      grew 384.8px, cells went 101.2 -> 216.1px, height unchanged, no sideways
      scroll on the view or the document, and both far edges hit-tested as th —
-     nothing clips a block wider than the column here. */
+     nothing clips a block wider than the column here. That probe centred the
+     block because the rule centred it at the time; what it establishes is that
+     the extra width is not clipped, and that holds whichever edge is anchored.
+
+     LEFT-ANCHORED, to match live preview. Reading view has no widget and no
+     handle padding around the block, so it needs no pull-back: the block simply
+     starts at the sizer's content edge — the line the prose already starts on —
+     and grows rightward. */
   width: var(--midori-block-max);
-  margin-inline: calc((var(--file-line-width) - var(--midori-block-max)) / 2);
+  margin-inline: 0 auto;
 }
+/* Flush left for the same reason as the live-preview copy: `auto` on both sides
+   would re-centre the table inside a block that is wider than it. */
 .markdown-reading-view .markdown-preview-sizer > .el-table > table {
   width: max-content;
   min-width: var(--file-line-width);
   max-width: 100%;
-  margin-inline: auto;
+  margin-inline: 0 auto;
 }
 
 /* Images and embeds cannot be fixed — their height is whatever the asset is.
