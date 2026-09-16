@@ -1937,15 +1937,42 @@ body {
      a whole pixel: the row is rounded up to 2px (see "TWO PIXELS, NOT ONE"),
      so it is always even. */
   --midori-cell-pad: calc(var(--midori-row) / 2);
+
+  /* The rules were rgba(60,58,54,0.1) — nearly invisible, so the dot grid read
+     as the table's structure instead. 28% of the text colour is a rule you can
+     see without it becoming the loudest thing in the block.
+
+     REDEFINING OBSIDIAN'S OWN TOKEN, not adding a parallel one: every app.css
+     rule that paints a table edge reads --table-border-color, so one
+     definition moves the drag handles and insertion markers with the rules,
+     and the theme's inset box-shadows keep reading the same name.
+
+     DERIVED, SO DARK MODE NEEDS NO SECOND COPY. --text-normal and
+     --background-primary are already per-mode; color-mix() over them means
+     there is one declaration rather than two to keep in step. Still checked by
+     eye in both modes — derived is not the same as verified. */
+  --table-border-color: color-mix(in srgb, var(--text-normal) 28%, transparent);
+  --midori-table-header-bg: color-mix(in srgb, var(--text-normal) 9%,
+                                      var(--background-primary));
 }
 .markdown-rendered td,
 .markdown-rendered th {
   line-height: var(--midori-row);
   padding: var(--midori-cell-pad);
   border-width: 0;
+  /* Opaque, so the dot grid stops showing through the table. The paper colour,
+     not a tint: the table is on the page, not floating over it. */
+  background: var(--background-primary);
   box-shadow:
     inset 0 -1px 0 var(--table-border-color),
     inset -1px 0 0 var(--table-border-color);
+}
+/* The header keeps the body face — a band and weight 600 separate it, not a
+   different family or small caps, both of which were tried in the rendered
+   mockups and read as a different document. */
+.markdown-rendered th {
+  background: var(--midori-table-header-bg);
+  font-weight: 600;
 }
 /* Live preview renders the table inside .cm-table-widget, whose own cell rule
    is (0,3,1) and beats the (0,1,1) above — so the rule has to be restated at
@@ -1971,6 +1998,17 @@ body {
   line-height: var(--midori-row) !important;
   padding-block: 0 !important;
   margin-block: 0 !important;
+}
+/* Live preview again needs its own copy at the widget's specificity, and the
+   header band must come AFTER the cell background at equal specificity and
+   equal !important, or `th` loses to `td, th`. */
+.markdown-source-view.mod-cm6 .cm-table-widget td,
+.markdown-source-view.mod-cm6 .cm-table-widget th {
+  background: var(--background-primary) !important;
+}
+.markdown-source-view.mod-cm6 .cm-table-widget th {
+  background: var(--midori-table-header-bg) !important;
+  font-weight: 600;
 }
 /* The widget wrapper and the table element contribute 34px and 2px of their
    own; both are zeroed so the block totals exactly 24 x rows. The air around

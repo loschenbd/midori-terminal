@@ -119,9 +119,66 @@ def test_cells_pad_half_a_row():
        f"{len(widget)} live-preview rule(s))")
 
 
+def test_table_colours_derive_from_theme_vars():
+    """Rules and the header band derive from theme variables, not literals.
+
+    Both modes then follow for free -- --text-normal and --background-primary
+    are already per-mode -- so there is no second copy to forget. theme_vars()
+    exists because this stylesheet declares most colour tokens twice, once per
+    mode, and a guard built on the last one proves at most one mode is wired;
+    deriving instead means there is only ever one declaration to check.
+
+    Cells must also be OPAQUE. --background-primary is the paper the dot grid
+    is painted on, so an opaque cell hides the dots inside the table; a
+    transparent or alpha cell lets them show through every cell, which is the
+    single biggest reason the old tables read as noisy.
+
+    SABOTAGE-PROVED: replacing either token with a hex literal fails naming it.
+    """
+    for name, needles in (("--table-border-color", ("color-mix", "var(--text-normal)")),
+                          ("--midori-table-header-bg", ("color-mix", "var(--text-normal)",
+                                                        "var(--background-primary)"))):
+        value = theme_var(name)
+        if value is None:
+            bad(f"{name} is not set; the table rules and header band have no "
+                "derived colour and dark mode needs a second copy")
+            return
+        missing = [n for n in needles if n not in value]
+        if missing:
+            bad(f"{name} is {value!r}, which does not derive from "
+                + ", ".join(missing) + "; a literal here needs a dark-mode copy")
+            return
+
+    # A SUBSTRING TEST WOULD NOT BE A CELL TEST. "th" appears in .theme-light,
+    # .theme-dark, body.theme-dark and a dozen .mermaid selectors: measured on
+    # this stylesheet, 16 selectors contain "td" or "th" and only 3 are cell
+    # selectors. None of the other 13 sets a cell background today, so a
+    # substring guard would pass for the right reason BY LUCK -- exactly the
+    # shape of check this repo has been burned by. Match the element as a token.
+    CELL = re.compile(r"(^|[ ,>+~])(td|th)\b")
+    HEAD = re.compile(r"(^|[ ,>+~])th\b")
+    opaque = [sel for sel, decls in rules()
+              if CELL.search(sel)
+              and re.search(r"background:\s*var\(--background-primary\)", decls)]
+    if not opaque:
+        bad("no cell rule sets background: var(--background-primary); the dot "
+            "grid shows through every cell")
+        return
+    banded = [sel for sel, decls in rules()
+              if HEAD.search(sel)
+              and re.search(r"background:\s*var\(--midori-table-header-bg\)", decls)]
+    if not banded:
+        bad("no th rule sets background: var(--midori-table-header-bg); the "
+            "header differs from the body by weight alone")
+        return
+    ok(f"table colours derive from theme variables; cells opaque in "
+       f"{len(opaque)} rule(s), header banded in {len(banded)}")
+
+
 if __name__ == "__main__":
     print("== block geometry ==")
     test_table_border_vars_are_zero()
     test_cells_pad_half_a_row()
+    test_table_colours_derive_from_theme_vars()
     print("block geometry: all green" if not FAIL else "block geometry: failures above")
     sys.exit(1 if FAIL else 0)
