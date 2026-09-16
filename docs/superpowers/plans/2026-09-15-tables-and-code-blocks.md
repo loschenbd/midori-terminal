@@ -120,6 +120,7 @@ and needs a running app to talk to, the same split as check_rendered_grid.py.
 """
 import json
 import sys
+import time
 import urllib.request
 
 import websocket   # not stdlib; see the module docstring
@@ -341,6 +342,33 @@ READ = r"""
 })()
 """
 
+THEME_STATE = r"""
+(() => {
+  const p = document.createElement('div');
+  p.style.cssText = 'position:absolute;visibility:hidden;line-height:var(--midori-row)';
+  document.body.appendChild(p);
+  const row = parseFloat(getComputedStyle(p).lineHeight);
+  p.remove();
+  // A sheet is identified by the RULES it contains, not by its name. Matching
+  // ownerNode.id against /midori/i finds midori-timer-style and misses the
+  // theme, which is injected as an unnamed inline <style>.
+  let rules = null;
+  for (const s of document.styleSheets) {
+    let n = 0; try { n = s.cssRules.length; } catch (e) { continue; }
+    for (let i = 0; i < Math.min(n, 400); i++) {
+      const txt = s.cssRules[i].cssText || '';
+      if (txt.includes('--midori-row') || txt.includes('--midori-set-measure')) { rules = n; break; }
+    }
+    if (rules) break;
+  }
+  let empty = 0;
+  for (const s of document.styleSheets) { try { if (s.cssRules.length === 0) empty++; } catch (e) {} }
+  return {row, themeSheet: rules, emptySheets: empty,
+          drawn: document.body.classList.contains('midori-drawn'),
+          indent: getComputedStyle(document.body).getPropertyValue('--midori-indent').trim()};
+})()
+"""
+
 FAIL = []
 
 
@@ -353,8 +381,47 @@ def bad(axis, msg):
     FAIL.append(axis)
 
 
+def require_theme_loaded(ws, samples=3, gap=0.7):
+    """Refuse to measure unless the theme is loaded in EVERY sample.
+
+    THIS GATE EXISTS BECAUSE ITS ABSENCE ALREADY PRODUCED A WRONG CONCLUSION.
+    A probe took ONE sample while Obsidian was swapping the theme's <style>
+    element: every --midori-* variable read unset, body had lost
+    midori-drawn, --file-line-width was Obsidian's default 700px, and one
+    inline sheet held 0 rules. Each number was correct. The conclusion drawn
+    beside them -- "the theme is not loaded, this cannot run" -- was wrong:
+    the theme was loaded seconds before and seconds after. One sample of a
+    reloading stylesheet is not a state; three agreeing samples are.
+
+    Why it is fatal rather than a warning: a themeless window does not FAIL
+    the axes below, it measures Obsidian's own defaults and reports them with
+    full confidence. That is the precise failure this file's docstring exists
+    to prevent, and it is cheaper to refuse than to explain afterwards.
+    """
+    seen = []
+    for i in range(samples):
+        seen.append(evaluate(ws, THEME_STATE))
+        if i < samples - 1:
+            time.sleep(gap)
+    for s in seen:
+        print(f"  theme: row={s['row']} drawn={s['drawn']} indent={s['indent']!r} "
+              f"themeSheetRules={s['themeSheet']} emptySheets={s['emptySheets']}")
+    good = [s for s in seen
+            if s["row"] == 24 and s["themeSheet"] and s["drawn"] and s["indent"]]
+    if len(good) != samples:
+        sys.exit(f"theme not loaded in {samples - len(good)} of {samples} samples. "
+                 "Every sample must show row=24, a stylesheet carrying "
+                 "--midori-row, body.midori-drawn, and a resolved "
+                 "--midori-indent. A themeless window measures Obsidian's "
+                 "defaults and would report them as results. If this fires "
+                 "repeatedly, re-select the theme in Settings -> Appearance; "
+                 "if it fires once, the theme was mid-reload -- just re-run.")
+    print(f"theme loaded in all {samples} samples\n")
+
+
 def main():
     ws = pick_window()
+    require_theme_loaded(ws)
     live = evaluate(ws, LIVE)
     if live.get("error"):
         sys.exit(f"live preview: {live['error']}")
@@ -2343,6 +2410,424 @@ user's call. Offer it; do not run it.
 
 ---
 
+### Task 10: Editing a table cell — the caret appears, and the cell is not indented
+
+**Not from the spec.** Two defects reported by the user during execution, with a
+screenshot: the caret is invisible while editing a table cell, and the line
+being edited gets indented. Both were measured in the running app before this
+task was written, and both live in the components this plan already touches, so
+they belong here rather than in a separate plan. The spec is unchanged — see
+the self-review note below.
+
+**Files:**
+- Modify: `obsidian/theme.css:952-954` (the drawn-caret rule) and
+  `obsidian/theme.css:1541-1546` (the paragraph-indent rule)
+- Modify: `tests/test_block_geometry.py` (add two tests, register both)
+
+**Interfaces:**
+- Consumes: `--caret-color` (declared at `obsidian/theme.css:2612`),
+  `--midori-indent` (declared at `obsidian/theme.css:1513`).
+- Produces: nothing later tasks read. Test names added:
+  `test_indent_never_reaches_a_table_cell`, `test_widget_editables_keep_a_caret`.
+
+**What was measured, before writing any of this.** A focused table cell is
+edited in a **nested `.cm-content` inside `.cm-table-widget`** — the widget has
+its own editor, so a note has two `.cm-content` ancestors in play. That single
+fact causes both defects:
+
+- The cell's line is that nested content's `:first-child`, so the first half of
+  the indent rule — "the first line of the note" — matches it. The `:not()`
+  chain cannot stop it: a cell line carries no HyperMD class at all, only
+  `cm-line cm-active`. Verified by `matches()`: the cell line matches half one
+  (`true`) and not half two (`false`), and is inside a widget (`true`); the
+  paragraph after the table matches half two, not half one, and is **not**
+  inside a widget.
+- `caret-color: transparent` is painted on `.cm-content`, so it reaches the
+  nested one too, while the drawn replacement in `plugins/midori-caret` only
+  covers the outer editor's selection geometry. Measured: `caret-color`
+  transparent at **both** `.cm-content` ancestors, and no `.cm-cursor`,
+  `.cm-cursor-primary` or drawn marker anywhere in the DOM. Painted-out native
+  caret plus un-drawn replacement is no caret.
+
+Both candidate fixes were then applied in the app and measured, with a
+three-sample stability gate first (`row 24px`, `indent 2em`, `body.midori-drawn`,
+a stylesheet carrying `--midori-row`):
+
+| | before | with the fixes | reverted |
+|---|---|---|---|
+| cell line `text-indent` | 32px | **0px** | 32px |
+| paragraph `text-indent` | 32px | **32px** | 32px |
+| nested `.cm-content` `caret-color` | transparent | **rgb(95, 111, 94)** | transparent |
+| outer `.cm-content` `caret-color` | transparent | **transparent** | transparent |
+
+- [ ] **Step 1: Write the failing static tests**
+
+Append to `tests/test_block_geometry.py`, before `__main__`:
+
+```python
+def test_indent_never_reaches_a_table_cell():
+    """The paragraph indent must not reach a table cell's nested content.
+
+    A focused cell is edited in a NESTED .cm-content inside .cm-table-widget,
+    and the cell's line is that content's :first-child -- so the "first line of
+    the note" selector matched it and indented the cell 2em while the user
+    typed. MEASURED: cell line text-indent 32px, and 0px with the exclusion,
+    while the paragraph after the table stayed at 32px.
+
+    THE :not() CHAIN CANNOT CATCH THIS. Every exclusion there names a HyperMD
+    class, and a cell line has none -- its classes are `cm-line cm-active`. The
+    only thing that distinguishes it is WHERE it lives, which is what
+    :not(.cm-table-widget *) says.
+
+    This is the same defect the comment above that rule already records for
+    headings: a selector that matches more than it names. Found again, in a
+    place nobody had looked, by measuring instead of reading.
+
+    CHECK EACH SELECTOR, NOT THE RULE -- the trap
+    test_indent_excludes_non_prose documents: rules() joins a comma-separated
+    list into one string, so asking whether the exclusion appears anywhere in
+    it asks whether ANY selector carries it.
+
+    SABOTAGE-PROVED: removing the exclusion from either half fails this test
+    naming that half.
+    """
+    indented = [sel for sel, decls in rules()
+                if "text-indent: var(--midori-indent)" in decls
+                and ".cm-line" in sel]
+    if not indented:
+        bad("no Live Preview rule applies --midori-indent")
+        return
+    for rule in indented:
+        for selector in rule.split(","):
+            if ".cm-line" not in selector:
+                continue
+            if ":not(.cm-table-widget *)" not in selector:
+                bad("a Live Preview indent selector can still reach a table "
+                    "cell's nested content, which indents the cell while it is "
+                    f"being edited: {' '.join(selector.split())[:90]}")
+                return
+    ok(f"no Live Preview indent selector reaches a table cell "
+       f"({len(indented)} rule(s) checked)")
+
+
+def test_widget_editables_keep_a_caret():
+    """A focused widget editable keeps a native caret.
+
+    caret-color: transparent is painted on .cm-content so the drawn caret from
+    plugins/midori-caret can replace it. A table widget carries its OWN nested
+    .cm-content, so that rule reached it too -- while the drawn replacement
+    only covers the outer editor's selection geometry. MEASURED: caret-color
+    transparent at BOTH .cm-content ancestors, with no .cm-cursor and no drawn
+    marker in the DOM. No native caret, no drawn caret, no caret.
+
+    CodeMirror's own drawSelection ships exactly this carve-out -- it restores
+    the native caret and selection inside a focused widget -- and the header of
+    plugins/midori-caret/main.js records that as a point in drawSelection's
+    favour. The hand-rolled path has to write the carve-out out.
+
+    GATED ON body.midori-drawn, like the rule it corrects: without the plugin
+    the native caret is untouched, and this must not start overriding a caret
+    nobody painted out.
+
+    SABOTAGE-PROVED: deleting the rule fails this test; removing its
+    body.midori-drawn gate fails it naming the gate.
+    """
+    restored = [sel for sel, decls in rules()
+                if ".cm-table-widget" in sel
+                and re.search(r"caret-color:\s*var\(--caret-color\)", decls)]
+    if not restored:
+        bad("no rule restores caret-color inside .cm-table-widget; editing a "
+            "table cell has no caret at all -- the native one is painted out "
+            "and the drawn one does not cover widget editables")
+        return
+    ungated = [sel for sel in restored if "body.midori-drawn" not in sel]
+    if ungated:
+        bad("the widget caret carve-out is not gated on body.midori-drawn, so "
+            "it overrides the caret even with the plugin disabled, where "
+            f"nothing painted it out: {' '.join(ungated[0].split())[:90]}")
+        return
+    ok(f"a focused widget editable keeps its caret ({len(restored)} rule(s), "
+       "all gated on body.midori-drawn)")
+```
+
+and register both in `__main__`, after `test_code_furniture_fits_a_row()`:
+
+```python
+    test_code_furniture_fits_a_row()
+    test_indent_never_reaches_a_table_cell()
+    test_widget_editables_keep_a_caret()
+```
+
+- [ ] **Step 2: Run them to make sure they fail**
+
+Run: `python3 tests/test_block_geometry.py`
+Expected: two FAIL lines — `a Live Preview indent selector can still reach a table cell's nested content…` and `no rule restores caret-color inside .cm-table-widget…`, exit 1.
+
+- [ ] **Step 3: Stop the indent reaching a cell**
+
+In `obsidian/theme.css`, replace (currently lines 1541–1546):
+
+```css
+/* The line that starts a paragraph: the first line of the note, or the line
+   after a blank one — and prose only. */
+.markdown-source-view.mod-cm6 .cm-content > .cm-line:first-child:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout),
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) + .cm-line:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout) {
+  text-indent: var(--midori-indent);
+}
+```
+
+with:
+
+```css
+/* The line that starts a paragraph: the first line of the note, or the line
+   after a blank one — and prose only.
+
+   "PROSE ONLY" NEEDED A PLACE AS WELL AS A CLASS LIST. A focused table cell is
+   edited in a NESTED .cm-content inside .cm-table-widget, and the cell's line
+   is that content's :first-child — so the first half of this rule, which means
+   "the first line of the note", matched the cell and indented it by 2em while
+   the user typed. None of the exclusions above could stop it: they all name a
+   HyperMD class and a cell line carries none, only `cm-line cm-active`. The
+   only thing that distinguishes it is where it lives.
+
+   Measured: cell line text-indent 32px, 0px with the exclusion, while the
+   paragraph after the table stayed at 32px. By matches(), the cell line takes
+   the FIRST half and not the second; the paragraph takes the second and is not
+   inside a widget — which is why one exclusion separates them cleanly.
+
+   BOTH HALVES CARRY IT. Only the first half was measured matching a cell, but
+   the two halves are one rule, and a nested widget line that happens to follow
+   a blank line would come through the other door. Cheaper than discovering the
+   same defect twice.
+
+   This is the second time this rule has matched more than it names — see the
+   heading case recorded above. A selector written as a description of intent
+   is not a proof of extent. */
+.markdown-source-view.mod-cm6 .cm-content > .cm-line:first-child:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout):not(.cm-table-widget *),
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child) + .cm-line:not(.HyperMD-header):not(.HyperMD-list-line):not(.HyperMD-codeblock):not(.HyperMD-quote):not(.HyperMD-table-row):not(.HyperMD-callout):not(.cm-table-widget *) {
+  text-indent: var(--midori-indent);
+}
+```
+
+**If Step 6's measurement shows the cell still at 32px**, the `:not()` with a
+descendant argument did not take effect in this Chromium build. In that case
+keep the rule above and add this equivalent, which was the form actually
+measured at 0px:
+
+```css
+.markdown-source-view.mod-cm6 .cm-table-widget .cm-content > .cm-line {
+  text-indent: 0 !important;
+}
+```
+
+and change the static test's needle from `":not(.cm-table-widget *)" not in selector`
+to accept either form. Do this only if the measurement demands it — the
+exclusion is the better fix because it removes the over-match instead of
+counteracting it.
+
+- [ ] **Step 4: Give a focused widget its caret back**
+
+In `obsidian/theme.css`, immediately after (currently lines 952–954):
+
+```css
+body.midori-drawn .markdown-source-view.mod-cm6 .cm-content {
+  caret-color: transparent;
+}
+```
+
+add:
+
+```css
+/* THE CARVE-OUT FOR A FOCUSED WIDGET. The rule above paints the native caret
+   out on .cm-content so plugins/midori-caret can draw a replacement. A table
+   widget carries its OWN nested .cm-content, so that rule reached it as well —
+   and the drawn caret is positioned from the OUTER editor's selection
+   geometry, so it never appears inside the widget. Editing a table cell
+   therefore had no caret at all: the native one painted out, nothing drawn in
+   its place. Measured: caret-color transparent at both .cm-content ancestors,
+   with no .cm-cursor and no drawn marker anywhere in the DOM.
+
+   CodeMirror's own drawSelection ships precisely this carve-out — it restores
+   the native caret and selection inside a focused widget — and the note at the
+   top of plugins/midori-caret/main.js cites that as a point in drawSelection's
+   favour. Hand-rolling the caret means hand-rolling the carve-out too.
+
+   One class more specific than the rule above, and gated on the same body
+   class, so with the plugin disabled this says nothing about a caret nobody
+   painted out. Measured with it: the nested content's caret-color became
+   rgb(95, 111, 94) — the sage accent — while the outer .cm-content stayed
+   transparent, so the drawn caret still owns prose. */
+body.midori-drawn .markdown-source-view.mod-cm6 .cm-table-widget .cm-content {
+  caret-color: var(--caret-color);
+}
+```
+
+- [ ] **Step 5: Run the static tests to verify they pass**
+
+Run: `python3 tests/test_block_geometry.py`
+Expected: `ok   no Live Preview indent selector reaches a table cell (1 rule(s) checked)` and `ok   a focused widget editable keeps its caret (1 rule(s), all gated on body.midori-drawn)`, exit 0.
+
+- [ ] **Step 6: Measure both fixes in the app**
+
+```bash
+cat > /tmp/cellcheck.mjs <<'EOF'
+const page = (await (await fetch('http://127.0.0.1:9222/json')).json())
+  .find((t) => t.type === 'page' && t.title.includes('Obsidian'));
+const ws = new WebSocket(page.webSocketDebuggerUrl);
+await new Promise((r) => (ws.onopen = r));
+const send = (method, params) => new Promise((r) => {
+  const id = Math.floor(Math.random() * 1e6);
+  const on = (e) => { const m = JSON.parse(e.data);
+    if (m.id === id) { ws.removeEventListener('message', on); r(m); } };
+  ws.addEventListener('message', on);
+  ws.send(JSON.stringify({ id, method, params }));
+});
+const ev = async (expression) => {
+  const m = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+  if (m.result && m.result.exceptionDetails) {
+    console.error('PAGE EXCEPTION:', JSON.stringify(m.result.exceptionDetails, null, 1));
+    ws.close(); process.exit(1);
+  }
+  return m.result.result.value;
+};
+// The theme must be loaded in three samples before anything is measured: one
+// sample taken while Obsidian swaps the theme <style> reads every variable
+// unset and is not a state.
+for (let i = 0; i < 3; i++) {
+  const s = await ev(`(() => {
+    const p = document.createElement('div');
+    p.style.cssText = 'position:absolute;visibility:hidden;line-height:var(--midori-row)';
+    document.body.appendChild(p);
+    const row = parseFloat(getComputedStyle(p).lineHeight); p.remove();
+    return {row, drawn: document.body.classList.contains('midori-drawn'),
+            indent: getComputedStyle(document.body).getPropertyValue('--midori-indent').trim()};
+  })()`);
+  console.log('  sample', i + 1, JSON.stringify(s));
+  if (s.row !== 24 || !s.drawn || !s.indent) {
+    console.error('theme not loaded in this sample; re-run'); ws.close(); process.exit(1);
+  }
+  if (i < 2) await new Promise((r) => setTimeout(r, 700));
+}
+const target = await ev(`(async () => {
+  const w = document.querySelector('.markdown-source-view.mod-cm6 .cm-table-widget');
+  if (!w) return {error: 'no table widget on screen'};
+  const cells = [...w.querySelectorAll('td')];
+  const cell = cells[cells.length - 1];
+  cell.scrollIntoView({block: 'center'});
+  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 300)));
+  const b = cell.getBoundingClientRect();
+  return {x: Math.round(b.left + 12), y: Math.round((b.top + b.bottom) / 2)};
+})()`);
+if (target.error) { console.error(target.error); ws.close(); process.exit(1); }
+for (const type of ['mousePressed', 'mouseReleased'])
+  await send('Input.dispatchMouseEvent', { type, x: target.x, y: target.y, button: 'left', clickCount: 1 });
+await new Promise((r) => setTimeout(r, 700));
+console.log(JSON.stringify(await ev(`(() => {
+  const view = document.querySelector('.markdown-source-view.mod-cm6');
+  const w = view.querySelector('.cm-table-widget');
+  const nested = w.querySelector('.cm-content'), line = w.querySelector('.cm-line');
+  const outer = [...view.querySelectorAll('.cm-content')].find((c) => !c.closest('.cm-table-widget'));
+  const para = [...outer.children].filter((e) => e.classList.contains('cm-line'))
+    .find((l) => (l.textContent || '').trim().startsWith('A paragraph after the table'));
+  if (!line || !nested) return {error: 'click did not focus a cell'};
+  return {cellIndent: getComputedStyle(line).textIndent,
+          paraIndent: para ? getComputedStyle(para).textIndent : null,
+          nestedCaret: getComputedStyle(nested).caretColor,
+          outerCaret: getComputedStyle(outer).caretColor};
+})()`), null, 1));
+ws.close();
+EOF
+node /tmp/cellcheck.mjs
+```
+
+Expected: `cellIndent: "0px"`, `paraIndent: "32px"`, `nestedCaret` a real colour
+(`rgb(95, 111, 94)` at the shipped accent), `outerCaret: "rgba(0, 0, 0, 0)"`.
+The last two matter together: the cell gets a native caret back **and** prose
+keeps the drawn one.
+
+Then confirm by eye, which is the only instrument for "the caret blinks": click
+into a table cell and type a character, then undo it (`Cmd+Z`). The caret must
+be visible and on the row, and the text must not shift right as you type.
+
+- [ ] **Step 7: Sabotage-prove both guards**
+
+```bash
+cd /Users/benjaminloschen/Projects/midori-terminal
+cp obsidian/theme.css /tmp/theme.css.bak
+# (a) the exclusion removed from the FIRST half only
+python3 - <<'PY'
+import pathlib
+p = pathlib.Path("obsidian/theme.css"); s = p.read_text()
+s = s.replace(":not(.HyperMD-callout):not(.cm-table-widget *),",
+              ":not(.HyperMD-callout),", 1)
+p.write_text(s)
+PY
+python3 tests/test_block_geometry.py; echo "exit $? (want 1, naming a selector that can reach a cell)"
+cp /tmp/theme.css.bak obsidian/theme.css
+# (b) the caret carve-out deleted
+python3 - <<'PY'
+import pathlib
+p = pathlib.Path("obsidian/theme.css"); s = p.read_text()
+s = s.replace("""body.midori-drawn .markdown-source-view.mod-cm6 .cm-table-widget .cm-content {
+  caret-color: var(--caret-color);
+}
+""", "", 1)
+p.write_text(s)
+PY
+python3 tests/test_block_geometry.py; echo "exit $? (want 1, naming the missing carve-out)"
+cp /tmp/theme.css.bak obsidian/theme.css
+# (c) the carve-out present but ungated
+python3 - <<'PY'
+import pathlib
+p = pathlib.Path("obsidian/theme.css"); s = p.read_text()
+s = s.replace("body.midori-drawn .markdown-source-view.mod-cm6 .cm-table-widget .cm-content {",
+              ".markdown-source-view.mod-cm6 .cm-table-widget .cm-content {", 1)
+p.write_text(s)
+PY
+python3 tests/test_block_geometry.py; echo "exit $? (want 1, naming the body.midori-drawn gate)"
+cp /tmp/theme.css.bak obsidian/theme.css
+python3 tests/test_block_geometry.py; echo "exit $? (want 0 -- theme restored)"
+```
+
+- [ ] **Step 8: Lint and commit**
+
+```bash
+sh tests/lint.sh
+git add obsidian/theme.css tests/test_block_geometry.py
+git commit -m "$(cat <<'EOF'
+fix(obsidian): editing a table cell had no caret and indented the line
+
+A focused table cell is edited in a NESTED .cm-content inside
+.cm-table-widget, and that one fact caused both defects the user reported.
+
+The cell's line is the nested content's :first-child, so the indent rule's
+"first line of the note" half matched it and pushed the cell 2em right while
+they typed. The :not() chain could not stop it: every exclusion names a
+HyperMD class and a cell line has none, only `cm-line cm-active`. Both halves
+now exclude :not(.cm-table-widget *) -- the only thing that distinguishes a
+cell line is where it lives. Measured 32px -> 0px, with the paragraph after
+the table unchanged at 32px.
+
+caret-color: transparent is painted on .cm-content for the drawn caret to
+replace, and it reached the nested content too, while the drawn caret is
+positioned from the outer editor's geometry and never appears inside a widget
+-- so there was no caret at all, native or drawn. Measured transparent at both
+.cm-content ancestors with no .cm-cursor and no drawn marker in the DOM.
+CodeMirror's drawSelection ships this same carve-out; the hand-rolled path
+needed it written out. Measured: the nested content's caret-color became the
+sage accent while prose stayed transparent.
+
+Both guards sabotage-proved three ways: the exclusion dropped from one half,
+the carve-out deleted, and the carve-out left ungated.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_013rhw75dhAvgnscSB9GHixV
+EOF
+)"
+```
+
+---
+
 ## Self-Review
 
 **1. Spec coverage.** Walking the spec section by section:
@@ -2367,6 +2852,16 @@ user's call. Offer it; do not run it.
 | Every guard sabotage-proved | 2–8 step "Sabotage-prove", plus 1 and 9 for the rendered checker |
 | Dark mode, wide and narrow pane, both views | 9 |
 | Out of scope: HTML comments, Style Settings controls, treatments A and B | no task, correctly |
+
+**One task is not from the spec.** Task 10 fixes two defects the user reported
+during execution — an invisible caret and an indented line while editing a
+table cell — both measured in the app before the task was written. It is in
+this plan because both live in the components Tasks 2–8 already touch and
+share one cause (a table widget has its own nested `.cm-content`). The spec is
+deliberately left unamended: it records the design that was approved, and
+inventing spec coverage after the fact would make a user-reported bug look
+like a requirement that had been agreed. A reader comparing the two should see
+nine tasks arguing from the spec and one arguing from a measurement.
 
 No gaps. Two spec items are deliberately no-ops (wrapping stays; long tokens
 still break), and the plan says so rather than inventing work for them.
