@@ -484,6 +484,91 @@ def test_code_furniture_fits_a_row():
        "against a positioned fence line")
 
 
+def test_indent_never_reaches_a_table_cell():
+    """The paragraph indent must not reach a table cell's nested content.
+
+    A focused cell is edited in a NESTED .cm-content inside .cm-table-widget,
+    and the cell's line is that content's :first-child -- so the "first line of
+    the note" selector matched it and indented the cell 2em while the user
+    typed. MEASURED: cell line text-indent 32px, and 0px with the exclusion,
+    while the paragraph after the table stayed at 32px.
+
+    THE :not() CHAIN CANNOT CATCH THIS. Every exclusion there names a HyperMD
+    class, and a cell line has none -- its classes are `cm-line cm-active`. The
+    only thing that distinguishes it is WHERE it lives, which is what
+    :not(.cm-table-widget *) says.
+
+    This is the same defect the comment above that rule already records for
+    headings: a selector that matches more than it names. Found again, in a
+    place nobody had looked, by measuring instead of reading.
+
+    CHECK EACH SELECTOR, NOT THE RULE -- the trap
+    test_indent_excludes_non_prose documents: rules() joins a comma-separated
+    list into one string, so asking whether the exclusion appears anywhere in
+    it asks whether ANY selector carries it.
+
+    SABOTAGE-PROVED: removing the exclusion from either half fails this test
+    naming that half.
+    """
+    indented = [sel for sel, decls in rules()
+                if "text-indent: var(--midori-indent)" in decls
+                and ".cm-line" in sel]
+    if not indented:
+        bad("no Live Preview rule applies --midori-indent")
+        return
+    for rule in indented:
+        for selector in rule.split(","):
+            if ".cm-line" not in selector:
+                continue
+            if ":not(.cm-table-widget *)" not in selector:
+                bad("a Live Preview indent selector can still reach a table "
+                    "cell's nested content, which indents the cell while it is "
+                    f"being edited: {' '.join(selector.split())[:90]}")
+                return
+    ok(f"no Live Preview indent selector reaches a table cell "
+       f"({len(indented)} rule(s) checked)")
+
+
+def test_widget_editables_keep_a_caret():
+    """A focused widget editable keeps a native caret.
+
+    caret-color: transparent is painted on .cm-content so the drawn caret from
+    plugins/midori-caret can replace it. A table widget carries its OWN nested
+    .cm-content, so that rule reached it too -- while the drawn replacement
+    only covers the outer editor's selection geometry. MEASURED: caret-color
+    transparent at BOTH .cm-content ancestors, with no .cm-cursor and no drawn
+    marker in the DOM. No native caret, no drawn caret, no caret.
+
+    CodeMirror's own drawSelection ships exactly this carve-out -- it restores
+    the native caret and selection inside a focused widget -- and the header of
+    plugins/midori-caret/main.js records that as a point in drawSelection's
+    favour. The hand-rolled path has to write the carve-out out.
+
+    GATED ON body.midori-drawn, like the rule it corrects: without the plugin
+    the native caret is untouched, and this must not start overriding a caret
+    nobody painted out.
+
+    SABOTAGE-PROVED: deleting the rule fails this test; removing its
+    body.midori-drawn gate fails it naming the gate.
+    """
+    restored = [sel for sel, decls in rules()
+                if ".cm-table-widget" in sel
+                and re.search(r"caret-color:\s*var\(--caret-color\)", decls)]
+    if not restored:
+        bad("no rule restores caret-color inside .cm-table-widget; editing a "
+            "table cell has no caret at all -- the native one is painted out "
+            "and the drawn one does not cover widget editables")
+        return
+    ungated = [sel for sel in restored if "body.midori-drawn" not in sel]
+    if ungated:
+        bad("the widget caret carve-out is not gated on body.midori-drawn, so "
+            "it overrides the caret even with the plugin disabled, where "
+            f"nothing painted it out: {' '.join(ungated[0].split())[:90]}")
+        return
+    ok(f"a focused widget editable keeps its caret ({len(restored)} rule(s), "
+       "all gated on body.midori-drawn)")
+
+
 if __name__ == "__main__":
     print("== block geometry ==")
     test_table_border_vars_are_zero()
@@ -494,5 +579,7 @@ if __name__ == "__main__":
     test_code_lines_pad_both_sides()
     test_hanging_indent_keeps_the_list_exclusion()
     test_code_furniture_fits_a_row()
+    test_indent_never_reaches_a_table_cell()
+    test_widget_editables_keep_a_caret()
     print("block geometry: all green" if not FAIL else "block geometry: failures above")
     sys.exit(1 if FAIL else 0)
