@@ -1871,6 +1871,41 @@ body {
   text-indent: -2ch;
 }
 
+/* THE LABEL AND THE COPY BUTTON GO IN THE EMPTY ROW, NOT OVER THE CODE.
+   Measured: .code-block-flair is 32px tall — 6px from the top plus 4px of
+   vertical padding each side — inside a 24px fence row, so it hung 8px into
+   the first line and overlapped the end of a long one. Reading view's hover
+   copy button does the same over the first line of a <pre>.
+
+   Both blocks already have an empty row for it: the fence row carries no code
+   text in live preview, and a reading-view <pre> pads a whole row top and
+   bottom (see the code block above). So constrain the furniture to one row and
+   pin it to the top of that row.
+
+   THE FENCE LINE IS POSITIONED ON PURPOSE. `top: 0` means nothing without a
+   known containing block, and an absolutely positioned label resolves against
+   its nearest positioned ancestor — left to chance that could be .cm-content,
+   which would put the label at the top of the document rather than the top of
+   its block. */
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-codeblock-begin {
+  position: relative;
+}
+.markdown-source-view.mod-cm6 .code-block-flair {
+  top: 0;
+  right: var(--midori-code-pad);
+  height: var(--midori-row);
+  line-height: var(--midori-row);
+  padding-block: 0;
+}
+.markdown-rendered button.copy-code-button {
+  top: 0;
+  right: 0;
+  margin: 0;
+  height: var(--midori-row);
+  line-height: var(--midori-row);
+  padding-block: 0;
+}
+
 /* Callouts: padding in whole rows, and the 1px border is absorbed by
    box-sizing rather than added on top. */
 body {
