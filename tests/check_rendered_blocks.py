@@ -216,21 +216,62 @@ LIVE = r"""
     const first = blk.lines[0], last = blk.lines[blk.lines.length - 1];
     const top = first.getBoundingClientRect().top, bottom = last.getBoundingClientRect().bottom;
     const h = bottom - top;
+    // The language label sits in the fence row; it must overlap no code text.
+    const flair = first.querySelector('.code-block-flair')
+      || (first.parentElement && first.parentElement.querySelector('.code-block-flair'));
+
+    // THIRD correction to this file, and the one that had two axes lying at once.
+    //
+    // .code-block-flair is a DESCENDANT of the fence .cm-line, so textRects(line)
+    // -- which ranges over the whole line's contents -- includes the label's own
+    // glyphs. Both consumers below then treated the label as code text:
+    //
+    //   * flairOverlap compared the flair's box against a rect set containing
+    //     the flair's own text, so it always intersected ITSELF. It reported
+    //     "overlaps code text by 32px" where 32px is exactly the flair's own
+    //     height -- the signature of self-intersection, not of a collision.
+    //     No CSS change could ever have driven that to zero.
+    //   * minGap took the rightmost text rect on each line, which on the fence
+    //     row is the label. code-right-gap duly named its worst line 'Python'
+    //     -- a language label, not a line of code.
+    //
+    // Why the original looked right: "the text in this line" is the obvious
+    // reading, and it is correct for every line EXCEPT the fence row, where
+    // Obsidian injects a widget that is not part of the document's text. The
+    // bug only shows on the one line the axis exists to check.
+    //
+    // So: gather rects from text nodes that are not inside the flair, and use
+    // that for both axes. Falling back to textRects when there is no flair
+    // keeps every other block measuring exactly as before.
+    const codeTextRects = (el) => {
+      if (!flair) return textRects(el);
+      const out = [];
+      const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let n;
+      while ((n = w.nextNode())) {
+        if (!n.nodeValue || !n.nodeValue.trim()) continue;
+        if (flair.contains(n)) continue;  // the label is not code
+        const r = document.createRange();
+        r.selectNodeContents(n);
+        for (const rect of r.getClientRects()) {
+          if (rect.width > 0 && rect.height > 0) out.push(rect);
+        }
+      }
+      return out;
+    };
+
     let minGap = Infinity, worst = null;
     for (const line of blk.lines) {
-      const b = line.getBoundingClientRect(), t = textRects(line);
+      const b = line.getBoundingClientRect(), t = codeTextRects(line);
       if (!t.length) continue;
       const gap = b.right - Math.max(...t.map((x) => x.right));
       if (gap < minGap) { minGap = gap; worst = (line.textContent || '').trim().slice(0, 32); }
     }
-    // The language label sits in the fence row; it must overlap no code text.
-    const flair = first.querySelector('.code-block-flair')
-      || (first.parentElement && first.parentElement.querySelector('.code-block-flair'));
     let overlap = null;
     if (flair) {
       const f = flair.getBoundingClientRect();
       overlap = 0;
-      for (const line of blk.lines) for (const t of textRects(line)) {
+      for (const line of blk.lines) for (const t of codeTextRects(line)) {
         const dx = Math.min(f.right, t.right) - Math.max(f.left, t.left);
         const dy = Math.min(f.bottom, t.bottom) - Math.max(f.top, t.top);
         if (dx > 0.5 && dy > 0.5) overlap = Math.max(overlap, +Math.min(dx, dy).toFixed(2));
