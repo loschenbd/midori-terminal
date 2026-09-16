@@ -57,8 +57,71 @@ def test_table_border_vars_are_zero():
     ok(f"all {len(BORDER_VARS)} Obsidian table edge widths are zeroed")
 
 
+def test_cells_pad_half_a_row():
+    """A cell pads half a row on all four sides, in both views.
+
+    A cell of n lines is then row x n + 2 x (row / 2) = row x (n + 1), so a
+    table totals whole rows however its cells wrap -- which is the property the
+    old 8px padding lacked: it held on a desktop where every cell is one line
+    and broke on a phone where the same cells wrap to two, because the
+    line-height term scales with wrapping while a constant does not.
+
+    Half a row is always a whole pixel: the theme rounds the row UP TO 2px (see
+    "TWO PIXELS, NOT ONE" in theme.css), so the row is always even.
+
+    THE LIVE-PREVIEW RULE MUST RESTATE IT. .cm-table-widget's own cell rule is
+    (0,3,1) and beats the (0,1,1) reading-view rule, so a single declaration
+    silently applies to reading view only -- the trap the existing comment in
+    theme.css records with !important.
+
+    SABOTAGE-PROVED: changing --midori-cell-pad to 0 fails naming the token;
+    deleting the padding from the widget rule fails naming live preview.
+    """
+    pad = theme_var("--midori-cell-pad")
+    if pad is None:
+        bad("--midori-cell-pad is not set; a cell needs half a row of padding "
+            "on all four sides for a table to total whole rows")
+        return
+    if not re.fullmatch(r"calc\(\s*var\(--midori-row\)\s*/\s*2\s*\)", pad.strip()):
+        bad(f"--midori-cell-pad is {pad!r}; it must be "
+            "calc(var(--midori-row) / 2) so it follows the reader's row")
+        return
+
+    def pads(selector_needle, extra=None):
+        hits = []
+        for sel, decls in rules():
+            if selector_needle not in sel:
+                continue
+            if extra and extra not in sel:
+                continue
+            if re.search(r"(^|;)\s*padding:\s*var\(--midori-cell-pad\)", decls):
+                hits.append(sel)
+        return hits
+
+    reading = [sel for sel in pads(".markdown-rendered td")]
+    if not reading:
+        bad("no .markdown-rendered td rule pads var(--midori-cell-pad); "
+            "reading-view cells keep Obsidian's 8px and fall off the row")
+    widget = [sel for sel in pads(".cm-table-widget td")]
+    if not widget:
+        bad("no .cm-table-widget td rule pads var(--midori-cell-pad); the "
+            "widget's own (0,3,1) cell rule wins and live preview is unfixed")
+    if not reading or not widget:
+        return
+    for sel in widget:
+        for one in sel.split(","):
+            if ".cm-table-widget" in one and "td" in one and "*" not in one:
+                break
+        else:
+            bad(f"a widget padding rule targets no bare cell: {sel[:70]}")
+            return
+    ok(f"cells pad half a row in both views ({len(reading)} reading-view rule(s), "
+       f"{len(widget)} live-preview rule(s))")
+
+
 if __name__ == "__main__":
     print("== block geometry ==")
     test_table_border_vars_are_zero()
+    test_cells_pad_half_a_row()
     print("block geometry: all green" if not FAIL else "block geometry: failures above")
     sys.exit(1 if FAIL else 0)
