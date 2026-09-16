@@ -22,6 +22,16 @@ Run:
 Open a note with a table and a fenced code block in Live Preview first, and
 scroll so both are on screen: CodeMirror only keeps visible lines in the DOM.
 
+RUNNING IT TWICE IN A ROW CAN SELF-REFUSE. The READ probe switches the leaf to
+mode 'preview' and back to measure the reading view, and that round trip resets
+the Live Preview scroller's position as a side effect -- measured directly: a
+back-to-back run with no scrolling in between can drop the live window's
+rendered code-line count to 0, and pick_window then refuses it, correctly,
+because a window with 0 rendered code lines genuinely cannot show the defects.
+That refusal is the instrument doing its job, not a bug to route around by
+loosening it. The fix when it happens is to re-scroll Live Preview so a table
+and a code block are on screen again, then re-run.
+
 Not stdlib and deliberately not wired into tests/lint.sh: it imports websocket
 and needs a running app to talk to, the same split as check_rendered_grid.py.
 """
@@ -116,9 +126,42 @@ LIVE = r"""
   const phase = (el) => { const d = (el.getBoundingClientRect().top - contentTop) % row;
     return +Math.min(Math.abs(d), Math.abs(row - d)).toFixed(2); };
 
+  // paragraph-phase originally read el.nextElementSibling directly and called that
+  // "the line after the block". That looked right -- it IS the next line after the
+  // block -- but it was wrong: measured read-only against the running app, on all
+  // 4 blocks on screen (1 table + 3 code blocks), el.nextElementSibling is ALWAYS a
+  // blank cm-line with br:only-child, textContent length 0, height 0px, and
+  // textRects().length === 0. It is an architectural spacer CodeMirror inserts
+  // after every block, not prose. The first sibling that textRects() accepts sits
+  // at +2 in all 4 cases. So the old form's `after && textRects(after).length` gate
+  // was always false, afterPhase was always null, `seen` in main() never
+  // incremented, and the "no block had a following line to measure" fallback fired
+  // on every run regardless of the theme -- a guard that can never pass is not a
+  // check, it is decoration.
+  //
+  // The fix is NOT to phase the blank spacer's own rect instead of walking past
+  // it. That was tried and rejected on measurement: the blank sibling has height
+  // 0px today and its top coincides with the rect below it (both -31.53 in the
+  // sample measured), so phasing it now would read the same position as the line
+  // after it. Task 5 deliberately gives that spacer 24px of height, which would
+  // move its top by a full row -- so a phase read on the spacer measures a
+  // different physical line before Task 5 lands than after, while nothing about
+  // the reported afterPhase value would announce that the thing being measured had
+  // changed. Walking forward to real content sidesteps that: whatever height the
+  // spacer ends up with, the first line with actual text is always the right thing
+  // to check for lattice alignment.
+  const nextMeasurable = (el) => {
+    let cur = el ? el.nextElementSibling : null;
+    for (let i = 0; i < 4 && cur; i++) {
+      if (textRects(cur).length) return cur;
+      cur = cur.nextElementSibling;
+    }
+    return null;
+  };
+
   // Tables: the widget is one element, so its own box is the block.
   const tables = kids.filter((el) => el.classList.contains('cm-table-widget')).map((el) => {
-    const b = el.getBoundingClientRect(), after = el.nextElementSibling;
+    const b = el.getBoundingClientRect(), after = nextMeasurable(el);
     const cell = el.querySelector('td'), head = el.querySelector('th');
     const alpha = (c) => { const m = /rgba?\(([^)]+)\)/.exec(c);
       return m ? (m[1].split(',').length > 3 ? parseFloat(m[1].split(',')[3]) : 1) : null; };
@@ -127,7 +170,7 @@ LIVE = r"""
             cellBg: cell ? getComputedStyle(cell).backgroundColor : null,
             cellAlpha: cell ? alpha(getComputedStyle(cell).backgroundColor) : null,
             headBg: head ? getComputedStyle(head).backgroundColor : null,
-            afterPhase: after && textRects(after).length ? phase(after) : null};
+            afterPhase: after ? phase(after) : null};
   });
 
   // Code: consecutive .HyperMD-codeblock lines are one block.
@@ -162,14 +205,14 @@ LIVE = r"""
         if (dx > 0.5 && dy > 0.5) overlap = Math.max(overlap, +Math.min(dx, dy).toFixed(2));
       }
     }
-    const after = last.nextElementSibling;
+    const after = nextMeasurable(last);
     const cs = getComputedStyle(first);
     return {lines: blk.lines.length, h: +h.toFixed(2), rows: +(h / row).toFixed(3), off: off(h),
             minGap: minGap === Infinity ? null : +minGap.toFixed(2), worstLine: worst,
             padStart: cs.paddingInlineStart, padEnd: cs.paddingInlineEnd, indent: cs.textIndent,
             flair: !!flair, flairH: flair ? +flair.getBoundingClientRect().height.toFixed(2) : null,
             flairOverlap: overlap,
-            afterPhase: after && textRects(after).length ? phase(after) : null};
+            afterPhase: after ? phase(after) : null};
   });
 
   const scroller = view.querySelector('.cm-scroller');
@@ -387,9 +430,14 @@ def main():
                                        f"{b['afterPhase']}px off the lattice")
             else:
                 ok("paragraph-phase", f"the line after {kind} {i} is on the lattice")
+    # This no longer means "scroll" -- nextMeasurable already walks past the
+    # blank spacer line CodeMirror inserts after every block. It means no
+    # sibling within 4 elements of any block had measurable text at all, which
+    # would be a real gap in the note, not a viewport problem.
     if not seen:
-        bad("paragraph-phase", "no block had a following line to measure; scroll so "
-                               "a block with text under it is on screen")
+        bad("paragraph-phase", "no block had a measurable sibling within 4 "
+                               "elements; the note may need a line of text "
+                               "after a block that is currently on screen")
 
     # code-right-gap
     for i, cb in enumerate(live["code"]):
@@ -415,6 +463,10 @@ def main():
         else:
             ok("label-overlap", f"the language label on live code block {i} "
                                 f"({cb['flairH']}px) overlaps no code text")
+    # Reading view has no overlap geometry to test against -- the copy button
+    # floats above the code rather than sharing its row -- so both branches
+    # below are descriptive only (both call ok()). The axis's real assertion
+    # is the live-preview half above, via flairOverlap.
     for i, pre in enumerate(read["pres"]):
         if not pre["button"]:
             ok("label-overlap", f"reading-view pre {i} has no copy button in the DOM")
