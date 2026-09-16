@@ -2163,13 +2163,43 @@ body {
   background: var(--midori-table-header-bg) !important;
   font-weight: 600;
 }
-/* The widget wrapper and the table element contribute 34px and 2px of their
-   own; both are zeroed so the block totals exactly 24 x rows. The air around
-   the table comes from the blank editor lines either side, which are already
-   whole rows. The outline draws the outer edge at no layout cost — a real
-   border here would put the 2px straight back. */
+/* A WHOLE ROW OF BLOCK PADDING, BECAUSE THIS WIDGET IS A SCROLL CONTAINER.
+   app.css gives it `padding: var(--table-drag-handle-size)` alongside
+   `overflow: auto hidden`, and that padding is not decoration. The table editor
+   hangs its affordances OUTSIDE the table box — `.table-row-btn { position:
+   absolute; top: 100%; height: var(--table-drag-handle-size) }` below it, and
+   the column drag handles the same distance above. The padding is the room
+   they occupy.
+
+   This rule used to zero padding-block, and the comment here claimed the
+   widget and table "contribute 34px and 2px of their own". Believable, because
+   both numbers were true of a table whose cells had no vertical padding — but
+   never re-derived afterwards, and wrong: what app.css declares is one
+   --table-drag-handle-size (16px, measured) per side. Zeroing it did not merely
+   remove space. It left 16px of absolutely positioned content hanging below a
+   box whose overflow-y is hidden, which makes the widget scrollable.
+
+   Measured with a cell focused: clientHeight 240, scrollHeight 256,
+   scrollTop 12. The engine had scrolled the widget to reveal the focused cell,
+   so the table rode 12px up inside its own box — slicing the header's top
+   padding ("header bar is cut off") and putting all 5 rows 11.53px off the 24px
+   lattice ("not vertically inline anymore"). One displacement, both symptoms;
+   neither is a padding value being wrong.
+
+   Relaxing the clip is not on offer: app.css sets overflow-x: auto, and per CSS
+   a `visible` on one axis computes to `auto` when the other is auto or scroll.
+   So the room returns as geometry. It returns as a whole row rather than the
+   16px app.css used because this block must stay a whole number of rows; 24 >=
+   16, so the affordances still fit, and with scrollHeight == clientHeight there
+   is nothing left to scroll.
+
+   This padding is also the air around the table, which is why the blank-line
+   rule below no longer names a table widget. The total is unchanged — 24 + 240
+   + 24 either way — and unlike a blank line it still works for a table that
+   has no blank line beside it. The outline draws the outer edge at no layout
+   cost; a real border would put 2px back. */
 .markdown-source-view.mod-cm6 .cm-table-widget {
-  padding-block: 0;
+  padding-block: var(--midori-row);
   margin-block: 0;
   /* The widget is the block: it takes the ceiling width and is pulled out
      symmetrically, so its centre stays the column's centre whatever the
@@ -2205,19 +2235,23 @@ body {
    from the blank line in the document, and :has() is what lets a rule see the
    block that follows it.
 
-   Measured: 0 -> 24px above and below both code blocks and table widgets, with
-   block height, corner radius and background untouched.
+   Measured: 0 -> 24px above and below a code block, with block height, corner
+   radius and background untouched.
 
-   FOUR SELECTORS BECAUSE THERE ARE FOUR CASES. Forward (:has(+ x)) and
-   backward (x + y) are different selectors, and a code block and a table
-   widget are different elements. Dropping one leaves a block touching its
-   neighbour on one side only, which reads as a rendering bug rather than a
-   missing rule. Only a line that is ACTUALLY blank qualifies —
-   :has(> br:only-child) — so a line with text keeps the prose rhythm. */
+   TWO SELECTORS, FOR A CODE BLOCK'S TWO SIDES. Forward (:has(+ x)) and
+   backward (x + y) are different selectors, so dropping one leaves a block
+   touching its neighbour on one side only, which reads as a rendering bug
+   rather than a missing rule. Only a line that is ACTUALLY blank qualifies —
+   :has(> br:only-child) — so a line with text keeps the prose rhythm.
+
+   There were four. A table widget had the same pair until it took a row of
+   block padding of its own, which it must carry to house its editing
+   affordances (see the .cm-table-widget rule above); a blank line on top of
+   that would have doubled the air on one side. A code block has no such
+   affordance and no such padding, so it still takes its air from the blank
+   line. */
 .markdown-source-view.mod-cm6 .cm-line:has(> br:only-child):has(+ .cm-line.HyperMD-codeblock-begin),
-.markdown-source-view.mod-cm6 .cm-line.HyperMD-codeblock-end + .cm-line:has(> br:only-child),
-.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child):has(+ .cm-table-widget),
-.markdown-source-view.mod-cm6 .cm-table-widget + .cm-line:has(> br:only-child) {
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-codeblock-end + .cm-line:has(> br:only-child) {
   line-height: var(--midori-row);
 }
 
