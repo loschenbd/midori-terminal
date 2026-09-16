@@ -430,6 +430,60 @@ def test_hanging_indent_keeps_the_list_exclusion():
        f"({len(found)} rule(s))")
 
 
+def test_code_furniture_fits_a_row():
+    """The language label and the copy button are one row tall and top-aligned.
+
+    MEASURED: .code-block-flair is 32px tall (6px top + 4px vertical padding
+    each side on a 24px row) inside a 24px fence row, so it hung 8px into the
+    first line of code and overlapped the end of a long one. The reading-view
+    copy button does the same over the first line of a <pre>.
+
+    Both blocks already have an empty row for them: the fence row carries no
+    code text in live preview, and reading view's <pre> pads a whole row top and
+    bottom. Constraining the furniture to one row and pinning it to the top puts
+    it in that row instead of over the code.
+
+    THE FENCE LINE IS MADE position: relative DELIBERATELY. `top: 0` is only
+    meaningful against a known containing block, and an absolutely positioned
+    label resolves against its nearest positioned ancestor -- which, left to
+    chance, may be .cm-content and would put the label at the top of the
+    document. Positioning the fence line makes the containing block the row we
+    mean.
+
+    SABOTAGE-PROVED: removing the height, or the position: relative, fails this
+    test naming what went missing.
+
+    THE height NEEDLE MUST NOT MATCH line-height. An unanchored "height:"
+    pattern is a substring of "line-height:" too, so it is satisfied by the
+    co-located line-height: var(--midori-row) declaration on the same two
+    rules even after the real height: line is deleted -- found while
+    sabotage-proving this exact test, which is the guard-shaped version of
+    the trap this file's other height/top checks already dodge with an
+    anchored (^|;) prefix. Anchored here the same way.
+    """
+    needed = {"flair-height": False, "flair-top": False, "fence-relative": False,
+              "button-height": False, "button-top": False}
+    for sel, decls in rules():
+        one_row = re.search(r"(^|;)\s*height:\s*var\(--midori-row\)", decls)
+        top0 = re.search(r"(^|;)\s*top:\s*0", decls)
+        if "code-block-flair" in sel:
+            needed["flair-height"] |= bool(one_row)
+            needed["flair-top"] |= bool(top0)
+        if "copy-code-button" in sel:
+            needed["button-height"] |= bool(one_row)
+            needed["button-top"] |= bool(top0)
+        if "HyperMD-codeblock-begin" in sel and re.search(r"position:\s*relative", decls):
+            needed["fence-relative"] = True
+    missing = [k for k, v in needed.items() if not v]
+    if missing:
+        for k in missing:
+            bad(f"code furniture is unconstrained: {k} is missing; a 32px label "
+                "in a 24px row hangs over the first line of code")
+        return
+    ok("the language label and the copy button are one row tall, top-aligned, "
+       "against a positioned fence line")
+
+
 if __name__ == "__main__":
     print("== block geometry ==")
     test_table_border_vars_are_zero()
@@ -439,5 +493,6 @@ if __name__ == "__main__":
     test_block_width_has_a_query_container()
     test_code_lines_pad_both_sides()
     test_hanging_indent_keeps_the_list_exclusion()
+    test_code_furniture_fits_a_row()
     print("block geometry: all green" if not FAIL else "block geometry: failures above")
     sys.exit(1 if FAIL else 0)
