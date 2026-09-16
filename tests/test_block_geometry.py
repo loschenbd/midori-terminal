@@ -147,7 +147,18 @@ def test_table_colours_derive_from_theme_vars():
 
     SABOTAGE-PROVED: replacing either token with a hex literal fails naming it;
     removing !important from the widget's opaque-cell background fails naming
-    it.
+    it; and removing the READING-VIEW opaque background fails naming reading
+    view (exit 1, message names READING-VIEW, stylesheet restored
+    byte-identical at sha f0cde749).
+
+    That third case is here because the guard once missed it. The opaque check
+    asked whether ANY cell rule was opaque, which the two views satisfied
+    jointly -- so deleting reading view's rule left the widget's live-preview
+    copy answering for it, and this test printed ok while every reading-view
+    cell went transparent and the dot grid showed through. "At least one opaque
+    cell rule exists" is a true sentence that does not mean what this test needs
+    it to mean. The miss was found by running the sabotage, not by reading the
+    code, which is the whole argument for requiring one.
     """
     for name, needles in (("--table-border-color", ("color-mix", "var(--text-normal)")),
                           ("--midori-table-header-bg", ("color-mix", "var(--text-normal)",
@@ -177,6 +188,29 @@ def test_table_colours_derive_from_theme_vars():
     if not opaque:
         bad("no cell rule sets background: var(--background-primary); the dot "
             "grid shows through every cell")
+        return
+
+    # ONE VIEW'S RULE MUST NOT STAND IN FOR BOTH. The check above asks whether
+    # ANY cell rule is opaque, which two rules satisfy jointly -- so deleting
+    # the reading-view rule left the widget's live-preview copy answering for
+    # it, and this guard printed ok while reading-view cells went transparent
+    # and the dot grid showed through every one of them.
+    #
+    # Found by sabotage, not by reading: the run that removed the reading-view
+    # background still passed. That is the whole reason this repo requires a
+    # guard to be broken before it is trusted -- the code looked right, and
+    # "at least one opaque cell rule exists" is a true sentence that does not
+    # mean what the test needs it to mean.
+    #
+    # The widget's own copy is checked separately below (it additionally needs
+    # !important to win a specificity contest). Here we require the OTHER one:
+    # a cell rule that is not the widget's, i.e. reading view's.
+    reading_opaque = [sel for sel in opaque if ".cm-table-widget" not in sel]
+    if not reading_opaque:
+        bad("no READING-VIEW cell rule sets background: "
+            "var(--background-primary) -- only the .cm-table-widget copy does, "
+            "so reading-view cells are transparent and the dot grid shows "
+            "through every one; live preview alone cannot cover both views")
         return
 
     # THE WIDGET'S OWN COPY MUST CARRY !important, OR IT LOSES A SPECIFICITY
