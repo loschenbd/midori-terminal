@@ -237,11 +237,61 @@ def test_blocks_get_a_row_of_air():
        f"{len(el_table)} table block rule(s)")
 
 
+def test_block_width_has_a_query_container():
+    """A cqi unit is only meaningful with a query container, so prove there is one.
+
+    --midori-block-max reads 100cqi to learn the pane width. A container query
+    unit with NO container does not fail loudly -- it silently resolves against
+    the small viewport, which here is the whole 1728px window rather than the
+    1428px pane, so a table would break out past the edge of its own pane and
+    the only symptom would be a clipped last column.
+
+    MEASURED: 100cqi is 1364px with container-type: inline-size on .cm-scroller
+    (live preview) and 1364px with it on .markdown-preview-view (reading view)
+    -- the 1428px pane less 32px of scroller padding each side -- against
+    1728px, the window, with no container. Layout was byte-identical before,
+    during and after in both views.
+
+    BOTH VIEWS NEED THEIR OWN CONTAINER: they have different scrollers, and a
+    container on one says nothing about the other.
+
+    SABOTAGE-PROVED: dropping either scroller from the container-type rule fails
+    this test naming that view.
+    """
+    value = theme_var("--midori-block-max")
+    if value is None:
+        bad("--midori-block-max is not set; blocks have no width ceiling")
+        return
+    if "100cqi" not in value:
+        bad(f"--midori-block-max is {value!r} and never reads 100cqi, so it "
+            "cannot know the pane width")
+        return
+    for needle in ("var(--file-line-width)", "min(", "max("):
+        if needle not in value:
+            bad(f"--midori-block-max is {value!r}, missing {needle}; it must be "
+                "floored at the prose column and capped at the pane less 96px")
+            return
+
+    containers = []
+    for sel, decls in rules():
+        if re.search(r"container-type:\s*inline-size", decls):
+            containers.extend(" ".join(one.split()) for one in sel.split(","))
+    for needle, view in ((".cm-scroller", "live preview"),
+                         (".markdown-preview-view", "reading view")):
+        if not any(needle in one for one in containers):
+            bad(f"no rule makes {needle} a query container, so 100cqi in "
+                f"{view} resolves against the window instead of the pane")
+            return
+    ok(f"--midori-block-max reads 100cqi and both views declare a query "
+       f"container ({len(containers)} selector(s))")
+
+
 if __name__ == "__main__":
     print("== block geometry ==")
     test_table_border_vars_are_zero()
     test_cells_pad_half_a_row()
     test_table_colours_derive_from_theme_vars()
     test_blocks_get_a_row_of_air()
+    test_block_width_has_a_query_container()
     print("block geometry: all green" if not FAIL else "block geometry: failures above")
     sys.exit(1 if FAIL else 0)
