@@ -2026,6 +2026,37 @@ body {
   outline-offset: -1px;
 }
 
+/* AIR AROUND A BLOCK, TAKEN FROM THE BLANK LINE THAT IS ALREADY THERE.
+   The paragraph-indent rhythm collapses a blank line to nothing, which is
+   right between paragraphs and wrong either side of a block: a table or a code
+   block ended up touching the heading above it. A CodeMirror line cannot take
+   a margin — it is a line, not a box the theme owns — so the row has to come
+   from the blank line in the document, and :has() is what lets a rule see the
+   block that follows it.
+
+   Measured: 0 -> 24px above and below both code blocks and table widgets, with
+   block height, corner radius and background untouched.
+
+   FOUR SELECTORS BECAUSE THERE ARE FOUR CASES. Forward (:has(+ x)) and
+   backward (x + y) are different selectors, and a code block and a table
+   widget are different elements. Dropping one leaves a block touching its
+   neighbour on one side only, which reads as a rendering bug rather than a
+   missing rule. Only a line that is ACTUALLY blank qualifies —
+   :has(> br:only-child) — so a line with text keeps the prose rhythm. */
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child):has(+ .cm-line.HyperMD-codeblock-begin),
+.markdown-source-view.mod-cm6 .cm-line.HyperMD-codeblock-end + .cm-line:has(> br:only-child),
+.markdown-source-view.mod-cm6 .cm-line:has(> br:only-child):has(+ .cm-table-widget),
+.markdown-source-view.mod-cm6 .cm-table-widget + .cm-line:has(> br:only-child) {
+  line-height: var(--midori-row);
+}
+
+/* Reading view has real boxes, so it gets a real margin. One row above and
+   below; adjacent margins collapse with the neighbouring paragraph's own row,
+   so the gap is one row rather than two — either way a whole number. */
+.markdown-reading-view .markdown-preview-sizer > .el-table {
+  margin-block: var(--midori-row);
+}
+
 /* Images and embeds cannot be fixed — their height is whatever the asset is.
    Reserve the admission rather than pretending otherwise: give them a whole
    row of space after, so at least the block itself is the only offender. */
