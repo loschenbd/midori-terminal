@@ -257,26 +257,41 @@ def test_blocks_get_a_row_of_air():
     line that is already in the document -- and :has() is what lets a rule see
     a block that comes AFTER the blank line.
 
-    MEASURED: 0 -> 24px above and below both code blocks and table widgets,
-    with block height, corner radius and background untouched.
+    MEASURED: 0 -> 24px above and below a code block, with block height, corner
+    radius and background untouched.
 
-    FOUR SELECTORS, NOT TWO. Forward (:has(+ x)) and backward (x + y) are
-    different selectors, and code blocks and table widgets are different
-    elements, so all four combinations are needed; dropping one leaves a block
-    touching its neighbour on exactly one side, which reads as a rendering bug
-    rather than a missing rule.
+    TWO CODE SELECTORS, NOT ONE. Forward (:has(+ x)) and backward (x + y) are
+    different selectors, so dropping one leaves a code block touching its
+    neighbour on exactly one side, which reads as a rendering bug rather than a
+    missing rule.
 
-    SABOTAGE-PROVED: deleting any one of the four selectors fails this test
-    naming which neighbour and which side.
+    A TABLE TAKES ITS AIR FROM THE WIDGET, NOT FROM A BLANK LINE, and this test
+    changed when that did. .cm-table-widget is a scroll container: app.css gives
+    it `overflow: auto hidden` together with `padding:
+    var(--table-drag-handle-size)`, and that padding is the room for the
+    affordances the table editor hangs OUTSIDE the table box -- chiefly
+    `.table-row-btn { position: absolute; top: 100% }`. Zeroing padding-block
+    turned that affordance into 16px of scrollable overflow; the engine then
+    scrolled the widget to reveal a focused cell and the table rode up inside
+    its own box. MEASURED: clientHeight 240, scrollHeight 256, scrollTop 12 --
+    a sliced header and all five rows 11.53px off the 24px lattice, from one
+    displacement. Overflow could not simply be relaxed, because per CSS
+    `visible` computes to `auto` when the other axis is auto.
+
+    A whole row of padding-block restores that room, makes scrollHeight equal
+    clientHeight so nothing can scroll, AND is the table's air -- which is why
+    the blank-line rule no longer names a table widget. The declaration is
+    load-bearing twice over and 0 is the value that breaks it, so this test
+    rejects a zero as well as requiring the row. The block totals 24 + 240 + 24
+    either way.
+
+    SABOTAGE-PROVED: deleting either code selector, or setting the widget's
+    padding-block to 0, fails this test naming the block and the side.
     """
     WANT = (("codeblock-begin", "before a code block",
              lambda s: ":has(> br:only-child)" in s and "+ .cm-line.HyperMD-codeblock-begin" in s),
             ("codeblock-end", "after a code block",
-             lambda s: "HyperMD-codeblock-end + .cm-line" in s and ":has(> br:only-child)" in s),
-            ("table-before", "before a table",
-             lambda s: ":has(> br:only-child)" in s and "+ .cm-table-widget" in s),
-            ("table-after", "after a table",
-             lambda s: "cm-table-widget + .cm-line" in s and ":has(> br:only-child)" in s))
+             lambda s: "HyperMD-codeblock-end + .cm-line" in s and ":has(> br:only-child)" in s))
     selectors = []
     for sel, decls in rules():
         if re.search(r"line-height:\s*var\(--midori-row\)", decls):
@@ -287,6 +302,32 @@ def test_blocks_get_a_row_of_air():
         for where in missing:
             bad(f"no rule gives the blank line {where} a row of air; the block "
                 "sits directly against its neighbour")
+        return
+
+    # The widget ITSELF, not a cell inside it: `.cm-table-widget td` also
+    # contains the string, and padding on a cell says nothing about whether the
+    # widget can scroll.
+    def targets_widget(sel):
+        return any(" ".join(one.split()).endswith(".cm-table-widget")
+                   for one in sel.split(","))
+
+    widget_pad = [sel for sel, decls in rules()
+                  if targets_widget(sel)
+                  and re.search(r"padding-block:\s*var\(--midori-row\)", decls)]
+    if not widget_pad:
+        bad("no .cm-table-widget rule sets padding-block: var(--midori-row); "
+            "the table has no air above or below, and its editing affordance "
+            "hangs outside a scroll container that then rides the table up off "
+            "the lattice and slices the header")
+        return
+    zeroed = [sel for sel, decls in rules()
+              if targets_widget(sel)
+              and re.search(r"padding(-block|-top|-bottom)?:\s*0(px)?\s*(;|$)", decls)]
+    if zeroed:
+        bad(f"a .cm-table-widget rule zeroes the widget's padding "
+            f"({zeroed[0].strip()[:60]}); that is the exact declaration that "
+            "made the widget scrollable and put every row half a row off the "
+            "lattice")
         return
 
     # theme.css ALREADY MENTIONS .el-table, and it is not this. At
@@ -314,8 +355,9 @@ def test_blocks_get_a_row_of_air():
             "margin-block: var(--midori-row); reading view has no air around "
             "a table")
         return
-    ok(f"all 4 live-preview air selectors present, and reading view pads "
-       f"{len(el_table)} table block rule(s)")
+    ok(f"both code-block air selectors present, {len(widget_pad)} table widget "
+       f"rule(s) pad a whole row, and reading view pads {len(el_table)} table "
+       f"block rule(s)")
 
 
 def test_block_width_has_a_query_container():
