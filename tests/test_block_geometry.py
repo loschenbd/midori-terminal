@@ -175,10 +175,73 @@ def test_table_colours_derive_from_theme_vars():
        f"{len(opaque)} rule(s), header banded in {len(banded)}")
 
 
+def test_blocks_get_a_row_of_air():
+    """A blank line next to a block gets its row back, in live preview.
+
+    The paragraph-indent rhythm collapses blank lines to nothing, so a table or
+    a code block sat directly against the heading or paragraph either side. A
+    CodeMirror line cannot take a margin, so the air has to come from the blank
+    line that is already in the document -- and :has() is what lets a rule see
+    a block that comes AFTER the blank line.
+
+    MEASURED: 0 -> 24px above and below both code blocks and table widgets,
+    with block height, corner radius and background untouched.
+
+    FOUR SELECTORS, NOT TWO. Forward (:has(+ x)) and backward (x + y) are
+    different selectors, and code blocks and table widgets are different
+    elements, so all four combinations are needed; dropping one leaves a block
+    touching its neighbour on exactly one side, which reads as a rendering bug
+    rather than a missing rule.
+
+    SABOTAGE-PROVED: deleting any one of the four selectors fails this test
+    naming which neighbour and which side.
+    """
+    WANT = (("codeblock-begin", "before a code block",
+             lambda s: ":has(> br:only-child)" in s and "+ .cm-line.HyperMD-codeblock-begin" in s),
+            ("codeblock-end", "after a code block",
+             lambda s: "HyperMD-codeblock-end + .cm-line" in s and ":has(> br:only-child)" in s),
+            ("table-before", "before a table",
+             lambda s: ":has(> br:only-child)" in s and "+ .cm-table-widget" in s),
+            ("table-after", "after a table",
+             lambda s: "cm-table-widget + .cm-line" in s and ":has(> br:only-child)" in s))
+    selectors = []
+    for sel, decls in rules():
+        if re.search(r"line-height:\s*var\(--midori-row\)", decls):
+            selectors.extend(" ".join(one.split()) for one in sel.split(","))
+    missing = [where for _, where, match in WANT
+               if not any(match(one) for one in selectors)]
+    if missing:
+        for where in missing:
+            bad(f"no rule gives the blank line {where} a row of air; the block "
+                "sits directly against its neighbour")
+        return
+
+    # theme.css ALREADY MENTIONS .el-table, and it is not this. At
+    # theme.css:1688 a heading-spacing rule reads
+    # `div:is(.el-blockquote, .el-p, .el-pre, .el-table, .el-ul, .el-ol) + div
+    # > :is(h5, h6)` and sets margin-TOP on the heading that FOLLOWS a block,
+    # not on the block. A grep for .el-table hits both; they are unrelated.
+    # Requiring the sizer-child shape keeps this guard from being answered by
+    # that rule. The two also interact harmlessly: reading view collapses
+    # adjacent margins, so a table's new bottom row and a following heading's
+    # own top row come to one row, not two.
+    el_table = [sel for sel, decls in rules()
+                if ".markdown-preview-sizer > .el-table" in " ".join(sel.split())
+                and re.search(r"margin-block:\s*var\(--midori-row\)", decls)]
+    if not el_table:
+        bad("no .markdown-preview-sizer > .el-table rule sets "
+            "margin-block: var(--midori-row); reading view has no air around "
+            "a table")
+        return
+    ok(f"all 4 live-preview air selectors present, and reading view pads "
+       f"{len(el_table)} table block rule(s)")
+
+
 if __name__ == "__main__":
     print("== block geometry ==")
     test_table_border_vars_are_zero()
     test_cells_pad_half_a_row()
     test_table_colours_derive_from_theme_vars()
+    test_blocks_get_a_row_of_air()
     print("block geometry: all green" if not FAIL else "block geometry: failures above")
     sys.exit(1 if FAIL else 0)
