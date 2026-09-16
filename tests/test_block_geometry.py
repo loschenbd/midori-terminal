@@ -133,7 +133,21 @@ def test_table_colours_derive_from_theme_vars():
     transparent or alpha cell lets them show through every cell, which is the
     single biggest reason the old tables read as noisy.
 
-    SABOTAGE-PROVED: replacing either token with a hex literal fails naming it.
+    !IMPORTANT IS LOAD-BEARING ON THE WIDGET COPY ONLY. .cm-table-widget's own
+    cell rule is (0,3,1) and beats a plain (0,1,1) declaration at equal
+    specificity -- the exact contest test_cells_pad_half_a_row already guards
+    for padding, and this stylesheet's own comment above the widget's opaque
+    rule records !important as verified there for the same reason. A
+    textual-presence check cannot see this: the declaration can read exactly
+    right and still lose in the running app while the guard prints ok, which
+    is the shape of failure this repo's CLAUDE.md records ("guard tests passed
+    while the rule they named lost a specificity contest and did nothing").
+    Reading view has no such competing rule (see the comment above its cell
+    rule), so !important is checked on the widget's copy only.
+
+    SABOTAGE-PROVED: replacing either token with a hex literal fails naming it;
+    removing !important from the widget's opaque-cell background fails naming
+    it.
     """
     for name, needles in (("--table-border-color", ("color-mix", "var(--text-normal)")),
                           ("--midori-table-header-bg", ("color-mix", "var(--text-normal)",
@@ -163,6 +177,31 @@ def test_table_colours_derive_from_theme_vars():
     if not opaque:
         bad("no cell rule sets background: var(--background-primary); the dot "
             "grid shows through every cell")
+        return
+
+    # THE WIDGET'S OWN COPY MUST CARRY !important, OR IT LOSES A SPECIFICITY
+    # CONTEST IT CANNOT WIN ANY OTHER WAY. .cm-table-widget's built-in cell
+    # rule is (0,3,1); a plain (0,1,1) declaration reads correctly and still
+    # does nothing in the running app. Reading view has no competing rule at
+    # this location, so this is checked on the widget's copy only.
+    widget_opaque = [(sel, decls) for sel, decls in rules()
+                      if ".cm-table-widget" in sel and CELL.search(sel)
+                      and re.search(r"background:\s*var\(--background-primary\)", decls)]
+    if not widget_opaque:
+        bad("no .cm-table-widget cell rule sets background: "
+            "var(--background-primary); live preview has no opaque-cell rule "
+            "at the widget's own specificity, so the dot grid shows through "
+            "every cell there")
+        return
+    unimportant = [sel for sel, decls in widget_opaque
+                   if not re.search(
+                       r"background:\s*var\(--background-primary\)\s*!important",
+                       decls)]
+    if unimportant:
+        bad("the widget's opaque-cell background is missing !important: "
+            f"{' '.join(unimportant[0].split())[:70]}; the widget's own "
+            "(0,3,1) cell rule can still win the specificity contest and "
+            "cell-opacity would regress silently in live preview")
         return
     banded = [sel for sel, decls in rules()
               if HEAD.search(sel)
@@ -222,9 +261,17 @@ def test_blocks_get_a_row_of_air():
     # > :is(h5, h6)` and sets margin-TOP on the heading that FOLLOWS a block,
     # not on the block. A grep for .el-table hits both; they are unrelated.
     # Requiring the sizer-child shape keeps this guard from being answered by
-    # that rule. The two also interact harmlessly: reading view collapses
-    # adjacent margins, so a table's new bottom row and a following heading's
-    # own top row come to one row, not two.
+    # that rule.
+    #
+    # MEASURED, NOT ASSUMED: the two also interact harmlessly. Injected a
+    # synthetic `<div><h5>` sibling directly after the reference note's
+    # rendered .el-table in Reading View (Obsidian 1.13.7, live CDP session,
+    # DOM-only -- the note file was never touched) and read the gap by
+    # getBoundingClientRect(): table margin-bottom 24px, h5 margin-top 24px,
+    # the wrapper div's own margin-top 0px (so the h5's margin transmits
+    # through it), and the actual rendered gap between the table's bottom edge
+    # and the h5's top edge was exactly 24px -- one row, not the 48px two
+    # separate margins would give without collapsing.
     el_table = [sel for sel, decls in rules()
                 if ".markdown-preview-sizer > .el-table" in " ".join(sel.split())
                 and re.search(r"margin-block:\s*var\(--midori-row\)", decls)]
