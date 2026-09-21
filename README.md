@@ -1297,6 +1297,27 @@ Two things worth carrying to any future port:
 
 ## Claude Code notes
 
+### Skills
+
+Claude Code skills live in their own repo, [`loschenbd/claude-skills`][skills],
+cloned to `~/.claude/skills` — **not** here, and `install.sh` does not manage
+them. What belongs here is any *dependency* a skill needs on a fresh machine, so
+that cloning the skills repo is enough and nothing is quietly broken:
+
+| Skill | Needs | Where it comes from |
+|---|---|---|
+| `youtube-transcript` | `yt-dlp` | `brew "yt-dlp"` in this repo's `Brewfile` |
+
+`youtube-transcript` pulls a video's captions so an agent can read what was
+actually said. It exists because `WebFetch` on a `youtube.com/watch` URL returns
+the JavaScript shell rather than the words, and does so *quietly* — a page comes
+back, so the fetch looks like it worked and the model is left reasoning from the
+title. Without `yt-dlp` the skill exits 3 instead of guessing.
+
+[skills]: https://github.com/loschenbd/claude-skills
+
+### Theme
+
 - The installer sets `"theme": "custom:midori"` in `~/.claude/settings.json`.
   If Claude Code ever looks stock/wrong, check that setting first — picking a
   stock preset in `/theme` silently overwrites it.
