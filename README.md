@@ -17,6 +17,7 @@ staged; the terminal frames are one scratch repo.
 | | Midori Paper | Midori Night |
 |---|---|---|
 | **Ghostty** + oh-my-posh, eza | ![Ghostty prompt, Paper](docs/screenshots/paper/ghostty-prompt.png) | ![Ghostty prompt, Night](docs/screenshots/night/ghostty-prompt.png) |
+| **Claude Code** | ![Claude Code, Paper](docs/screenshots/paper/claude-code.png) | ![Claude Code, Night](docs/screenshots/night/claude-code.png) |
 | **tmux** | ![tmux, Paper](docs/screenshots/paper/tmux.png) | ![tmux, Night](docs/screenshots/night/tmux.png) |
 | **herdr** | ![herdr, Paper](docs/screenshots/paper/herdr.png) | ![herdr, Night](docs/screenshots/night/herdr.png) |
 | **fzf** | ![fzf, Paper](docs/screenshots/paper/fzf.png) | ![fzf, Night](docs/screenshots/night/fzf.png) |
@@ -25,12 +26,13 @@ staged; the terminal frames are one scratch repo.
 | **Vivaldi** | ![Vivaldi, Paper](docs/screenshots/paper/vivaldi.png) | ![Vivaldi, Night](docs/screenshots/night/vivaldi.png) |
 | **Antinote** | ![Antinote, Paper](docs/screenshots/paper/antinote.png) | ![Antinote, Night](docs/screenshots/night/antinote.png) |
 
-Not pictured yet: Claude Code, T3 Code and Moshi. The PNGs are lossless and
+Not pictured yet: T3 Code and Moshi. The PNGs are lossless and
 full retina size on purpose — downscaling them to 1800px made the set *larger*
 (7.2 MB against 6.3 MB), because the resampled dot grid compresses worse than
 the original, and `pngquant` would cut each frame to 256 colours in a repo
 whose subject is exact hex values. The Vivaldi frames are cropped 72px at the
-bottom to remove a status line.
+bottom to remove a status line. The Claude Code pair was shot later, on a 1x
+display, so it is half the pixel size of the others.
 
 ## Quick start (new machine)
 
