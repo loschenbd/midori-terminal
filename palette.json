@@ -21,7 +21,8 @@
     },
     "background-secondary": {
       "source": "obsidian/theme.css",
-      "light": "#edeae2"
+      "light": "#edeae2",
+      "dark": "#161513"
     },
     "background-secondary-alt": {
       "source": "obsidian/theme.css",
@@ -80,6 +81,11 @@
     "midori-mint": {
       "source": "obsidian/theme.css",
       "light": "#548373"
+    },
+    "midori-mythic": {
+      "source": "obsidian/theme.css",
+      "light": "#6b5f52",
+      "dark": "#c4b8a8"
     },
     "midori-ochre": {
       "source": "obsidian/theme.css",
