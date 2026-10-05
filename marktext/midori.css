@@ -1,0 +1,703 @@
+/* ===========================================================================
+   Midori for MarkText — one stylesheet, both modes
+   ---------------------------------------------------------------------------
+   Pairs with MarkText's CADMIUM LIGHT (`light`) and CADMIUM DARK (`dark`).
+   Preferences -> Theme -> Follow System Theme on, light = Cadmium Light,
+   dark = Cadmium Dark, then paste this whole file into the Custom CSS box
+   below those selectors. See README.md for why that is the only route.
+
+   WHY THIS IS ONE BLOB AND NOT TWO THEME FILES. MarkText 0.20.0 has a
+   "Open themes folder" / "Import Theme" section in Preferences -> Theme, and
+   it is dead: both rows are rendered under `withDirectives(..., [[vShow,
+   false]])` in out/renderer/assets/index-*.js, and neither button carries a
+   click handler. The theme ids themselves are a frozen array (LIGHT_THEMES /
+   DARK_THEMES in out/main/index.js) compiled into the asar. There is no user
+   theme directory to drop a file into. The `customCss` preference is the
+   whole supported surface, and it is a single string shared by both modes --
+   hence `:root` for paper and `body.dark` for night in one file.
+
+   WHY `body.dark` IS A SAFE MODE MARKER. addThemeStyle() in the renderer does
+   `document.body.classList.remove("dark")` and re-adds it when the chosen id
+   is in `railscastsThemes` (which contains "dark") or is "one-dark". So the
+   class tracks the *theme*, not the OS, which is what we want: a manual theme
+   switch moves it too. prefers-color-scheme would be wrong the moment someone
+   picks a dark theme on a light desktop.
+
+   WHY NO `!important` ON THE VARIABLES. MarkText injects the selected theme as
+   <style id="ag-theme"> at mount and this file as <style id="custom-styles">
+   when the customCss preference first arrives from the main process -- always
+   later in <head>, so equal-specificity rules here win on order. The handful
+   of `!important` rules below are the ones Cadmium Dark hardcodes a literal
+   hex into (#1d1d1d borders, #f3f3f3 tab strip); those cannot be reached
+   through a variable and need to be met in kind.
+
+   THE VARIABLES COME IN TWO FAMILIES AND BOTH ARE LIVE. MarkText's own chrome
+   reads the camelCase set (--editorBgColor); the @muyajs/core editor reads a
+   kebab-case mirror (--editor-bg-color). The shipped themes define both and a
+   comment inside Graphite says the camelCase set still drives the current
+   editor "until editor.vue switches engines". Setting only one leaves half the
+   app on Cadmium's defaults.
+
+   Palette values are copied verbatim from obsidian/theme.css (.theme-light /
+   .theme-dark) so a note reads the same in both apps. Nothing here is a
+   re-derivation; if a value looks wrong, fix it there first.
+   =========================================================================== */
+
+
+/* ---------------------------------------------------------------------------
+   PAPER — light mode
+   --------------------------------------------------------------------------- */
+:root {
+  /* ---- Palette tokens, named as in obsidian/theme.css ---- */
+  --midori-ink: #2a2825;          /* --code-normal, h1/h2            */
+  --midori-text: #3d3933;         /* --text-normal                   */
+  --midori-muted: #524d46;        /* --text-muted                    */
+  --midori-faint: #8a847b;        /* --text-faint                    */
+  --midori-paper: #f3f1eb;        /* --background-primary            */
+  --midori-card: #faf9f6;         /* --background-primary-alt        */
+  --midori-secondary: #edeae2;    /* --background-secondary          */
+  --midori-border: rgba(60, 58, 54, 0.1);
+  --midori-hover: rgba(60, 58, 54, 0.05);
+
+  --midori-sage: #5f6f5e;
+  --midori-sage-hover: #4a5749;
+  --midori-indigo: #3a5572;
+  --midori-indigo-deep: #2d4259;
+  --midori-olive: #6c7d52;
+  --midori-wine: #7a4a4a;
+  --midori-wine-lift: #9d6161;
+  --midori-ochre: #b88a3a;
+  --midori-purple: #653f7f;
+  --midori-mint: #548373;
+  --midori-clay: #c9916b;
+  --midori-terracotta: #b06d4a;
+  --midori-mythic: #6b5f52;       /* --accent-mythic, h4/h5          */
+
+  /* ---- Code roles. Mapping copied from obsidian/theme.css, which maps each
+     role to the ANSI slot its terminal highlighter would use, so a fence here
+     matches the same fence in Obsidian and in Ghostty.
+
+     NOTE this is deliberately NOT vscode/midori-theme's mapping, which puts
+     keywords on indigo, functions on ochre and types on wine, and darkens
+     every hex for editor contrast. That set is tuned for reading code all day;
+     this one is tuned for a fence inside prose, which is what MarkText is
+     for. Two mappings, on purpose -- don't "unify" them without reading the
+     palette section of the root README first. ---- */
+  --code-normal: #2a2825;
+  --code-comment: #8a8378;
+  --code-punctuation: #524d46;
+  --code-keyword: var(--midori-purple);
+  --code-string: var(--midori-olive);
+  --code-function: var(--midori-indigo);
+  --code-property: var(--midori-mint);
+  --code-value: var(--midori-ochre);
+  --code-operator: var(--midori-wine);
+  --code-tag: var(--midori-wine);
+  --code-important: var(--midori-terracotta);
+
+  /* ---- MarkText: accent ramp. The 10-90 steps are consumed as flat rgba by
+     buttons, notifications and the tab underline, so they are written out
+     rather than color-mix()'d -- MarkText ships no @supports fallback path
+     and an unparseable token stream here computes to `initial`, not to sage. */
+  --themeColor: #5f6f5e;
+  --themeColor90: rgba(95, 111, 94, 0.9);
+  --themeColor80: rgba(95, 111, 94, 0.8);
+  --themeColor70: rgba(95, 111, 94, 0.7);
+  --themeColor60: rgba(95, 111, 94, 0.6);
+  --themeColor50: rgba(95, 111, 94, 0.5);
+  --themeColor40: rgba(95, 111, 94, 0.4);
+  --themeColor30: rgba(95, 111, 94, 0.3);
+  --themeColor20: rgba(95, 111, 94, 0.2);
+  --themeColor10: rgba(95, 111, 94, 0.1);
+  --highlightThemeColor: var(--themeColor);
+  --focusColor: var(--themeColor);
+
+  /* ---- MarkText: editor ground and ink ramp.
+     MarkText's 80/60/50/40/30/10/04 steps are alpha ramps of one ink in every
+     shipped theme. Midori has named rungs instead, so they are mapped to the
+     nearest role rather than generated: 80 is the heading ink, 50 the muted
+     ink, 40 the faint ink. Only 10 and 04 stay as alpha, because those two are
+     used as hairlines and hover washes, not as text. */
+  --editorBgColor: #f3f1eb;
+  --editorColor: #3d3933;
+  --editorColor80: #2a2825;
+  --editorColor60: #3d3933;
+  --editorColor50: #524d46;
+  --editorColor40: #8a847b;
+  --editorColor30: #8a847b;
+  --editorColor10: rgba(60, 58, 54, 0.1);
+  --editorColor04: rgba(60, 58, 54, 0.04);
+
+  --highlightColor: rgba(184, 138, 58, 0.28); /* ochre wash — --text-highlight-bg */
+  --selectionColor: rgba(95, 111, 94, 0.25);  /* sage @ 25% — see obsidian/theme.css */
+  --deleteColor: var(--midori-wine);
+  --iconColor: #524d46;
+  --maskColor: rgba(243, 241, 235, 0.8);
+
+  --codeBgColor: #faf9f6;        /* inline code sits on card white, not a tint */
+  --codeBlockBgColor: #faf9f6;
+  --codeBlockColor: #2a2825;
+  --footnoteBgColor: rgba(60, 58, 54, 0.03);
+  --inputBgColor: rgba(60, 58, 54, 0.06);
+  --tableBorderColor: rgba(60, 58, 54, 0.1);
+
+  /* ---- MarkText: markdown element colours ---- */
+  /* ONE COLOUR FOR ALL SIX LEVELS. obsidian/theme.css steps these down --
+     ink, ink, muted, mythic, mythic, faint -- so depth reads as a fade. That
+     works in a vault where headings are navigation; here it made h3 and h6
+     look washed out against their neighbours, which was the whole complaint.
+     Size and weight already carry the hierarchy. If you ever want the fade
+     back, the old ramp was #2a2825 / #2a2825 / #524d46 / mythic / mythic /
+     #8a847b, and --midori-mythic is still defined above for it. */
+  --headingColor: #2a2825;
+  --h1Color: var(--headingColor);
+  --h2Color: var(--headingColor);
+  --h3Color: var(--headingColor);
+  --h4Color: var(--headingColor);
+  --h5Color: var(--headingColor);
+  --h6Color: var(--headingColor);
+  --blockquoteTextColor: #524d46;
+  --blockquoteBorderColor: var(--midori-sage); /* sage is punctuation, not paint */
+  --hrColor: rgba(60, 58, 54, 0.1);
+  --linkColor: var(--midori-indigo);
+  --strongColor: #2a2825;
+  --emColor: #3d3933;
+  --listMarkerColor: var(--midori-sage);
+
+  /* ---- MarkText: chrome ---- */
+  --sideBarBgColor: #edeae2;
+  --sideBarColor: #3d3933;
+  --sideBarTitleColor: #2a2825;
+  --sideBarTextColor: #524d46;
+  --sideBarIconColor: #524d46;
+  --sideBarItemHoverBgColor: rgba(60, 58, 54, 0.05);
+  --itemBgColor: #faf9f6;
+
+  --floatBgColor: #faf9f6;
+  --floatFontColor: #3d3933;
+  --floatHoverColor: rgba(60, 58, 54, 0.05);
+  --floatBorderColor: rgba(60, 58, 54, 0.1);
+  /* --raised-lift from obsidian/theme.css: a tight contact shadow plus a wider
+     soft one, tinted with the warm ink neutral so it reads as paper shadow
+     rather than a grey haze over the cream. */
+  --floatShadow:
+    0 1px 1px rgba(60, 58, 54, 0.05),
+    0 2px 8px rgba(60, 58, 54, 0.07);
+
+  --buttonFontColor: #3d3933;
+  --buttonBgColor: #faf9f6;
+  --buttonBorder: 1px solid rgba(60, 58, 54, 0.14);
+  --buttonShadow: none;
+  --buttonFontColorHover: var(--buttonFontColor);
+  --buttonBgColorHover: #f3f1eb;
+  --buttonBorderHover: var(--buttonBorder);
+  --buttonFontColorActive: var(--buttonFontColor);
+  --buttonBgColorActive: #edeae2;
+  --buttonBorderActive: var(--buttonBorder);
+  --buttonFocusBorder: 1px solid var(--themeColor);
+
+  --buttonPrimaryFontColor: #faf9f6;
+  --buttonPrimaryBgColor: var(--themeColor);
+  --buttonPrimaryBorder: none;
+  --buttonPrimaryShadow: 0 1px 2px rgba(60, 58, 54, 0.12);
+  --buttonPrimaryFontColorHover: var(--buttonPrimaryFontColor);
+  --buttonPrimaryBgColorHover: var(--midori-sage-hover);
+  --buttonPrimaryBorderHover: var(--buttonPrimaryBorder);
+  --buttonPrimaryFontColorActive: var(--buttonPrimaryFontColor);
+  --buttonPrimaryBgColorActive: var(--midori-sage-hover);
+  --buttonPrimaryBorderActive: var(--buttonPrimaryBorder);
+  --buttonPrimaryFocusBorder: none;
+  --buttonPrimaryFocusShadow: 0 0 0 1px var(--themeColor);
+
+  --notificationPrimaryBg: var(--midori-sage);
+  --notificationPrimaryColor: #faf9f6;
+  --notificationInfoBg: #524d46;
+  --notificationInfoColor: #faf9f6;
+  --notificationWarningBg: var(--midori-ochre);
+  --notificationWarningColor: #2a2825;
+  --notificationErrorBg: var(--midori-wine);
+  --notificationErrorColor: #faf9f6;
+
+  /* ---- @muyajs/core mirror. Same values, kebab-cased.
+
+     THIS BLOCK IS REPEATED VERBATIM INSIDE body.dark AND THAT IS NOT A
+     DUPLICATE. var() is substituted AT THE ELEMENT THAT DECLARES IT, not at
+     the element that consumes it: `--h1-color: var(--h1Color)` written only
+     here resolves --h1Color against :root, so redefining --h1Color further
+     down on body.dark changes nothing a muya node can see. Measured in the
+     running app before the fix -- with a correct dark ground and correct
+     Prism tokens, every heading, the link, the blockquote rule, the list
+     marker and the checkbox were still painting the PAPER values, because
+     each of those reads the kebab name and the kebab name had already been
+     frozen to light. 12 of 28 assertions.
+
+     The mirror has to be re-declared wherever the camelCase values are
+     re-declared. Flattening it to literal hexes would also work and would be
+     worse: two hand-maintained copies of every colour instead of one. ---- */
+  --theme-color: var(--themeColor);
+  --highlight-color: var(--highlightColor);
+  --selection-color: var(--selectionColor);
+  --editor-color: var(--editorColor);
+  --editor-color-80: var(--editorColor80);
+  --editor-color-50: var(--editorColor50);
+  --editor-color-30: var(--editorColor30);
+  --editor-color-10: var(--editorColor10);
+  --editor-color-04: var(--editorColor04);
+  --editor-bg-color: var(--editorBgColor);
+  --delete-color: var(--deleteColor);
+  --icon-color: var(--iconColor);
+  --code-block-bg-color: var(--codeBlockBgColor);
+  --code-block-color: var(--codeBlockColor);
+  --table-border-color: var(--tableBorderColor);
+  --input-bg-color: var(--inputBgColor);
+  --button-font-color: var(--buttonFontColor);
+  --button-bg-color: var(--buttonBgColor);
+  --button-border: var(--buttonBorder);
+  --button-bg-color-hover: var(--buttonBgColorHover);
+  --button-border-hover: var(--buttonBorderHover);
+  --button-bg-color-active: var(--buttonBgColorActive);
+  --button-border-active: var(--buttonBorderActive);
+  --button-border-focus: var(--button-border);
+  --float-bg-color: var(--floatBgColor);
+  --float-hover-color: var(--floatHoverColor);
+  --float-border-color: var(--floatBorderColor);
+  --float-shadow: var(--floatShadow);
+  --link-color: var(--linkColor);
+  --h1-color: var(--h1Color);
+  --h2-color: var(--h2Color);
+  --h3-color: var(--h3Color);
+  --h4-color: var(--h4Color);
+  --h5-color: var(--h5Color);
+  --h6-color: var(--h6Color);
+  --blockquote-text-color: var(--blockquoteTextColor);
+  --blockquote-border-color: var(--blockquoteBorderColor);
+  --strong-color: var(--strongColor);
+  --em-color: var(--emColor);
+  --list-marker-color: var(--listMarkerColor);
+  --hr-color: var(--hrColor);
+}
+
+
+/* ---------------------------------------------------------------------------
+   NIGHT — dark mode
+   ---------------------------------------------------------------------------
+   Set on body, not :root, so these inherit to everything the app actually
+   renders. The only thing left on the light values is <html> itself, which
+   paints nothing: body carries the ground. */
+body.dark {
+  --midori-ink: #ebe8e2;
+  --midori-text: #ebe8e2;
+  --midori-muted: #9c958a;
+  --midori-faint: #6e685f;
+  --midori-paper: #1a1917;
+  --midori-card: #22211e;
+  --midori-secondary: #161513;
+  --midori-border: rgba(235, 232, 226, 0.1);
+  --midori-hover: rgba(235, 232, 226, 0.05);
+
+  --midori-sage: #9aab97;
+  --midori-sage-hover: #b4c0b0;   /* LIGHTER here — see obsidian/theme.css */
+  --midori-indigo: #6c87a4;
+  --midori-indigo-lift: #8ba3bd;
+  --midori-olive: #9eaf85;
+  --midori-wine: #b8868a;
+  --midori-wine-lift: #d0a2a6;
+  --midori-ochre: #d8b06a;
+  --midori-purple: #a079be;
+  --midori-page-dot: #9ebfb4;
+  --midori-clay: #d4a07a;
+  --midori-terracotta: #e0b899;
+  --midori-mythic: #c4b8a8;
+
+  /* Two roles move on dark ground, exactly as in obsidian/theme.css:
+     `function` takes indigo-LIFT (ANSI 12) because resting indigo is too close
+     to the ground, and `property` takes the page-dot mint rather than the site
+     mint, which lands 0.6 of a lightness step from indigo-lift down here.
+     `important` takes clay, the dark warm ramp's accent. */
+  --code-normal: #ebe8e2;
+  --code-comment: #9c958a;
+  --code-punctuation: #c5bfb4;
+  --code-keyword: var(--midori-purple);
+  --code-string: var(--midori-olive);
+  --code-function: var(--midori-indigo-lift);
+  --code-property: var(--midori-page-dot);
+  --code-value: var(--midori-ochre);
+  --code-operator: var(--midori-wine);
+  --code-tag: var(--midori-wine);
+  --code-important: var(--midori-clay);
+
+  --themeColor: #9aab97;
+  --themeColor90: rgba(154, 171, 151, 0.9);
+  --themeColor80: rgba(154, 171, 151, 0.8);
+  --themeColor70: rgba(154, 171, 151, 0.7);
+  --themeColor60: rgba(154, 171, 151, 0.6);
+  --themeColor50: rgba(154, 171, 151, 0.5);
+  --themeColor40: rgba(154, 171, 151, 0.4);
+  --themeColor30: rgba(154, 171, 151, 0.3);
+  --themeColor20: rgba(154, 171, 151, 0.2);
+  --themeColor10: rgba(154, 171, 151, 0.1);
+
+  --editorBgColor: #1a1917;
+  --editorColor: #ebe8e2;
+  --editorColor80: #ebe8e2;
+  --editorColor60: #c5bfb4;
+  --editorColor50: #9c958a;
+  --editorColor40: #6e685f;
+  --editorColor30: #6e685f;
+  --editorColor10: rgba(235, 232, 226, 0.1);
+  --editorColor04: rgba(235, 232, 226, 0.04);
+
+  --highlightColor: rgba(216, 176, 106, 0.24); /* ochre wash on charcoal */
+  /* 38%, not 25%. Equal alpha does not read as equal strength on the two
+     grounds — measured in obsidian/theme.css as an L* step of 11.9 on paper
+     against 16.9 on charcoal, where the band still looked weaker. */
+  --selectionColor: rgba(154, 171, 151, 0.38);
+  --deleteColor: var(--midori-wine);
+  --iconColor: #9c958a;
+  --maskColor: rgba(26, 25, 23, 0.8);
+
+  --codeBgColor: #22211e;
+  --codeBlockBgColor: #22211e;
+  --codeBlockColor: #ebe8e2;
+  --footnoteBgColor: rgba(235, 232, 226, 0.03);
+  --inputBgColor: rgba(235, 232, 226, 0.06);
+  --tableBorderColor: rgba(235, 232, 226, 0.1);
+
+  /* One colour for all six -- see the note in :root. The night ramp was
+     #ebe8e2 / #ebe8e2 / #9c958a / mythic / mythic / #6e685f. */
+  --headingColor: #ebe8e2;
+  --h1Color: var(--headingColor);
+  --h2Color: var(--headingColor);
+  --h3Color: var(--headingColor);
+  --h4Color: var(--headingColor);
+  --h5Color: var(--headingColor);
+  --h6Color: var(--headingColor);
+  --blockquoteTextColor: #9c958a;
+  --blockquoteBorderColor: var(--midori-sage);
+  --hrColor: rgba(235, 232, 226, 0.1);
+  --linkColor: var(--midori-indigo);
+  --strongColor: #ebe8e2;
+  --emColor: #ebe8e2;
+  --listMarkerColor: var(--midori-sage);
+
+  --sideBarBgColor: #161513;
+  --sideBarColor: #ebe8e2;
+  --sideBarTitleColor: #ebe8e2;
+  --sideBarTextColor: #9c958a;
+  --sideBarIconColor: #9c958a;
+  --sideBarItemHoverBgColor: rgba(235, 232, 226, 0.05);
+  --itemBgColor: #22211e;
+
+  --floatBgColor: #22211e;
+  --floatFontColor: #ebe8e2;
+  --floatHoverColor: rgba(235, 232, 226, 0.05);
+  --floatBorderColor: rgba(235, 232, 226, 0.1);
+  /* Dark carries the lift on darkness, not tint — a sage-tinted shadow on a
+     near-black ground reads as a smudge. */
+  --floatShadow:
+    0 1px 1px rgba(0, 0, 0, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.28);
+
+  --buttonFontColor: #ebe8e2;
+  --buttonBgColor: #22211e;
+  --buttonBorder: 1px solid rgba(235, 232, 226, 0.14);
+  --buttonBgColorHover: #2b2a26;
+  --buttonBgColorActive: #2f2e2b;
+  --buttonPrimaryFontColor: #1a1917;
+  --buttonPrimaryBgColor: var(--themeColor);
+  --buttonPrimaryBgColorHover: var(--midori-sage-hover);
+  --buttonPrimaryBgColorActive: var(--midori-sage-hover);
+  --buttonPrimaryShadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --buttonPrimaryFocusShadow: 0 0 0 1px var(--themeColor);
+
+  --notificationPrimaryBg: var(--midori-sage);
+  --notificationPrimaryColor: #1a1917;
+  --notificationInfoBg: #9c958a;
+  --notificationInfoColor: #1a1917;
+  --notificationWarningBg: var(--midori-ochre);
+  --notificationWarningColor: #1a1917;
+  --notificationErrorBg: var(--midori-wine);
+  --notificationErrorColor: #1a1917;
+
+  /* The kebab mirror again -- see the note in :root. Not a duplicate:
+     these resolve against the dark camelCase values above. */
+  --theme-color: var(--themeColor);
+  --highlight-color: var(--highlightColor);
+  --selection-color: var(--selectionColor);
+  --editor-color: var(--editorColor);
+  --editor-color-80: var(--editorColor80);
+  --editor-color-50: var(--editorColor50);
+  --editor-color-30: var(--editorColor30);
+  --editor-color-10: var(--editorColor10);
+  --editor-color-04: var(--editorColor04);
+  --editor-bg-color: var(--editorBgColor);
+  --delete-color: var(--deleteColor);
+  --icon-color: var(--iconColor);
+  --code-block-bg-color: var(--codeBlockBgColor);
+  --code-block-color: var(--codeBlockColor);
+  --table-border-color: var(--tableBorderColor);
+  --input-bg-color: var(--inputBgColor);
+  --button-font-color: var(--buttonFontColor);
+  --button-bg-color: var(--buttonBgColor);
+  --button-border: var(--buttonBorder);
+  --button-bg-color-hover: var(--buttonBgColorHover);
+  --button-border-hover: var(--buttonBorderHover);
+  --button-bg-color-active: var(--buttonBgColorActive);
+  --button-border-active: var(--buttonBorderActive);
+  --button-border-focus: var(--button-border);
+  --float-bg-color: var(--floatBgColor);
+  --float-hover-color: var(--floatHoverColor);
+  --float-border-color: var(--floatBorderColor);
+  --float-shadow: var(--floatShadow);
+  --link-color: var(--linkColor);
+  --h1-color: var(--h1Color);
+  --h2-color: var(--h2Color);
+  --h3-color: var(--h3Color);
+  --h4-color: var(--h4Color);
+  --h5-color: var(--h5Color);
+  --h6-color: var(--h6Color);
+  --blockquote-text-color: var(--blockquoteTextColor);
+  --blockquote-border-color: var(--blockquoteBorderColor);
+  --strong-color: var(--strongColor);
+  --em-color: var(--emColor);
+  --list-marker-color: var(--listMarkerColor);
+  --hr-color: var(--hrColor);
+}
+
+
+/* ---------------------------------------------------------------------------
+   Chrome that Cadmium hardcodes
+   ---------------------------------------------------------------------------
+   Everything above reaches the app through a variable. These four do not:
+   Cadmium Dark writes literal #1d1d1d into the sidebar and tab-strip rules
+   with !important, and the frameless title-bar buttons take a literal #ffffff
+   fill. Met in kind, and only in kind — nothing here invents geometry. */
+body.dark .side-bar {
+  border-right: 1px solid rgba(235, 232, 226, 0.1) !important;
+}
+body.dark .editor-tabs:after,
+body.dark .editor-tabs ul.tabs-container:after {
+  border-bottom-color: rgba(235, 232, 226, 0.1);
+}
+body.dark .title-bar .frameless-titlebar-button > div > svg {
+  fill: #9c958a;
+}
+body.dark .title-bar .frameless-titlebar-minimize:hover,
+body.dark .title-bar .frameless-titlebar-toggle:hover {
+  background-color: rgba(235, 232, 226, 0.06);
+}
+
+/* The light tab strip. Cadmium Light leaves the tab bar on the compiled
+   default rather than on --editorBgColor, so it reads as a cooler strip above
+   warm paper; Graphite patches the same spot with its own #f3f3f3. */
+.editor-tabs:after,
+.editor-tabs ul.tabs-container:after {
+  border-bottom-color: rgba(60, 58, 54, 0.1);
+}
+/* THE TAB IS THE SAME SHEET AS THE BAR BEHIND IT. Measured in the running
+   app on Cadmium Light: .title-bar-editor-bg paints #f3f1eb and the tab
+   painted #faf9f6 -- the card white -- so an open tab read as a separate
+   white chip floating on warm paper. Cadmium Dark already forces exactly this
+   rule for its own ground (`background: var(--editorBgColor) !important` on
+   both li and li.active); light simply never had the equivalent. Stated for
+   both modes here, unqualified, so the two agree.
+
+   The sage underline below is the only thing that marks the active tab, which
+   is the point -- accent as punctuation, not as a second surface.
+
+   !important IS LOAD-BEARING HERE, and a plain rule was tried first and lost.
+   The shipped declaration is `.tabs-container > li.active[data-v-f2591453]`:
+   Vue's scoped-style attribute makes it (0,3,0), so a hand-written
+   `.tabs-container > li.active` at (0,2,0) never applies, however late it sits
+   in <head>. The data-v hash is a build artefact and must not be written into
+   a selector here -- it changes on every MarkText release.
+
+   Retargeting --itemBgColor instead would be the tidier lever and is the wrong
+   one: it has three other consumers (the search match-count chip, .side-bar
+   .left-c, and the active drop target), so moving it to the editor ground
+   would quietly flatten those too. */
+.tabs-container > li,
+.tabs-container > li.active {
+  background: var(--editorBgColor) !important;
+}
+.tabs-container > li.active:after {
+  background: var(--themeColor) !important;
+}
+
+/* Scrollbars. Cadmium Dark paints the track from --editorBgColor and leaves
+   the thumb at the Chromium default, which on warm paper reads blue-grey. */
+::-webkit-scrollbar-thumb {
+  background: rgba(60, 58, 54, 0.15);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(60, 58, 54, 0.3);
+}
+body.dark ::-webkit-scrollbar-thumb {
+  background: rgba(235, 232, 226, 0.12);
+}
+body.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(235, 232, 226, 0.25);
+}
+
+
+/* ---------------------------------------------------------------------------
+   Headings in Spectral
+   ---------------------------------------------------------------------------
+   MarkText exposes an editor font and a code font in Preferences, and no
+   heading font — so this is the only place the family split can happen.
+   M PLUS 1p for prose (set in Preferences -> General -> Editor font family),
+   Spectral for titles, matching obsidian/theme.css.
+
+   STOCK SPECTRAL, NOT the metric-normalised "Midori Display" alias the
+   Obsidian theme uses. That alias exists to hold a 24px baseline lattice;
+   MarkText has no such lattice, and normalised metrics are what break
+   browser-drawn carets and selection boxes. Delete this block if you want one
+   family throughout — nothing else depends on it. */
+h1, h2, h3, h4, h5, h6,
+.mu-container h1, .mu-container h2, .mu-container h3,
+.mu-container h4, .mu-container h5, .mu-container h6 {
+  font-family: "Spectral", ui-serif, Georgia, serif;
+  letter-spacing: -0.005em;
+}
+
+
+/* ---------------------------------------------------------------------------
+   Prism — rendered code fences
+   ---------------------------------------------------------------------------
+   The role -> colour mapping is Obsidian's (see --code-* above). The token
+   class -> role mapping below is NEW, written against Prism's own grouping,
+   and is the one part of this file with no prior art in the repo to copy.
+   Two places it deliberately splits a group Prism ships joined:
+
+     .token.property is pulled out of the property/tag/constant/symbol group
+       onto mint, because Obsidian gives `property` its own role and folding it
+       into wine would lose that distinction in JSON and CSS.
+     .token.boolean/.number take `value` (ochre) rather than riding with
+       constants, for the same reason.
+   --------------------------------------------------------------------------- */
+code[class*='language-'],
+pre[class*='language-'],
+pre.mu-code-block,
+pre.ag-paragraph {
+  color: var(--code-normal);
+}
+
+:not(pre) > code[class*='language-'],
+pre[class*='language-'],
+pre.mu-code-block,
+pre.ag-paragraph {
+  background: var(--codeBlockBgColor);
+}
+
+/* INLINE CODE IS NOT A PRISM NODE. muya renders `like this` as
+   <code class="mu-inline-rule">, which matches none of Prism's
+   [class*='language-'] selectors -- measured in the running app, it was
+   inheriting --editorColor (the prose ink) while the fence beside it was on
+   --codeBlockColor. Named explicitly so inline and fenced code are the same
+   ink. Element-qualified on purpose: `.mu-inline-rule` alone also matches
+   span.mu-inline-rule.mu-link, which must stay indigo. */
+code.mu-inline-rule {
+  background: var(--codeBgColor);
+  color: var(--code-normal);
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata        { color: var(--code-comment); font-style: italic; }
+
+.token.punctuation  { color: var(--code-punctuation); }
+.namespace          { opacity: 0.7; }
+
+.token.property     { color: var(--code-property); }
+
+.token.tag,
+.token.constant,
+.token.symbol,
+.token.deleted      { color: var(--code-tag); }
+
+.token.boolean,
+.token.number       { color: var(--code-value); }
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted     { color: var(--code-string); }
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string { color: var(--code-operator); }
+
+.token.atrule,
+.token.attr-value,
+.token.function,
+.token.class-name   { color: var(--code-function); }
+
+.token.keyword      { color: var(--code-keyword); }
+
+.token.regex,
+.token.important,
+.token.variable     { color: var(--code-important); }
+
+.token.important,
+.token.bold         { font-weight: 600; }
+.token.italic       { font-style: italic; }
+.token.entity       { cursor: help; }
+
+
+/* ---------------------------------------------------------------------------
+   CodeMirror — source-code mode and the code-block editor
+   ---------------------------------------------------------------------------
+   addThemeStyle() swaps ONE class on .CodeMirror: `cm-s-default` for every
+   light theme, `cm-s-railscasts` for Cadmium Dark and its siblings, and
+   `cm-s-one-dark` for One Dark. Styling `.CodeMirror` unqualified covers all
+   three, and leaves anyone who switches to a non-Midori theme on that theme's
+   own highlighting -- which is why the mode split below is on body.dark and
+   not on the cm-s-* class. */
+.CodeMirror {
+  background: var(--editorBgColor);
+  color: var(--code-normal);
+}
+.CodeMirror-gutters {
+  background: var(--editorBgColor);
+  border-right: 1px solid var(--editorColor10);
+}
+.CodeMirror-linenumber   { color: var(--editorColor40); }
+.CodeMirror-cursor       { border-left: 1px solid var(--midori-indigo); }
+.CodeMirror-selected     { background: var(--selectionColor); }
+.CodeMirror-focused .CodeMirror-selected { background: var(--selectionColor); }
+.CodeMirror-activeline-background { background: var(--editorColor04); }
+.CodeMirror-matchingbracket {
+  color: var(--code-operator) !important;
+  border-bottom: 1px solid var(--code-operator);
+}
+
+.cm-comment    { color: var(--code-comment); font-style: italic; }
+.cm-keyword    { color: var(--code-keyword); }
+.cm-atom       { color: var(--code-value); }
+.cm-number     { color: var(--code-value); }
+.cm-def        { color: var(--code-function); }
+.cm-variable   { color: var(--code-normal); }
+.cm-variable-2 { color: var(--code-property); }
+.cm-variable-3,
+.cm-type       { color: var(--code-tag); }
+.cm-property   { color: var(--code-property); }
+.cm-operator   { color: var(--code-operator); }
+.cm-string     { color: var(--code-string); }
+.cm-string-2   { color: var(--code-property); }
+.cm-meta       { color: var(--code-punctuation); }
+.cm-qualifier  { color: var(--code-function); }
+.cm-builtin    { color: var(--code-function); }
+.cm-bracket    { color: var(--code-punctuation); }
+.cm-tag        { color: var(--code-tag); }
+.cm-attribute  { color: var(--code-value); }
+.cm-header     { color: var(--headingColor); font-weight: 600; }
+.cm-quote      { color: var(--blockquoteTextColor); }
+.cm-hr         { color: var(--hrColor); }
+.cm-link       { color: var(--linkColor); }
+.cm-error      { color: var(--deleteColor); }

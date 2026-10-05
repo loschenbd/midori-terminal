@@ -4,7 +4,8 @@ A complete terminal theme system built on the Midori design language from
 [benjaminloschen.com](https://benjaminloschen.com) — warm paper neutrals and a
 sage accent, taking their cue from Japanese MD-style notebook stock. It covers
 Ghostty, Claude Code, tmux, herdr, fzf, oh-my-posh, Vivaldi, Cursor/VS Code,
-Obsidian and Antinote, all switching light/dark together with macOS appearance.
+Obsidian, Antinote and MarkText, all switching light/dark together with macOS
+appearance.
 
 **Midori Paper** (light) · **Midori Night** (dark)
 
@@ -52,7 +53,9 @@ to skip the prompt). After tweaking hotkeys in Vivaldi's UI, re-export them with
 (it prints the settings snippet to wire up auto light/dark + icons). For
 Obsidian: `./obsidian/install-obsidian.sh`. For Antinote:
 `./antinote/install-antinote.sh`, then Settings → Visuals → "Reload Custom
-Themes". herdr is handled by `install.sh` too (skipped when it isn't installed) —
+Themes". For MarkText: quit it, then `./marktext/apply-marktext.sh` — MarkText
+takes no theme files at all, only a Custom CSS string, and `marktext/README.md`
+explains why its own Import Theme UI cannot be used. herdr is handled by `install.sh` too (skipped when it isn't installed) —
 see `herdr/README.md`, which explains why herdr is the one component with no
 `midori-paper`/`midori-night` theme files.
 
