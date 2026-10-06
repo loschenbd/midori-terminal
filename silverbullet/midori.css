@@ -1,0 +1,698 @@
+/* Midori for SilverBullet 2.12.0 — Paper and Night in one stylesheet.
+   Measured against 2.12.0-0-g70e58486-2026-10-06T07-37-12Z.
+
+   SilverBullet has no theme-file format and no theme directory. It ships one
+   set of design tokens, declared twice in its own stylesheet:
+
+       html                     153 custom properties
+       html[data-theme=dark]    142 of those 153, redefined
+
+   WHY THIS FILE HAS THREE BLOCKS AND NOT TWO. The obvious shape is a light
+   block on `html` and a dark block on `html[data-theme=dark]`. That is what
+   this file had first, with the dark block redefining only the raw palette
+   tokens, on the reasoning that both selectors target the SAME element, so a
+   raw token redefined for dark would be read by every semantic property that
+   references it. The reasoning about the element is correct. The conclusion was
+   wrong, and the rendered check failed 29 of 43 probes in dark mode while light
+   passed 43 of 43.
+
+   What was missed is specificity, not substitution. `html[data-theme=dark]` is
+   a type plus an attribute, (0,1,1); a bare `html` is (0,0,1). So for each of
+   the 142 properties SilverBullet redefines in ITS dark block, its value beats
+   a declaration of the same property in a plain `html` block of ours — and the
+   raw token we so carefully redefined is then never read at all, because the
+   semantic property that would have read it lost. The 14 probes that did pass
+   in dark are exactly the properties SilverBullet's dark block does NOT
+   declare: the fonts, --editor-width, --editor-code-operator-color, and this
+   file's own new rules.
+
+   Hence: raw tokens per mode, then the semantic mapping ONCE under
+   `html, html[data-theme="dark"]`. In dark mode that selector list matches via
+   its (0,1,1) branch, ties SilverBullet's dark block, and wins on document
+   order. In light mode it matches via `html` and has no competition. The
+   semantic mapping is therefore written once rather than twice, and cannot
+   drift between modes — which is the failure mode marktext/midori.css has to
+   live with, where the two variable families sit on different elements and the
+   mirror genuinely must be repeated verbatim.
+
+   WHERE DARK MODE COMES FROM. In the editor, only `html[data-theme=dark]` ever
+   applies; the client sets that attribute. SilverBullet's own
+   `@media (prefers-color-scheme: dark)` block is gated on
+   `html:not([data-theme]):has(body.sb-standalone)`, so it reaches only the
+   login and dashboard pages, which are standalone and carry no data-theme
+   until a client boots. This file needs no prefers-color-scheme block, and one
+   would be dead code in the editor.
+
+   HOW TO INSTALL. See silverbullet/README.md. Two routes:
+
+     - a `space-style` fenced block in any page of the space (the documented
+       route; the client collects all `space-style` objects in the space, wraps
+       each in <style>, and writes them into <div id="custom-styles">, the last
+       child of <body>)
+     - per-space `headHtml` in spaces.json (server-side; lands in <head> after
+       main.css, so it still wins equal-specificity ties against stock rules,
+       but loses to any space-style block)
+
+   NO TRIPLE BACKTICK APPEARS ANYWHERE IN THIS FILE, and that is a constraint,
+   not an accident. Under the space-style route this whole file goes inside a
+   fenced block, and a fence ends at the first line opening with a run of
+   backticks at least as long as the one that opened it. An earlier draft of
+   this very paragraph named the block type with a three-backtick fence rather
+   than single ones, which truncated the installed stylesheet at line 33 of
+   just over 400 — the page still rendered, the block still parsed, and only
+   the colours below the cut were missing. Write `space-style` with single
+   backticks. silverbullet/wrap-midori.sh checks for it and refuses to emit a
+   page from a file that breaks it. */
+
+/* ====================================================================== *
+ * RAW TOKENS, PAPER.
+ * The Midori palette, copied from obsidian/theme.css via palette.json under
+ * the names those values already carry. Nothing here is invented for
+ * SilverBullet. The palette is CLOSED: all six chromatic slots are spoken
+ * for, and a new hue is a palette decision, not a theme decision.
+ * ====================================================================== */
+html {
+  --midori-ink: #2a2825;
+  --midori-text: #3d3933;
+  --midori-muted: #524d46;
+  --midori-faint: #8a847b;
+
+  --midori-paper: #f3f1eb;          /* background-primary */
+  --midori-card: #faf9f6;           /* background-primary-alt, code-background */
+  --midori-secondary: #edeae2;      /* background-secondary */
+  --midori-border: rgba(60, 58, 54, 0.1);
+
+  --midori-sage: #5f6f5e;           /* the accent */
+  --midori-indigo: #3a5572;
+  --midori-olive: #6c7d52;
+  --midori-wine: #7a4a4a;
+  --midori-ochre: #b88a3a;
+  --midori-purple: #653f7f;
+  --midori-mint: #548373;
+  --midori-clay: #c9916b;
+  --midori-mythic: #6b5f52;
+
+  --midori-code-normal: #2a2825;
+  --midori-code-comment: #8a8378;
+  --midori-code-punctuation: #524d46;
+
+  /* MODE-VARYING SCALARS, so the semantic block below can stay mode-free.
+     Each of these differs between paper and night for a reason that is not a
+     hue change, and putting them here is what keeps the mapping single. */
+
+  /* Text ON the accent. Paper text on sage is 4.71:1, clearing AA for body
+     and AAA for large. On night ground the accent is light, so this inverts;
+     see the night block. */
+  --midori-on-accent: var(--midori-paper);
+
+  /* The selection needs more alpha on dark ground to register at all: sage at
+     25% over #f3f1eb is a visible tint, the same 25% over #1a1917 is nearly
+     nothing. marktext/midori.css landed on the same pair for the same reason. */
+  --midori-selection-alpha: 25%;
+
+  /* The neutral a general-purpose wash is mixed from. Faint on paper, muted on
+     night: faint goes DARKER in night mode (#8a847b -> #6e685f) because it is
+     a de-emphasis colour against light ground, so a wash built from it would
+     disappear. */
+  --midori-wash-base: var(--midori-faint);
+  --midori-comment-alpha: 10%;
+}
+
+/* ====================================================================== *
+ * RAW TOKENS, NIGHT. Same element, higher specificity, so these replace the
+ * paper values above for every semantic property that reads them.
+ * ====================================================================== */
+html[data-theme="dark"] {
+  --midori-ink: #ebe8e2;
+  --midori-text: #ebe8e2;
+  --midori-muted: #9c958a;
+  --midori-faint: #6e685f;
+
+  --midori-paper: #1a1917;
+  --midori-card: #22211e;
+  --midori-secondary: #161513;
+  --midori-border: rgba(235, 232, 226, 0.12);
+
+  --midori-sage: #9aab97;
+  /* Indigo and wine take their lifted variants on dark ground. These are
+     separate palette entries (midori-indigo-lift, midori-wine-lift), not an
+     ad-hoc lightening: #6c87a4 is indigo's own dark value and sits too close
+     to the ground for code, which is what -lift exists for. */
+  --midori-indigo: #8ba3bd;         /* midori-indigo-lift */
+  --midori-olive: #9eaf85;
+  --midori-wine: #b8868a;
+  --midori-ochre: #d8b06a;
+  --midori-purple: #a079be;
+  /* Mint has no dark entry in palette.json; page-dot is the value
+     obsidian/theme.css uses in its place on dark ground. */
+  --midori-mint: #9ebfb4;           /* midori-page-dot */
+  --midori-clay: #d4a07a;
+  --midori-mythic: #c4b8a8;
+
+  --midori-code-normal: #ebe8e2;
+  --midori-code-comment: #9c958a;
+  --midori-code-punctuation: #c5bfb4;
+
+  --midori-on-accent: #1a1917;      /* 7.4:1 against night sage */
+  --midori-selection-alpha: 38%;
+  --midori-wash-base: var(--midori-muted);
+  --midori-comment-alpha: 14%;
+}
+
+/* ====================================================================== *
+ * THE SEMANTIC MAPPING, ONCE FOR BOTH MODES.
+ *
+ * The selector list is load-bearing and must not be simplified to `html`.
+ * See the long note at the top: the `html[data-theme="dark"]` branch exists
+ * to reach (0,1,1) and tie SilverBullet's own dark block, which this file
+ * then beats on document order. Dropping it silently restores 29 stock dark
+ * values while leaving light mode perfect, which is exactly the kind of
+ * half-working that reads as finished.
+ *
+ * WASHES ARE MIXED, NOT WRITTEN OUT. Every translucent value is color-mix()
+ * against the token it tints, so a token change carries into its washes and
+ * there is one place per hue to edit. marktext/midori.css writes its alpha
+ * ramp out as literal rgba() instead, and that is correct THERE: MarkText's
+ * --themeColor ramp is read by @muyajs/core and by chrome code that will not
+ * take a computed colour. Here the consumers are plain CSS, and SilverBullet
+ * already uses color-mix() in nine places of its own.
+ * ====================================================================== */
+html,
+html[data-theme="dark"] {
+  /* ---------------- accent ---------------- */
+  --ui-accent-color: var(--midori-sage);
+  --ui-accent-contrast-color: var(--midori-on-accent);
+
+  --link-color: var(--midori-indigo);
+  --link-missing-color: var(--midori-clay);
+  --link-invalid-color: var(--midori-purple);
+
+  /* Ochre, matching --highlightColor in marktext/midori.css. This is the
+     ==highlight== mark, NOT the selection; the selection is sage, so a
+     highlighted run inside a selection reads as two tints rather than one
+     muddy overlap. */
+  --highlight-color: color-mix(in srgb, var(--midori-ochre) 28%, transparent);
+
+  /* ---------------- grounds and text ---------------- */
+  --root-background-color: var(--midori-paper);
+  --root-color: var(--midori-text);
+
+  --subtle-color: var(--midori-muted);
+  --subtle-background-color: color-mix(in srgb, var(--midori-wash-base) 14%, transparent);
+
+  /* The markdown syntax marks (#, *, backticks, link brackets). Stock
+     SilverBullet paints these dark red (#650007 paper, #d6222e night). Sage
+     makes them read as structure rather than as an error, the same call
+     obsidian/theme.css makes for its formatting marks. */
+  --meta-color: var(--midori-sage);
+  --meta-subtle-color: var(--midori-faint);
+
+  --ui-surface-border-color: var(--midori-border);
+
+  /* ---------------- top bar ----------------
+     Secondary ground, matching the header-bar decision in
+     marktext/midori.css: the bar is a different surface from the page, one
+     step back from paper, not a tinted version of it. */
+  --top-background-color: var(--midori-secondary);
+  --top-border-color: var(--midori-border);
+  --top-color: var(--midori-muted);
+  --top-saved-color: var(--midori-faint);
+  --top-unsaved-color: var(--midori-ochre);
+  --top-loading-color: var(--midori-faint);
+  --top-sync-error-color: var(--midori-wine);
+  --top-sync-error-background-color: color-mix(in srgb, var(--midori-wine) 14%, var(--midori-paper));
+
+  --panel-background-color: var(--midori-secondary);
+  --panel-border-color: var(--midori-border);
+  --bhs-background-color: var(--midori-paper);
+  --bhs-border-color: var(--midori-border);
+
+  /* ---------------- modals, buttons, fields ---------------- */
+  --modal-background-color: var(--midori-card);
+  --modal-color: var(--midori-text);
+  --modal-help-background-color: var(--midori-secondary);
+  --modal-help-color: var(--midori-muted);
+  --modal-description-color: var(--midori-faint);
+  /* Stock is #212476 in both modes, a saturated navy and the one place
+     SilverBullet's UI leaves its own palette. Sage pill, paper text. */
+  --modal-hint-background-color: var(--midori-sage);
+  --modal-hint-color: var(--midori-on-accent);
+  --modal-hint-inactive-background-color: var(--midori-secondary);
+  --modal-hint-inactive-color: var(--midori-muted);
+
+  --button-background-color: var(--midori-card);
+  --button-hover-background-color: var(--midori-secondary);
+  --button-border-color: var(--midori-border);
+
+  --action-button-color: var(--midori-muted);
+  --action-button-hover-color: var(--midori-sage);
+  --action-button-active-color: var(--midori-sage);
+
+  --progress-background-color: var(--midori-secondary);
+  --progress-sync-color: var(--midori-sage);
+  --progress-index-color: var(--midori-ochre);
+
+  /* ---------------- editor surface ---------------- */
+  --editor-caret-color: var(--midori-ink);
+  /* NOT the Obsidian caret treatment. obsidian/theme.css sets
+     `caret-color: transparent` and draws its own, because the native Chromium
+     caret is symmetric about the baseline and sits ~3px low against Spectral —
+     and that fix needs the companion plugins/midori-caret to put a caret back.
+     SilverBullet has no plugin here to do that, so hiding the native caret
+     would leave the writing surface with no caret at all. Ink it is. */
+
+  --editor-selection-background-color:
+    color-mix(in srgb, var(--midori-sage) var(--midori-selection-alpha), transparent);
+
+  /* ALL SIX HEADING LEVELS, ONE COLOUR. SilverBullet gets this right already —
+     one --editor-heading-color, consumed by .sb-line-h1 through .sb-line-h6 in
+     a single rule, so there is no per-level fade to undo. This is the end state
+     the headings in marktext/midori.css had to be walked back to by hand. */
+  --editor-heading-color: var(--midori-ink);
+  --editor-heading-meta-color: var(--midori-faint);
+
+  --editor-list-bullet-color: var(--midori-sage);
+  --editor-task-marker-color: var(--midori-sage);
+  --editor-task-state-color: var(--midori-muted);
+
+  --editor-blockquote-border-color: var(--midori-sage);
+  --editor-blockquote-color: var(--midori-muted);
+  --editor-blockquote-background-color: color-mix(in srgb, var(--midori-wash-base) 8%, transparent);
+
+  --editor-code-background-color: var(--midori-card);
+  --editor-code-color: var(--midori-code-normal);
+
+  /* Tag pills, sage. */
+  --editor-hashtag-background-color: color-mix(in srgb, var(--midori-sage) 16%, transparent);
+  --editor-hashtag-color: var(--midori-sage);
+  --editor-hashtag-border-color: color-mix(in srgb, var(--midori-sage) 35%, transparent);
+
+  /* @mentions, indigo — the same hue as links, because both are references to
+     something outside this page. */
+  --editor-at-mention-color: var(--midori-indigo);
+  --editor-at-mention-signature-color: var(--midori-faint);
+  --editor-at-mention-background-color: color-mix(in srgb, var(--midori-indigo) 10%, transparent);
+  --editor-at-mention-border-color: color-mix(in srgb, var(--midori-indigo) 28%, transparent);
+
+  --editor-wiki-link-page-background-color: color-mix(in srgb, var(--midori-indigo) 8%, transparent);
+  --editor-wiki-link-color: var(--midori-faint);
+
+  --editor-table-head-background-color: var(--midori-secondary);
+  --editor-table-head-color: var(--midori-ink);
+  --editor-table-even-background-color: var(--midori-card);
+
+  --editor-frontmatter-background-color: color-mix(in srgb, var(--midori-wash-base) 10%, transparent);
+  --editor-frontmatter-color: var(--midori-muted);
+  --editor-frontmatter-marker-color: var(--midori-faint);
+
+  --editor-comment-background-color:
+    color-mix(in srgb, var(--midori-ochre) var(--midori-comment-alpha), transparent);
+  --editor-comment-border-color: color-mix(in srgb, var(--midori-ochre) 45%, transparent);
+
+  --editor-widget-background-color: var(--midori-secondary);
+  --editor-ruler-color: var(--midori-border);
+
+  /* Lua directives and the {{struct}} syntax. Mythic — the brown
+     obsidian/theme.css reserves for machinery the writer did not type. */
+  --editor-directive-color: var(--midori-mythic);
+  --editor-directive-mark-color: var(--midori-mythic);
+  --editor-directive-background-color: color-mix(in srgb, var(--midori-mythic) 10%, transparent);
+  --editor-struct-color: var(--midori-mythic);
+
+  /* Another client editing the same page. Clay, so it cannot be mistaken for
+     your own ink or for the sage selection. */
+  --editor-external-caret-color: var(--midori-clay);
+  --editor-external-edit-color: color-mix(in srgb, var(--midori-clay) 26%, transparent);
+
+  --editor-completion-detail-color: var(--midori-muted);
+  --editor-completion-detail-selected-color: var(--midori-card);
+
+  --editor-panels-bottom-background-color: var(--midori-secondary);
+  --editor-panels-bottom-color: var(--midori-text);
+  --editor-panels-bottom-border-color: var(--midori-border);
+  --editor-panels-bottom-input-background-color: var(--midori-card);
+  --editor-panels-bottom-button-background-image:
+    linear-gradient(var(--midori-card), var(--midori-secondary));
+  --editor-panels-bottom-button-active-background-image:
+    linear-gradient(var(--midori-secondary), var(--midori-card));
+
+  --editor-command-button-color: var(--midori-ink);
+  --editor-command-button-background-color: var(--midori-secondary);
+  --editor-command-button-hover-background-color: var(--midori-card);
+  --editor-command-button-border-color: var(--midori-border);
+
+  /* ---------------- code tokens ----------------
+     The role names are the ones obsidian/theme.css uses, so the same hue means
+     the same thing in Obsidian, MarkText and here:
+       keyword  purple    string  olive     function/variable  indigo
+       property mint      value   ochre     operator           wine */
+  --editor-code-comment-color: var(--midori-code-comment);
+  --editor-code-variable-color: var(--midori-indigo);     /* code-function */
+  --editor-code-typename-color: var(--midori-mint);       /* code-property */
+  --editor-code-string-color: var(--midori-olive);        /* code-string */
+  --editor-code-number-color: var(--midori-ochre);        /* code-value */
+  --editor-code-operator-color: var(--midori-wine);       /* code-operator */
+  --editor-code-atom-color: var(--midori-purple);         /* code-keyword; atoms
+                                                             are true/false/nil */
+  --editor-code-info-color: var(--midori-faint);
+
+  /* ---------------- status ----------------
+     Wine errs, ochre cautions, indigo informs, olive confirms — the Midori
+     reading of the four, rather than stock red/amber/blue/green. */
+  --danger-color: var(--midori-wine);
+  --danger-contrast-color: var(--midori-paper);
+  --success-color: var(--midori-olive);
+
+  --alert-error-color: var(--midori-wine);
+  --alert-error-background-color: color-mix(in srgb, var(--midori-wine) 8%, var(--midori-paper));
+  --alert-error-border-color: color-mix(in srgb, var(--midori-wine) 30%, transparent);
+
+  --alert-warning-color: var(--midori-ochre);
+  --alert-warning-background-color: color-mix(in srgb, var(--midori-ochre) 10%, var(--midori-paper));
+  --alert-warning-border-color: color-mix(in srgb, var(--midori-ochre) 32%, transparent);
+
+  --alert-info-color: var(--midori-indigo);
+  --alert-info-background-color: color-mix(in srgb, var(--midori-indigo) 8%, var(--midori-paper));
+  --alert-info-border-color: color-mix(in srgb, var(--midori-indigo) 28%, transparent);
+
+  --badge-background-color: var(--midori-secondary);
+  --badge-color: var(--midori-muted);
+
+  /* ---------------- fallback-only extension points ----------------
+     Six custom properties are READ by SilverBullet's stylesheet but declared
+     nowhere in it, so they exist only as the fallback inside each var().
+     Declaring them is the only way to bring them onto the palette.
+
+     --editor-text-color is the interesting one: it is read with NO fallback,
+     by `.sb-comment-resolve:hover` and by
+     `#sb-main .cm-editor .sb-lua-bottom-widget blockquote`. An undeclared
+     custom property makes the whole declaration invalid at computed-value
+     time, which for `color` means it computes to `inherit` — so both rules
+     silently do nothing today, and whoever wrote them meant them to set a
+     colour. Declaring it below makes them work. That is a defect in
+     SilverBullet 2.12.0, not in this theme; if a later release declares the
+     property itself, this line becomes a plain override and stays correct. */
+  --editor-text-color: var(--midori-text);
+  --editor-error-color: var(--midori-wine);
+  --editor-accent-muted: color-mix(in srgb, var(--midori-sage) 60%, transparent);
+  --editor-code-deleted-color: var(--midori-wine);
+  --editor-code-deleted-bg: color-mix(in srgb, var(--midori-wine) 14%, transparent);
+  --editor-code-inserted-color: var(--midori-olive);
+  --editor-code-inserted-bg: color-mix(in srgb, var(--midori-olive) 16%, transparent);
+  --editor-monospace-font: "M PLUS 1 Code", ui-monospace, Menlo, monospace;
+
+  /* ---------------- type ---------------- */
+
+  /* Spectral for chrome, matching --font-interface-theme in
+     obsidian/theme.css. --ui-font drives #sb-root, every button, input, select
+     and tab, the page-name field in the top bar, and the nav sidebar. */
+  --ui-font: "Spectral", ui-serif, Georgia, serif;
+
+  /* M PLUS 1p for the writing surface. This is the one real departure from
+     stock: SilverBullet is monospace end to end by design (iA-Mono), and
+     --editor-font is the ONLY font-family the editor sets — there is no
+     separate family for code anywhere in its stylesheet, so switching this to
+     a proportional face takes fenced code with it. The tail of this file puts
+     a monospace family back on code, which is a rule SilverBullet does not
+     need and this theme does.
+
+     WHAT THE ch-BASED GEOMETRY DOES WHEN THE FONT CHANGES, measured rather
+     than assumed. `#sb-main .cm-editor .cm-content` declares
+     `--editor-column: 1ch` and `--blockquote-step: 2ch`; the first indents
+     inline comments by 3 columns, the second sets the repeating-gradient pitch
+     that draws nested blockquote bars. `ch` is the advance of "0":
+
+         iA-Mono    0.600em  ->  10.80px at the 18px editor size
+         M PLUS 1p  0.620em  ->  11.16px
+
+     so the indent grid moves +0.36px per column, +1.08px on a 3-column inline
+     comment, and the blockquote pitch goes 21.60px -> 22.32px. Left alone
+     deliberately. Pinning it would mean re-declaring --editor-column on
+     `.cm-content`, which needs a selector at least as specific as
+     `#sb-main .cm-editor .cm-content` (1,2,0) — a high-specificity rule
+     reaching into SilverBullet's layout to buy back a third of a pixel. */
+  --editor-font: "M PLUS 1p", ui-sans-serif, system-ui, sans-serif;
+
+  /* THE MEASURE, IN ABSOLUTE PX, AND IT MUST BE ABSOLUTE.
+
+     Midori's line length is a setting in characters held through one measured
+     constant: 70 characters at M PLUS 1p's average advance of 0.4818em, taken
+     with a BoundsPen over a prose sample. See the long note at
+     --midori-set-measure in obsidian/theme.css; the constant is font-specific
+     and is only valid because the body font is fixed, which it is here too.
+
+     SilverBullet applies --editor-width as max-width on `.cm-content`, which
+     is `box-sizing: border-box` with `padding: 5px 20px`, at font-size 18px:
+
+         70 * 0.4818 * 18px  =  607.07px of text
+                      + 40px     the two 20px paddings, inside the border box
+         ------------------
+                       647px
+
+     NOT em, for the same class of reason obsidian/theme.css records, in a
+     different element. There the hazard is that `.cm-line` is also the heading
+     element, so an em measure hands an h1 an 880px column against a body
+     line's 544px. SilverBullet is safe from THAT one — max-width sits on the
+     shared `.cm-content` parent, and h1 and p lines both measure 760px at the
+     stock 800px, verified. But --editor-width has four consumers, and one of
+     them is `#sb-top .main .inner`, the page-title row, at `font-size: 28px`.
+     An em value resolves against each consumer's own font-size, so 33.726em
+     would be 607px in the text column and 944px in the top bar, pulling the
+     title out of alignment with the text it names. The px form leaves the top
+     bar where SilverBullet put it; the rendered check asserts the resulting
+     text column at 607.07px to 0.6px. */
+  --editor-width: 647px;
+}
+
+/* ====================================================================== *
+ * THE FIVE THINGS SILVERBULLET DOES NOT EXPOSE AS A VARIABLE.
+ * Everything above is a token substitution. Everything below is a new rule,
+ * and each is here because no variable reaches the thing it changes.
+ * ====================================================================== */
+
+/* 1. SPECTRAL HEADINGS. --editor-font is inherited by `.cm-line` from
+   `.cm-content`, and a direct rule on the line beats an inherited value
+   regardless of specificity, so this needs no !important and no id. */
+#sb-main .cm-editor .sb-line-h1,
+#sb-main .cm-editor .sb-line-h2,
+#sb-main .cm-editor .sb-line-h3,
+#sb-main .cm-editor .sb-line-h4,
+#sb-main .cm-editor .sb-line-h5,
+#sb-main .cm-editor .sb-line-h6 {
+  font-family: "Spectral", ui-serif, Georgia, serif;
+}
+
+/* 2. MONOSPACE CODE. Required by the --editor-font change above: SilverBullet
+   sets no font-family for code anywhere, because its editor font is already
+   monospace. `.sb-line-fenced-code` and `.sb-line-code` are the line elements;
+   `.sb-code` is the inline span; `tt` is what the markdown widgets render
+   inline code as. */
+#sb-main .cm-editor .sb-line-fenced-code,
+#sb-main .cm-editor .sb-line-code,
+#sb-main .cm-editor .sb-code,
+#sb-main .cm-editor tt,
+.sb-nav-root .sb-nav-content code {
+  font-family: var(--editor-monospace-font);
+}
+
+/* 3. KEYWORD AND PUNCTUATION COLOUR. Stock SilverBullet gives `.sb-keyword`
+   font-weight: bold and no colour, and gives `.sb-punctuation` no rule at all,
+   so both inherit the body ink. Every other token class it emits has a
+   variable. Colouring these two is a deliberate departure, so that the Midori
+   code roles are as complete here as in obsidian/theme.css — a purple keyword
+   is load-bearing in that mapping, not decoration. The bold stays. */
+#sb-main .cm-editor .sb-keyword {
+  color: var(--midori-purple);
+}
+
+#sb-main .cm-editor .sb-punctuation {
+  color: var(--midori-code-punctuation);
+}
+
+/* 4. ADMONITIONS. The only colours SilverBullet keeps OUTSIDE its token set:
+   --admonition-color is declared per type, on the type's own selector, as four
+   fully saturated values (#00b8d4 note, #ff9100 warning, #d50000 danger,
+   #00c853 success). Nothing in the token blocks reaches them, which is why a
+   theme that redefines every one of the 153 properties still leaves
+   admonitions cyan — it did here, and the rendered check caught it.
+
+   One colour each drives the left border, the title wash (color-mix at 10%)
+   and the icon, so these four declarations theme all three. The selector is
+   repeated verbatim, attribute `i` flag included, to match at (0,2,0); equal
+   specificity resolves on document order, and this file is later than main.css
+   under both install routes. The hues are the same four this file gives
+   --alert-*. */
+.sb-admonition[admonition="note" i] { --admonition-color: var(--midori-indigo); }
+.sb-admonition[admonition="warning" i] { --admonition-color: var(--midori-ochre); }
+.sb-admonition[admonition="danger" i] { --admonition-color: var(--midori-wine); }
+.sb-admonition[admonition="success" i] { --admonition-color: var(--midori-olive); }
+
+/* 5. FONT WEIGHT, CAPPED AT THE SITE'S SCALE. SilverBullet's weights are far
+   heavier than the Midori design language allows, and nothing in the token set
+   reaches them, so every one of these is a rule rather than a variable.
+
+   THE SOURCE OF TRUTH is benjaminloschen.com, which is unusually explicit
+   about this. app/layout.tsx carries the rule in a comment headed "ONLY THE
+   WEIGHTS THE DESIGN SYSTEM CAN ACTUALLY REACH":
+
+     - <strong> resolves to 500 in sans prose and 600 in serif prose, never
+       the UA default 700 (components/notion-rich-text.tsx renders
+       <strong className="font-medium">, and .prose-essay strong is 600)
+     - headings top out at 600 (.prose-essay :is(h1,h2,h3,h4) is 600)
+     - 300 and 700 were deleted from the site as unreachable, 95KB across six
+       files, and the comment requires re-checking three conditions before
+       either is added back
+
+   So the mapping below is: sans editor prose 500, serif chrome and headings
+   600, and nothing at 700 or above.
+
+   WHAT SILVERBULLET ASKS FOR, and why this is not a small delta: `.sb-strong`
+   is `font-weight: 900`, the only 900 anywhere in the 2.12.0 binary. Measured
+   at 18px over a 22-character string, M PLUS 1p renders 400 at 186.6px,
+   500 at 190.3px, 700 at 196.0px and 900 at 207.3px. So stock bold is 900
+   against a 400 body -- a 11.1% advance increase -- where the site asks for
+   500, a 2.0% one.
+
+   A CORRECTION WORTH READING, because it points the wrong way from here.
+   Earlier on 2026-10-06 this theme had no weight rules at all, and so stock
+   900 applied while silverbullet-hub's FONTS_URL served M PLUS 1p at only
+   400;500;700. Bold therefore rendered as a browser-synthesised 700. Reading
+   `.sb-strong` as a requirement, this session asked the hub to ADD a real 900
+   face, and it did. That was the wrong direction: it replaced a too-heavy
+   approximation with a faithful black, and made the defect worse rather than
+   fixing it. The requirement was never 900 -- it was whatever the design
+   language says, which is 500. Do not re-add 900 to FONTS_URL on the strength
+   of the stock rule; the rule below is what decides.
+
+   SPECIFICITY IS LOAD-BEARING HERE, in a way the rest of this file is not.
+   Each selector below is a VERBATIM copy of the stock selector that declares
+   the weight, so it ties and wins on document order -- the same mechanism the
+   admonitions in group 4 use, and this file is later than main.css under both
+   install routes.
+
+   The heading selector is the trap. Group 1 above sets font-family with
+   `#sb-main .cm-editor .sb-line-h1`, which is (1,2,0) and works, because the
+   stock heading rule declares no font-family to contest. But that stock rule
+   is `#sb-main .cm-editor .cm-line.sb-line-h1`, (1,3,0), and it DOES declare
+   font-weight. A weight rule copied from group 1's selector would sit at
+   (1,2,0), lose, and change nothing -- while reading as though it worked.
+   `.cm-line` is therefore present below and must stay. */
+
+/* Editor prose, sans (M PLUS 1p): 500. */
+.sb-strong {
+  font-weight: 500;
+}
+
+#sb-main .cm-editor .sb-line-tbl-header {
+  font-weight: 500;
+}
+
+#sb-main .cm-editor thead tr {
+  font-weight: 500;
+}
+
+.sb-directive,
+.sb-directive-mark {
+  font-weight: 500;
+}
+
+/* Editor headings, serif (Spectral): 600. Note `.cm-line` -- see above. */
+#sb-main .cm-editor .cm-line.sb-line-h1,
+#sb-main .cm-editor .cm-line.sb-line-h2,
+#sb-main .cm-editor .cm-line.sb-line-h3,
+#sb-main .cm-editor .cm-line.sb-line-h4,
+#sb-main .cm-editor .cm-line.sb-line-h5,
+#sb-main .cm-editor .cm-line.sb-line-h6 {
+  font-weight: 600;
+}
+
+/* Chrome, serif (Spectral, via --ui-font): 600. The page title in the top bar
+   is the one visible 700 outside the editor; the rest are small surfaces that
+   would otherwise sit a full step above every heading on the page. */
+#sb-top .main #sb-current-page .sb-input {
+  font-weight: 600;
+}
+
+.sb-tab.sb-active {
+  font-weight: 600;
+}
+
+.sb-page-widget-title {
+  font-weight: 600;
+}
+
+.sb-modal-box .sb-prompt label {
+  font-weight: 600;
+}
+
+/* TWO STOCK WEIGHTS ARE DELIBERATELY LEFT ALONE.
+
+   `#sb-main .cm-editor .sb-keyword` is bold, and capping it at 600 would be
+   consistent -- but it renders in M PLUS 1 Code, which FONTS_URL serves only
+   at 400;700. Two discrete weights from the css2 API are two static faces, not
+   a variable range, so a 600 request there synthesises from 400 instead of
+   resolving, which looks worse than the honest 700. Capping it needs the Code
+   axis changed to 400;600 first, in silverbullet-hub. Until then group 3's
+   "the bold stays" is still accurate.
+
+   `#sb-main .cm-editor .sb-hr` is bold on the `---` line. That is a divider
+   glyph rather than text emphasis, the site has no font-weight precedent for
+   a rule, and thinning it changes how heavy the break looks for no reason the
+   design language supplies.
+
+   WHAT THIS FILE NOW REQUIRES OF FONTS_URL: M PLUS 1p at 500 and Spectral at
+   600, both of which are already served. Nothing here requests 900 any more,
+   so that axis value is dead weight on every page load until the hub drops
+   it. */
+
+/* ====================================================================== *
+ * PANELS, AND THE ONE WAY THE TWO INSTALL ROUTES DIFFER.
+ *
+ * SilverBullet CAN render a panel inside an <iframe srcdoc>: `panelStyles()`
+ * builds such a document from `.client/components.css` — which carries an
+ * identical copy of the `html` and `html[data-theme=dark]` variable blocks —
+ * then appends the collected space styles after it so that "user theming
+ * wins" (its own comment), and the client propagates `data-theme` in by
+ * postMessage. From reading that code alone the conclusion looks obvious:
+ * space-style themes panels, headHtml cannot, because an iframe srcdoc
+ * document does not inherit its parent's stylesheets.
+ *
+ * Measured, stock SilverBullet 2.12.0 opens no such iframe at all. The tree,
+ * mentions and linked-mentions sidebars are `.sb-nav-root` elements in the
+ * MAIN document; after running each of Navigate: Tree, Navigate: Mentions and
+ * Navigate: Linked Mentions, `document.querySelectorAll('iframe').length` is
+ * 0 and all four panel slots (lhs, rhs, bhs, modal) are null. So the sidebars
+ * are themed under BOTH routes — verified under headHtml: `.sb-nav-root`
+ * paints #161513 via --panel-background-color, its text #ebe8e2, its font
+ * Spectral, and .sb-nav-title sage.
+ *
+ * The iframe path is reached only by a plug calling `editor.showPanel`. For
+ * those, and only those, the route matters: space-style reaches them,
+ * headHtml does not.
+ *
+ * Neither route reaches /.dashboard or the login page. Those are separate
+ * documents served by the server, they carry `body.sb-standalone`, and
+ * headHtml is per space.
+ * ====================================================================== */
+
+/* ====================================================================== *
+ * COMPLETENESS SENTINEL. The last line of this file is a fixed string, so
+ * that "did the whole stylesheet arrive" is a question with an exact answer
+ * instead of a guess at a plausible minimum length.
+ *
+ * Both install routes can truncate this file silently: each wraps the whole
+ * stylesheet in something that ends early at one particular character
+ * sequence, named in the header and in silverbullet/README.md. Neither
+ * sequence may be written here, which is why this comment does not quote
+ * them — an earlier draft of this very block did, and the lint check caught
+ * it. Both sequences are refused before anything ships. What neither an
+ * empty-file check nor a length threshold catches is the remaining case, a
+ * file that arrives truncated-but-nonempty: the
+ * raw-token blocks survive, the semantic mapping does not, and the result is a
+ * half-themed space with nothing logged anywhere.
+ *
+ * A reader that wants to know the file is whole checks that its last
+ * non-blank line is exactly the line below. tests/check_style_literals.py
+ * asserts it on every commit.
+ * ====================================================================== */
+/* END midori.css -- if this line is missing, the file was truncated. */
