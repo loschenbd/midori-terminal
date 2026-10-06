@@ -4,8 +4,8 @@ A complete terminal theme system built on the Midori design language from
 [benjaminloschen.com](https://benjaminloschen.com) — warm paper neutrals and a
 sage accent, taking their cue from Japanese MD-style notebook stock. It covers
 Ghostty, Claude Code, tmux, herdr, fzf, oh-my-posh, Vivaldi, Cursor/VS Code,
-Obsidian, Antinote and MarkText, all switching light/dark together with macOS
-appearance.
+Obsidian, Antinote, MarkText and SilverBullet, all switching light/dark
+together with macOS appearance.
 
 **Midori Paper** (light) · **Midori Night** (dark)
 
@@ -55,7 +55,12 @@ Obsidian: `./obsidian/install-obsidian.sh`. For Antinote:
 `./antinote/install-antinote.sh`, then Settings → Visuals → "Reload Custom
 Themes". For MarkText: quit it, then `./marktext/apply-marktext.sh` — MarkText
 takes no theme files at all, only a Custom CSS string, and `marktext/README.md`
-explains why its own Import Theme UI cannot be used. herdr is handled by `install.sh` too (skipped when it isn't installed) —
+explains why its own Import Theme UI cannot be used. SilverBullet is the one
+target `install.sh` deliberately leaves alone: its theme has no fixed
+destination on this machine — it goes either into a page inside a space, which
+is a live project folder, or into a server config — so `silverbullet/README.md`
+covers both routes and `silverbullet/wrap-midori.sh` renders the theme to
+stdout for you to place. herdr is handled by `install.sh` too (skipped when it isn't installed) —
 see `herdr/README.md`, which explains why herdr is the one component with no
 `midori-paper`/`midori-night` theme files.
 
