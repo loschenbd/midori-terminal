@@ -33,6 +33,14 @@ esac
 
 mkdir -p "$DEST_DIR"
 
+# The Lemonardo twin goes next to the live config, never over it — the same
+# policy install.sh uses for ghostty/config.lemonardo. Unlike the Ghostty case
+# there is no theme-file indirection to switch: herdr reads one config.toml, so
+# switching design language means replacing that file (keep a backup) and
+# `herdr server reload-config`.
+cp -f "$REPO_DIR/config.lemonardo.toml" "$DEST_DIR/config.lemonardo.toml"
+echo "Wrote ${DEST_DIR#"$HOME"/}/config.lemonardo.toml (swap in to switch design language)"
+
 # Same policy as the Ghostty config in install.sh: never clobber a config the
 # user has edited. herdr's config carries keybindings and per-host settings
 # that are none of this repo's business.

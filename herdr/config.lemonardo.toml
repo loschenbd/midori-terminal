@@ -1,0 +1,253 @@
+# herdr — Lemonardo
+#
+# The ALTERNATIVE to herdr/config.toml, which is Midori's. install-herdr.sh
+# writes this next to the live config; it never becomes the live config on its
+# own. To switch, replace ~/.config/herdr/config.toml with it (keep a backup)
+# and `herdr server reload-config`.
+#
+# DERIVED FROM config.toml, and most of that file carries over VERBATIM: which
+# keys exist, which herdr version exposes them, which roles upstream couples,
+# why auto_switch must stay true even when both names match. None of that is
+# about a design language and all of it was expensive to learn. What changed is
+# only the blocks that name a colour, and each was re-measured rather than
+# translated -- because the same RULE can produce an illegible surface on a
+# different palette, and twice below it did.
+#
+# The base is name = "terminal": herdr derives its UI from the host terminal, so
+# every NAMED colour below is emitted as a raw ANSI code that Ghostty resolves
+# against light:lemonardo-paintpot,dark:lemonardo-inkwell. The Ghostty palette
+# stays the single source of truth for everything that has an ANSI slot --
+# which is why eleven of the fifteen colour keys here needed NO change at all
+# when this file was derived: they were already pointing at whatever the
+# terminal resolves.
+#
+# "terminal" was unusable in 0.8.0 because of what the base assigns, not the
+# idea: it hardcodes these roles to ANSI slots that mean something else in
+# Midori, and 0.8.0 exposed none of them as keys.
+#
+#   active_row_bg, surface1, surface_dim   DarkGray  [100m / [90m   ANSI 8
+#   overlay0, subtext0, mauve              Gray      [37m           ANSI 7
+#   overlay1                               White     [97m           ANSI 15
+#   selection_bg                           Reset     no background at all
+#
+# ANSI 8 is Lemonardo's dim TEXT (#5c6470 bond, #8893a5 inkwell), the same
+# mismatch Midori's copy of this file records: a dim-text slot pressed into
+# service as a row surface. 0.9.0 exposes all nineteen palette keys plus
+# per-appearance blocks, so each role is re-pointed: to a named slot that means
+# the right thing in both appearances where one exists, and per appearance
+# where none does.
+# Source: src/app/state.rs Palette::terminal() in herdr v0.9.0.
+
+[theme]
+# Still a fixed built-in list with no theme-file loader, so there is no "midori"
+# name to set — "terminal" is how Midori gets in. 0.9.0's `herdr config check`
+# now reports an unknown name ("unknown theme name ... using catppuccin"), where
+# 0.8.0 printed "config: ok" and silently rendered Catppuccin Mocha. It still
+# cannot tell you a valid name with wrong overrides looks right: capture a
+# render (README.md, "Verifying").
+#
+# auto_switch must stay true even though both names are the same. The
+# [theme.custom.light] / [theme.custom.dark] blocks are applied ONLY when
+# auto_switch picks an appearance (src/app/mod.rs resolve_effective_theme); with
+# it false they are silently ignored and every surface below falls back to the
+# ANSI 8 slab. Appearance comes from the terminal's background colour (OSC 11)
+# or colour-scheme report; if neither answers, herdr assumes dark.
+name = "terminal"
+auto_switch = true
+dark_name = "terminal"
+light_name = "terminal"
+
+[theme.custom]
+# Let Ghostty's baked dot-grid + glow background image show through herdr's
+# chrome. Without this, the sidebar and tab row paint an opaque fill over the
+# 24pt mint dot grid and the top halo — the single most Midori thing on screen.
+# It has a second effect that is easy to miss: with panel_bg = "reset", herdr
+# routes two more roles to surface_dim. See surface_dim below.
+panel_bg = "reset"
+
+# The terminal's DEFAULT foreground: Lemonardo --foreground in both appearances
+# (#3a4048 paintpot, #ede4d3 inkwell). "white" would pin ANSI 7, which in this
+# palette is the crust tan #d4b186 — 1.86:1 on bond, unreadable.
+text = "reset"
+
+# Lemonardo's accent is the leaf green at ANSI 2 (#1c763f paintpot, #1abd62
+# inkwell). Deeper than Midori's sage in light mode, which costs the tab label
+# a little contrast — see surface_dim below, where that is measured.
+accent = "green"
+
+# Agent state on ANSI 1/2/3/4 — brick / leaf / ochre / cobalt, the roles the
+# design language assigns: ochre is "needs you" (blocked), leaf is progress
+# (working), brick is failure. Same four slots as Midori, different pigments;
+# the MEANING is carried by the slot number, which is why neither file has to
+# name a hex here. The terminal base already names green, yellow and
+# blue; red is needed because the base uses LightRed (ANSI 9, the lifted wine).
+# All four stay explicit so a change of base can't silently move them — that
+# exact failure happened once, when this file moved from "terminal" to vesper.
+red    = "red"
+green  = "green"
+yellow = "yellow"
+blue   = "blue"
+
+# Secondary text: sidebar labels and counts, inactive tab names, hints — and,
+# because upstream couples them, inactive pane borders too (herdr Discussion
+# #3156). darkgray is ANSI 8, which is precisely what Lemonardo assigns that
+# slot: dim text, 5.16:1 on bond, 4.60:1 on inkwell. Both clear 4.5 and both
+# are quieter than Midori's 7.41/5.92 — the ANSI generator's own gates set
+# these, and a louder dim tier is not this file's to ask for.
+overlay0 = "darkgray"
+subtext0 = "darkgray"
+
+# Brighter secondary text: inactive tab labels, the "+" new-tab button, settings
+# values. The default foreground; the base's White is invisible on cream.
+overlay1 = "reset"
+
+# Per appearance. Lemonardo has no ANSI slot that is a surface either (0 is ink,
+# 8 is dim text), so the four surfaces are hex — and hex is safe now only because
+# it is per appearance; one global hex had to serve both, which is why 0.8.0
+# couldn't. Every hex below is a value themes/lemonardo.json or a Lemonardo
+# ghostty theme already declares; none is invented here, which is the same rule
+# themes/lemonardo.json applies to itself when it refuses to invent a purple.
+#
+# mauve          Named, and here ONE slot serves both appearances — which is the
+#                one place Lemonardo has it easier than Midori. The focused
+#                workspace's second row (branch / git status), key names in
+#                overlays, the resize-mode bar. Its real background is the FOCUS
+#                WASH, not the page — sidebar.rs draws it only on the focused
+#                row. Measured on each mode's wash:
+#
+#                               magenta (5)        lightmagenta (13)
+#                  bond         #91339c  5.11:1    #681372  8.38:1  <- taken
+#                  inkwell      #d372de  3.66:1    #f4a0fd  5.71:1  <- taken
+#
+#                lightmagenta wins in BOTH, so the per-appearance split Midori
+#                needs is unnecessary here — Midori's magenta is 5.28:1 on paper
+#                but only 2.80:1 on night, which is what forced its split. The
+#                blocks below still set it twice, deliberately: the key stays
+#                visible in both so a later palette change cannot silently move
+#                one appearance without the other being looked at.
+#
+# active_row_bg  Focused workspace row and focused agent row. Ghostty's own
+#                selection wash, exactly as in Midori — the rule ports without
+#                change. Body text on it: 8.04:1 bond, 8.42:1 inkwell (Midori
+#                measures 9.50 / 8.04). The bond wash is a very light non-photo
+#                cyan, #a9ecff, which is what makes selection_bg below hard.
+#
+# selection_bg   The NAVIGATE-mode cursor row. It is NOT a fallback for
+#                active_row_bg: src/client/shell/sidebar.rs paints selected rows
+#                with selection_bg and focused rows with active_row_bg, and the
+#                base leaves selection_bg Reset — so unset, the cursor has no
+#                background. One step heavier than the focus wash so it stays
+#                findable on a different row.
+#
+#                THE MECHANICAL RULE FAILS HERE, IN BOTH MODES. Midori's paper
+#                value is ghostty's unfocused-split-fill; Lemonardo's is
+#                #e4cbc4 on bond, which measures 1.18:1 against the bond wash —
+#                a cursor row you cannot find. Inkwell's is #34211d at 1.43:1,
+#                also short. Note Midori's own file already abandons this source
+#                once, for night, because midori-night sets unfocused-split-fill
+#                EQUAL to selection-background and it scores 1.00:1. So the rule
+#                was never "use the split fill"; it is "find a declared value a
+#                clear step off the wash that still carries body text", and the
+#                source differs per palette and per mode.
+#
+#                Searched every value themes/lemonardo.json and the two ghostty
+#                themes declare, requiring >= 1.5:1 against the wash and >= 4.5:1
+#                for body text. Exactly one candidate cleared both in each mode:
+#
+#                  bond     ANSI 7 crust #d4b186   1.55:1 wash, 5.20:1 text
+#                  inkwell  palette secondary      1.71:1 wash, 14.43:1 text
+#                           #171513 (the desk ground)
+#
+#                Near misses on bond, recorded so they are not re-proposed:
+#                peg #c9bb9f 1.45:1, split-divider #c6cbd3 1.25:1, guide
+#                #a8d7ea 1.19:1, unfocused-split-fill #e4cbc4 1.18:1.
+#
+# surface1       A row being dragged, and hairline rules in overlays. The split
+#                divider tone from both Ghostty themes.
+#
+# surface_dim    Two roles that pull apart. With panel_bg = "reset" herdr uses it
+#                for the sidebar separator line AND for the ACTIVE TAB label and
+#                mode-bar label drawn on sage (ui/widgets.rs panel_contrast_fg).
+#                A line wants distance from the page; a label on mid-tone sage
+#                wants the page colour. The split divider tone is the compromise:
+#                the separator matches Ghostty's own split divider exactly
+#                (1.18:1 paper, 1.29:1 night — quiet by design), and the tab
+#                label reads 4.02:1 paper, 5.59:1 night, bold. Upstream ask to
+#                split coupled roles like this: herdr Discussion #3802.
+#
+#                Rejected: the selection wash, chosen at first in Midori on the
+#                belief that surface_dim is also the background of a mouse
+#                selection in a pane (ui/panes.rs selection_palette_background).
+#                It is only the input to a fallback: when the terminal answers
+#                OSC 11, as Ghostty does, herdr mixes the PAGE colour 28% toward
+#                black/white and never reads surface_dim
+#                (automatic_selection_bg). That mechanic is herdr's, not a
+#                palette's, so it holds here unchanged.
+#
+#                THE SAME COMPROMISE, AT A WORSE PRICE, AND THAT IS RECORDED
+#                RATHER THAN FIXED. Lemonardo's divider gives the tab label
+#                3.47:1 on bond and 3.72:1 on inkwell, against Midori's 4.02 and
+#                5.59 — because Lemonardo's accent is a deeper leaf green
+#                (#1c763f) than Midori's sage. 3.47:1 clears the 3.0 a bold
+#                label needs, and it is almost exactly the 3.46:1 that Midori's
+#                record calls out above as a COST. The measured alternative is
+#                `card` (#fbf8f0 bond, #363330 inkwell), which buys 5.33:1 and
+#                5.08:1 on the label — but its separator falls to 1.09:1 and
+#                1.14:1 against the page, i.e. a line that is not there. The two
+#                roles pull apart harder in this palette than in Midori's, and
+#                until upstream splits them (Discussion #3802) the line wins,
+#                for the same reason it wins in Midori: an invisible separator
+#                is a defect, a 3.47:1 bold label is legible.
+[theme.custom.light]
+# paintpot: ground #f3eee2, fg #3a4048, accent #1c763f
+active_row_bg = "#a9ecff"   # lemonardo-paintpot selection-background
+selection_bg  = "#d4b186"   # lemonardo-paintpot ANSI 7 (crust)
+surface1      = "#c6cbd3"   # lemonardo-paintpot split-divider-color
+surface_dim   = "#c6cbd3"   # same, and see the note above on why
+mauve         = "lightmagenta"
+
+[theme.custom.dark]
+# inkwell: ground #2c2a28, fg #ede4d3, accent #1abd62
+active_row_bg = "#004553"   # lemonardo-inkwell selection-background
+selection_bg  = "#171513"   # themes/lemonardo.json palette.secondary.dark
+surface1      = "#44484e"   # lemonardo-inkwell split-divider-color
+surface_dim   = "#44484e"   # same, and see the note above on why
+mauve         = "lightmagenta"
+
+[ui]
+# Highlights, borders and navigation UI on the same sage accent.
+accent = "green"
+
+# Lemonardo keeps the chrome quiet for a different reason than Midori does:
+# not a paper texture to show through (this language ships no background image
+# and its shader draws no lattice — see ghostty/config.lemonardo) but because
+# the palette is already carrying a lot of pigment in the agent-state slots.
+pane_borders = true
+pane_gaps = true
+
+# The sidebar IS the reason to run herdr — the agent-status rollup. Give it
+# room and keep it expanded.
+#
+# 30, not 26. herdr auto-scales this "based on workspace names" — which does not
+# count the AGENT rows, and those are the longest strings in the panel because
+# they carry a `· agent-N` suffix. At 26 the longest one rendered
+# `○ benjaminlo… · agent-2`; at 30 it renders `○ benjaminloschen · agent-2` in
+# full. Captured at 120 columns, both ways, and diffed.
+sidebar_width = 30
+sidebar_start_collapsed = false
+
+# Group agent rows by workspace (project), matching the tmux-session-per-project
+# mental model the workspaces were migrated from.
+agent_panel_sort = "spaces"
+
+show_agent_labels_on_pane_borders = true
+# Both of these hand pixels back to the plain Lemonardo ground showing through
+# panel_bg. Note the reason differs from Midori's copy of this line, which hands
+# them back to a dot grid: Lemonardo has none. Turning scrollbars off also keeps
+# the scrollbar column out of terminal-native selections, so mouse-copy from a
+# pane stops picking it up — that part is herdr behaviour, not a palette choice.
+pane_scrollbars = false
+hide_tab_bar_when_single_tab = true
+
+[ui.toast]
+delivery = "system"

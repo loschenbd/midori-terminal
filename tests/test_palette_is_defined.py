@@ -36,7 +36,12 @@ SKIP_FILES = {"docs/cleanup-queue.md", "palette.json",
               # site pushed four pigment reference hexes over the threshold
               # and demanded that #ff4000 have a palette role, which it must
               # not: it is a citation, not a colour this repo ships.
-              "tools/colorspace.py"}
+              "tools/colorspace.py",
+              # Quotes one tmux line verbatim in a docstring, to explain a
+              # filter bug that hid exactly that line from the guard. Counting
+              # a write-up as a usage site is what SKIP_FILES is for, and this
+              # one pushed #44484e from three files to four.
+              "tests/test_lemonardo_twins.py"}
 # Directories that DEFINE colours rather than use them. themes/*.json is the
 # source a target's palette block is generated FROM, so counting it as a usage
 # site double-counts every value: adding themes/midori.json alone pushed seven
@@ -144,7 +149,12 @@ def declared(root):
                 out.setdefault(value.lower(), []).append(
                     f"{built['id']}:{slot}")
                 n_slot += 1
-            for key in ("bg", "fg", "selection"):
+            # divider and split_fill joined this list on 2026-10-11, when
+            # herdr and tmux started painting with the divider tone and it
+            # crossed the 4-file threshold while being declared nowhere. They
+            # were derived inside the generator's emit() rather than build(),
+            # so this reader could not see them; the generator now returns them.
+            for key in ("bg", "fg", "selection", "divider", "split_fill"):
                 out.setdefault(built[key].lower(), []).append(
                     f"{built['id']}:{key}")
         if n_anchor == 0 or n_slot == 0:
