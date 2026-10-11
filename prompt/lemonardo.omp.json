@@ -1,0 +1,132 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "_comment": [
+    "LEMONARDO oh-my-posh prompt. The alternative to prompt/midori.omp.json.",
+    "install.sh renders this to ~/.config/lemonardo.omp.json; shell/zshrc.midori",
+    "points oh-my-posh at ~/.config/midori.omp.json, so switching means editing",
+    "that one `--config` path.",
+    "",
+    "THIS FILE NAMES ANSI SLOTS WHERE MIDORI'S NAMES HEXES, and that is not a",
+    "style preference -- the hex mechanism does not port, measured rather than",
+    "assumed. oh-my-posh has no light/dark blocks: one colour per job serves BOTH",
+    "appearances. Midori's palette happens to hold mid-tone accents that straddle",
+    "its two grounds, so six hexes work there, with a worst case of 2.76:1 (ochre",
+    "on paper). Lemonardo's does not, and deliberately: themes/lemonardo.json",
+    "takes light accents from the -800 tier and dark ones from -300/-400, because",
+    "a hue legible as small text on bond is not legible on inkwell. Straddling",
+    "both with one hex was tried for all six jobs and the best candidate in each",
+    "role scored, as min(bond, inkwell):",
+    "",
+    "   path + arrow   ansi10 light #105028   1.50:1   <- unusable",
+    "   git dirty      ansi3  dark  #d58d15   2.37:1",
+    "   diverged       terracotta   #b03e22   2.42:1",
+    "   git clean      ansi6  light #1c716e   2.48:1",
+    "   ahead          ansi2  light #1c763f   2.53:1",
+    "   separator      faint  light #767d85   3.43:1",
+    "",
+    "A slot NAME is resolved by the terminal per appearance, so each mode gets",
+    "its own tier and the straddle problem disappears. Measured on each mode's",
+    "own ground, every value below:",
+    "",
+    "   lightGreen (10)  #105028  8.24:1 bond   #55e487  8.74:1 inkwell",
+    "   cyan (6)         #1c716e  4.99:1        #19b5b0  5.64:1",
+    "   yellow (3)       #855918  5.27:1        #d58d15  5.21:1",
+    "   green (2)        #1c763f  4.89:1        #1abd62  5.79:1",
+    "   red (1)          #ab3417  5.61:1        #f96c4b  4.95:1",
+    "   darkGray (8)     #5c6470  5.16:1        #8893a5  4.60:1",
+    "",
+    "Worst case 4.60:1, against Midori's 2.96:1. The slot names are from the",
+    "schema's own color_string pattern (oh-my-posh 26.14.3): black, red, green,",
+    "yellow, blue, magenta, cyan, white, darkGray, light*, plus bare 0-255.",
+    "",
+    "AND THIS REVERSES A DECISION MIDORI MADE ON PURPOSE, which is the one thing",
+    "here a reader must not take as an oversight. prompt/midori.omp.json named",
+    "ANSI colours until 2026-08-20 and was deliberately pinned to hex; t3/README.md",
+    "holds the reason. t3 exposes no ansi role and no --ansi-* variable, and",
+    "hardcodes two bright-on-dark palettes: against a 4.5:1 floor on Midori's",
+    "cream, the VGA table medians 2.33 with 11 of 16 failing and the VS Code one",
+    "2.48 with 13 of 15. A prompt painting with slot NAMES is unreadable there,",
+    "and no terminalForeground fixes it. Truecolor is the way out because t3's SGR",
+    "parser returns literal rgb for 38;2;R;G;B.",
+    "",
+    "WHY LEMONARDO GOES BACK ANYWAY, and what it costs. The hex route was tried",
+    "first and it does not reach. Searching every value themes/lemonardo.json and",
+    "the two ghostty themes declare, within 40 degrees of each Midori token's",
+    "OKLCh hue so the roles keep their meaning, the best straddle collapses to TWO",
+    "distinct colours for six jobs -- mint.light #2e7d5b at 2.86:1 worst for path,",
+    "clean AND ahead, clay.light #a0701d for dirty, error AND the separator. Six",
+    "roles rendered in two colours is not a prompt. Midori can pin hex because its",
+    "accents are mid-tone and muted; Lemonardo's cannot because its light accents",
+    "come from the -800 tier and its dark ones from -300/-400, which is a decision",
+    "themes/lemonardo.json makes for legibility reasons of its own.",
+    "",
+    "So the t3 constraint is REAL and is not met here. It does not bind yet: t3",
+    "has no Lemonardo theme -- t3/midori-t3.json is the only one -- so the surface",
+    "where slot names break does not exist for this design language. If one is",
+    "ever made, THIS FILE IS A KNOWN BLOCKER, and the fix is the one t3/README.md",
+    "already names (an upstream ansi role, or a custom-CSS hook) rather than a",
+    "retreat to hex, which would cost four of the six role distinctions above.",
+    "",
+    "THE JOB-TO-SLOT MAP IS MIDORI'S, re-expressed. Each hex in midori.omp.json",
+    "was traced to the slot or role it came from and the slot kept, so the two",
+    "prompts mean the same things: path and the arrow on bright green (10), a",
+    "clean tree on cyan (6), dirty or behind on ochre (3), ahead on green (2),",
+    "the separator on dim text (8). The one role with no slot is `diverged`,",
+    "which Midori paints in its terracotta palette role; it takes red (1) here,",
+    "the failure slot, because that is the meaning rather than the pigment.",
+    "",
+    "AND THIS IS WHY shell/zshrc.midori NEEDED NO TWIN: its fzf colours are slot",
+    "INDICES under --color=16, so it was already wearing whichever palette is",
+    "live. Naming slots rather than values is the portable choice across this",
+    "whole terminal surface; tmux/lemonardo.tmux.conf is down to two hexes for",
+    "the same reason, and herdr/config.lemonardo.toml to four."
+  ],
+  "blocks": [
+    {
+      "alignment": "left",
+      "segments": [
+        {
+          "foreground": "lightGreen",
+          "properties": {
+            "style": "folder"
+          },
+          "style": "plain",
+          "template": "  <u>{{ .Path }}</u>",
+          "type": "path"
+        },
+        {
+          "foreground": "cyan",
+          "foreground_templates": [
+            "{{ if or (.Working.Changed) (.Staging.Changed) }}yellow{{ end }}",
+            "{{ if and (gt .Ahead 0) (gt .Behind 0) }}red{{ end }}",
+            "{{ if gt .Ahead 0 }}green{{ end }}",
+            "{{ if gt .Behind 0 }}yellow{{ end }}"
+          ],
+          "properties": {
+            "fetch_stash_count": true,
+            "fetch_status": true,
+            "fetch_upstream_icon": true
+          },
+          "style": "plain",
+          "template": " <darkGray>\u00b7</> {{ .UpstreamIcon }}{{ .HEAD }}{{if .BranchStatus }} {{ .BranchStatus }}{{ end }}{{ if .Staging.Changed }}  {{ .Staging.String }}{{ end }}{{ if and (.Working.Changed) (.Staging.Changed) }} |{{ end }}{{ if .Working.Changed }}  {{ .Working.String }}{{ end }}{{ if gt .StashCount 0 }}  {{ .StashCount }}{{ end }}",
+          "type": "git"
+        },
+        {
+          "foreground": "lightGreen",
+          "foreground_templates": [
+            "{{ if gt .Code 0 }}red{{ end }}"
+          ],
+          "properties": {
+            "always_enabled": true
+          },
+          "style": "plain",
+          "template": " \u276f",
+          "type": "status"
+        }
+      ],
+      "type": "prompt"
+    }
+  ],
+  "final_space": true,
+  "version": 3
+}

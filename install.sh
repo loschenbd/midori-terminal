@@ -151,12 +151,25 @@ echo "   wrote config.lemonardo next to it (swap in to switch design language)"
 echo "-- prompt -> ~/.config/midori.omp.json"
 mkdir -p "$HOME/.config"
 cp -f "$REPO/prompt/midori.omp.json" "$HOME/.config/midori.omp.json"
+# The Lemonardo twin goes next to it, never over it — same policy as
+# ghostty/config.lemonardo. shell/zshrc.midori points oh-my-posh at the midori
+# path, so switching is one --config edit there.
+cp -f "$REPO/prompt/lemonardo.omp.json" "$HOME/.config/lemonardo.omp.json"
+echo "   wrote lemonardo.omp.json next to it (swap the --config path to switch)"
 
 # --- 5. Shell + tmux fragments ----------------------------------------------
 echo "-- shell/tmux fragments -> ~/.config/midori"
 mkdir -p "$HOME/.config/midori"
 cp -f "$REPO/shell/zshrc.midori" "$HOME/.config/midori/zshrc.midori"
 cp -f "$REPO/tmux/midori.tmux.conf" "$HOME/.config/midori/midori.tmux.conf"
+# There is NO zshrc.lemonardo and that is deliberate, not an omission: that
+# fragment holds no colour values at all. Its fzf theme is `--color=16` with
+# slot INDICES (hl:4, prompt:2, info:8), which the terminal resolves against
+# whichever theme pair is live, so the one file is already correct for both
+# design languages. Adding a twin would create a second copy of shell logic
+# that has to be kept in step for no benefit.
+cp -f "$REPO/tmux/lemonardo.tmux.conf" "$HOME/.config/midori/lemonardo.tmux.conf"
+echo "   wrote lemonardo.tmux.conf next to it (repoint source-file to switch)"
 
 touch "$HOME/.zshrc"
 # Detect the actual source line (not any mention of "midori" — inline references

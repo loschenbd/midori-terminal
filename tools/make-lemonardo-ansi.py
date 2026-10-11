@@ -423,10 +423,23 @@ def build(mode_id, theme):
         spec["selection_l"], 0.075,
         cs.hex_to_oklch(SELECTION_ANCHOR[0])[2])
 
+    # Split chrome. These were derived inline in emit() and are built here
+    # instead so that build() returns EVERY colour the theme file will carry.
+    # The reason is not tidiness: tests/test_palette_is_defined.py treats this
+    # generator as the declaration site for values nothing else declares, and
+    # it can only see what build() returns. While the divider lived in emit(),
+    # #44484e was declared nowhere -- which went unnoticed until herdr and tmux
+    # started using it and it crossed that test's 4-file threshold.
+    div, _ = cs.oklch_to_hex_clamped(0.84 if m == "light" else 0.40, 0.012,
+                                     cs.hex_to_oklch(ANCHORS["blue"][0])[2])
+    unf, _ = cs.oklch_to_hex_clamped(0.86 if m == "light" else 0.27, 0.030,
+                                     cs.hex_to_oklch(ANCHORS["red"][0])[2])
+
     return {"id": f"lemonardo-{mode_id}", "mode": m,
             "bg": pal[spec["ground_role"]][m],
             "fg": pal[spec["ink_role"]][m],
-            "selection": sel, "slots": slots, "notes": notes, "spec": spec}
+            "selection": sel, "divider": div, "split_fill": unf,
+            "slots": slots, "notes": notes, "spec": spec}
 
 
 def _pair_ok(a, b, floors):
@@ -585,10 +598,7 @@ def emit(built):
     w(f"cursor-text = {built['bg']}")
     w("")
     m = built["mode"]
-    div, _ = cs.oklch_to_hex_clamped(0.84 if m == "light" else 0.40, 0.012,
-                                     cs.hex_to_oklch(ANCHORS["blue"][0])[2])
-    unf, _ = cs.oklch_to_hex_clamped(0.86 if m == "light" else 0.27, 0.030,
-                                     cs.hex_to_oklch(ANCHORS["red"][0])[2])
+    div, unf = built["divider"], built["split_fill"]
     w("# Split chrome: the divider is an ink wash, the unfocused fill a")
     w("# vermilion one, both far enough down in chroma to stay furniture.")
     w(f"split-divider-color = {div}")
