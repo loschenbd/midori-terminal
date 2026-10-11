@@ -11,6 +11,15 @@ window-title-font-family = Spectral Bold
 # Exact family name required: "M PLUS 1 Code" (NOT "M PLUS 1 mono"/"Mono" —
 # no such family is installed; Ghostty silently falls back to JetBrains Mono,
 # which breaks the 48px cell = dot-grid lock below).
+#
+# THE MEASUREMENT THIS WARNING WAS MISSING, and it is not hypothetical: on the
+# machine this was written for, the live copy of this file read
+# "M PLUS 1 Code Latin 60" and rendered JetBrains Mono for two months. The
+# installed families are "M PLUS 1 Code", "M PLUS Code Latin 50" and
+# "M PLUS Code Latin 60" — there is no "1" in the Code Latin names.
+# `ghostty +validate-config` exits 0 on a family that does not exist. The check
+# that catches it, and the --config-default-files=false flag without which the
+# check lies, are recorded in ghostty/config.lemonardo and in README.md.
 font-family = "M PLUS 1 Code"
 
 window-padding-x = 12

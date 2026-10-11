@@ -221,7 +221,7 @@ without colliding with anything.
 
 | Path | What |
 |---|---|
-| `ghostty/` | Main config, `midori-paper`/`midori-night` themes, background PNGs, rounded-cursor shader |
+| `ghostty/` | Midori config (`config`) and the Lemonardo alternative (`config.lemonardo`); `midori-paper`/`midori-night` and `lemonardo-paintpot`/`lemonardo-inkwell` themes; background PNGs (Midori only — the Lemonardo themes set no image on purpose); rounded-cursor shader |
 | `watcher/` | Appearance/display watcher script + launchd plist template |
 | `prompt/midori.omp.json` | Manuscript-style oh-my-posh prompt (24-bit hex, no powerline blocks). It named ANSI colours until 2026-08-20; see `t3/README.md` for why pinning them was necessary and what it costs |
 | `shell/zshrc.midori` | omp init, fzf ANSI palette, eza aliases, zoxide, zsh autosuggestions/highlighting, cursor-color reset (sourced from `.zshrc`) |
@@ -231,7 +231,7 @@ without colliding with anything.
 | `antinote/` | Midori Paper/Night Antinote themes (24-key JSON), installer, and a transcription of Antinote's undocumented theme schema |
 | `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret`, `midori-confetti` and `midori-timer` companion plugins, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
 | `moshi/` | Midori Paper/Night for [Moshi](https://getmoshi.app) (the phone terminal for agents) — **generated** from the Ghostty themes by `build-moshi-themes.py`, which also publishes them to iCloud for the phone |
-| `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
+| `fonts/` | Midori: M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI). Lemonardo: Sometype Mono, roman **and italic** — both measured `isFixedPitch=1` at a single 580/1000 = 0.58em advance across all 94 printable ASCII glyphs, so the italic is metric-compatible and safe in a terminal grid. All SIL OFL 1.1. **`install.sh` copies every `.ttf` here into `~/Library/Fonts`**, so adding a face here installs it. |
 | `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
 | `tests/` | `lint.sh` (run before every commit), the prose-typography guards, and `dryrun-installers.sh` — never run an installer to test one, it writes into nine live vaults |
 | `docs/cleanup-queue.md` | Cleanup work list plus FINDINGS: reports from the overnight loop, several of which falsify their own item's premise |
@@ -289,7 +289,38 @@ Residual gotchas:
   whatever the cell is — it only nudges the rhythm off 24 pt. Coupled to
   font size.
 - The font family must be exactly `"M PLUS 1 Code"` — a wrong name silently
-  falls back to JetBrains Mono and changes the cell metrics.
+  falls back to JetBrains Mono and changes the cell metrics. **This warning
+  came true on the machine it was written for**, and the measurement is now
+  here instead of the claim alone: a live config read
+  `font-family = "M PLUS 1 Code Latin 60"`, a family that does not exist (the
+  installed names are `M PLUS 1 Code`, `M PLUS Code Latin 50` and
+  `M PLUS Code Latin 60` — no `1` in the *Code Latin* ones), and the terminal
+  rendered JetBrains Mono for two months directly beneath this sentence.
+  `ghostty +validate-config` exits **0** on a nonexistent font family; it
+  catches an unknown key and an unknown `theme` name, but not this. The only
+  check that catches it:
+
+  ```sh
+  ghostty +show-face --config-default-files=false \
+          --font-family="M PLUS 1 Code" --string=Mg
+  ```
+
+  It names the face actually resolved, so `JetBrains Mono` in the output means
+  the name did not match. `--config-default-files=false` is **not optional**:
+  without it `+show-face` leaves the live config's own `font-family` in the
+  fallback chain, so a bogus name resolves to whatever the config names and
+  reads as correct — a trap inside the check itself. Note also that
+  `ghostty +list-fonts` lists **monospace families only** (19 here, with no
+  Helvetica or Georgia among them), so a proportional face's absence from it
+  proves nothing about whether it is installed.
+
+  Checked against the upstream docs, because which half is documented matters:
+  Ghostty documents this silent fallback only for the *style variants* — if
+  `font-family-bold` names a font that "cannot be found, Ghostty will use
+  whatever font is set for `font-family`" — and says nothing about a missing
+  **primary** family, about whether `+validate-config` checks font families, or
+  about `adjust-cell-height` needing a restart. Those three rest on the
+  measurements recorded here, not on anything published.
 - Dots disappear in full-screen TUIs that hide the cursor (no cursor uniform,
   no anchor) — a known trade-off.
 - Box-drawing rules (TUI separators) render at cell *center* and can never

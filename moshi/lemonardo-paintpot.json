@@ -1,0 +1,27 @@
+{
+  "v": 1,
+  "name": "Lemonardo Paintpot",
+  "mode": "light",
+  "colors": {
+    "background": "#f3eee2",
+    "foreground": "#3a4048",
+    "cursor": "#175cc7",
+    "black": "#09101a",
+    "red": "#ab3417",
+    "green": "#1c763f",
+    "yellow": "#855918",
+    "blue": "#175cc7",
+    "magenta": "#91339c",
+    "cyan": "#1c716e",
+    "white": "#d4b186",
+    "brightBlack": "#5c6470",
+    "brightRed": "#75210c",
+    "brightGreen": "#105028",
+    "brightYellow": "#5a3b0d",
+    "brightBlue": "#0c3d8a",
+    "brightMagenta": "#681372",
+    "brightCyan": "#104c4a",
+    "brightWhite": "#ffebd4",
+    "selectionBackground": "#a9ecff"
+  }
+}

@@ -164,6 +164,54 @@ fi
 echo "== t3 theme matches its source =="
 if python3 t3/build-t3-theme.py --check; then :; else FAIL=1; fi
 
+# THE PALETTE ROUND-TRIP, which for a long time did not run. tools/emit-theme.py
+# documented a gate -- "emitting midori must reproduce the committed block byte
+# for byte" -- that nothing ever invoked, because no target carried the sentinels
+# and lint did not call it. Wiring it found the adapter dropped nine comment
+# lines and carried a correction that had never shipped. The loop below fails on
+# an EMPTY target list as well as on a mismatch: a round-trip over zero files is
+# this repo's documented failure mode, not a pass.
+echo "== theme palettes round-trip from themes/*.json =="
+RT_PAIRS=$(python3 - <<'EOF'
+import importlib.util
+spec = importlib.util.spec_from_file_location("e", "tools/emit-theme.py")
+m = importlib.util.module_from_spec(spec)
+try:
+    spec.loader.exec_module(m)
+except SystemExit:
+    pass
+# Every pair a target DECLARES. A target that ships no file for a theme is not
+# a gap here -- it declares nothing and nothing is checked. A target that
+# declares a file which is missing or stale fails, by name.
+for t in sorted(m.TARGETS):
+    for th in sorted(m.TARGETS[t]["files"]):
+        print(f"{t}:{th}")
+EOF
+)
+RT_N=0
+for pair in $RT_PAIRS; do
+  t=${pair%%:*}; th=${pair##*:}
+  if python3 tools/emit-theme.py --target "$t" --theme "$th" --check; then :; else FAIL=1; fi
+  RT_N=$((RT_N + 1))
+done
+if [ "$RT_N" -eq 0 ]; then
+  echo "  FAIL round-tripped 0 target/theme pairs -- the gate examined nothing"
+  FAIL=1
+else
+  echo "  $RT_N target/theme pair(s) round-tripped"
+fi
+
+echo
+echo "== colour arithmetic selftest =="
+# Run FIRST among the colour checks in spirit, even though it prints here: if
+# CIEDE2000 or the Oklab matrices are wrong, every distance and contrast number
+# the Lemonardo gates print is confidently wrong in the same direction.
+if python3 tools/colorspace.py; then :; else FAIL=1; fi
+
+echo
+echo "== lemonardo ansi matches its rules and clears its gates =="
+if python3 tests/test_lemonardo_ansi.py; then :; else FAIL=1; fi
+
 echo
 [ "$FAIL" -eq 0 ] && echo "LINT: all green" || echo "LINT: failures above"
 exit "$FAIL"
