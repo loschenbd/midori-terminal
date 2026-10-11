@@ -24,9 +24,22 @@
   <true/>
   <key>KeepAlive</key>
   <true/>
+  <!-- PER-USER LOG PATHS, AND THEY MUST STAY PER-USER. These were
+       /tmp/midori-claude-theme.{out,err} until 2026-10-11. /tmp is shared
+       across accounts on a Mac, launchd creates the file as whichever account
+       starts the job first, and it lands mode 644 owned by that account. A
+       second account's job then cannot open it, and launchd fails the SPAWN
+       before the script runs: `launchctl print` shows `last exit code = 78:
+       EX_CONFIG` and a runs counter climbing forever, with an empty log,
+       because the thing that could not be written to is the log.
+       Found on this machine with runs = 6304 and both files owned by another
+       account since 7 Oct, four days of a watcher that was never running
+       while `launchctl list` happily showed the job loaded. A loaded job is
+       not a running one; read the exit code.
+       ~/Library/Logs is the per-user location and is not shared. -->
   <key>StandardOutPath</key>
-  <string>/tmp/midori-claude-theme.out</string>
+  <string>__HOME__/Library/Logs/midori-claude-theme.out</string>
   <key>StandardErrorPath</key>
-  <string>/tmp/midori-claude-theme.err</string>
+  <string>__HOME__/Library/Logs/midori-claude-theme.err</string>
 </dict>
 </plist>

@@ -183,5 +183,62 @@ else:
         fail(f"Lemonardo's maps reuse Midori colour(s): {sorted(shared)}")
     print(f"{len(lem)} Lemonardo colour(s), none of Midori's {len(mid)}")
 
+# 6. The watcher's launchd contract.
+#
+# This lives here rather than in a file of its own because it is the same
+# delivery path: these maps only reach ~/.claude/themes if the job that copies
+# them actually starts. Two ways it silently does not.
+#
+# A PLIST THAT DOES NOT PARSE. The template grew a comment explaining the log
+# paths, that comment used "--" as a dash, and XML forbids "--" inside a
+# comment -- so the file stopped being a plist. launchd would have refused it
+# with a message about the file, not about the prose in it.
+#
+# LOG PATHS UNDER /tmp. /tmp is shared between accounts on a Mac. launchd
+# creates the stdout/stderr file as whichever account starts the job first,
+# mode 644, and a second account's job then cannot open it -- so launchd fails
+# the SPAWN, before the script runs, with `last exit code = 78: EX_CONFIG` and
+# an empty log, because the unwritable thing IS the log. On this machine that
+# ran up runs = 6304 against files another account had owned since 7 Oct,
+# while `launchctl list` showed the job present the whole time. A loaded job is
+# not a running one.
+import plistlib  # noqa: E402
+import re  # noqa: E402
+
+tpl = ROOT / "watcher" / "com.benjaminloschen.midori-claude-theme.plist.template"
+if not tpl.exists():
+    fail(f"{tpl.name} is missing -- the watcher has no launchd definition")
+else:
+    raw = tpl.read_text()
+    rendered = raw.replace("__HOME__", "/Users/test").replace("__LANG__", "midori")
+    try:
+        d = plistlib.loads(rendered.encode())
+    except Exception as e:
+        d = None
+        fail(f"{tpl.name} does not parse as a plist after substitution: {e}"
+             + ('  (an XML comment may contain "--")'
+                if any("--" in m for m in re.findall(r"<!--(.*?)-->", raw, re.S))
+                else ""))
+    if d is not None:
+        for key in ("StandardOutPath", "StandardErrorPath"):
+            v = d.get(key, "")
+            if not v:
+                fail(f"{tpl.name}: {key} is unset")
+            elif v.startswith("/tmp/"):
+                fail(f"{tpl.name}: {key} is {v} -- /tmp is shared between "
+                     f"accounts, so the first account to start this job owns "
+                     f"the file and every other account's job dies at spawn "
+                     f"with EX_CONFIG (78) and an empty log")
+            elif not v.startswith("/Users/test/"):
+                fail(f"{tpl.name}: {key} is {v}, which is not per-user")
+        env = d.get("EnvironmentVariables") or {}
+        if env.get("MIDORI_LANG") != "midori":
+            fail(f"{tpl.name}: MIDORI_LANG renders as "
+                 f"{env.get('MIDORI_LANG')!r} -- install.sh substitutes "
+                 f"__LANG__, and without it launchd runs the watcher's own "
+                 f"midori default whatever the installer was told")
+        print(f"launchd template parses; logs per-user "
+              f"({d.get('StandardOutPath')}), MIDORI_LANG substitutes")
+
 print(f"\n{len(fails)} failure(s)")
 sys.exit(1 if fails else 0)
