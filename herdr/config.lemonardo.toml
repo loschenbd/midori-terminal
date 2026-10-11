@@ -131,6 +131,8 @@ overlay1 = "reset"
 #                change. Body text on it: 8.04:1 bond, 8.42:1 inkwell (Midori
 #                measures 9.50 / 8.04). The bond wash is a very light non-photo
 #                cyan, #a9ecff, which is what makes selection_bg below hard.
+#                (active_row_bg no longer uses that cyan raw -- see the block
+#                above the value for the measurement that moved it.)
 #
 # selection_bg   The NAVIGATE-mode cursor row. It is NOT a fallback for
 #                active_row_bg: src/client/shell/sidebar.rs paints selected rows
@@ -200,7 +202,38 @@ overlay1 = "reset"
 #                is a defect, a 3.47:1 bold label is legible.
 [theme.custom.light]
 # paintpot: ground #f3eee2, fg #3a4048, accent #1c763f
-active_row_bg = "#a9ecff"   # lemonardo-paintpot selection-background
+# THE ROLE PORTED AND THE LOUDNESS DID NOT, which is the correction below and
+# is worth reading before anyone ports another surface by role name.
+#
+# This started as lemonardo-paintpot's `selection-background`, #a9ecff, because
+# that is the role Midori's #ced1c8 came from. Ghostty's selection-background
+# paints a TRANSIENT drag-select and is allowed to shout; herdr's
+# active_row_bg paints the focused workspace row and the focused agent row on
+# every frame. Midori survives the mix-up because its own selection colour is
+# quiet; Lemonardo's is an electric cyan, and the sidebar came back with two
+# cyan slabs in it. Measured against each page in OKLCh:
+#
+#                      dL       dC      dHue    dE from the page
+#   midori    light  -0.102   +0.004   + 30.2       8.05
+#   midori    dark   +0.169   +0.011   + 68.9      14.56
+#   lemonardo light  -0.045   +0.055   +129.3      21.36   <- 2.7x as loud
+#   lemonardo dark   +0.074   +0.060   +149.4      18.42
+#
+# Midori's row is a LIGHTNESS step at the page's own chroma. Lemonardo's was a
+# chroma jump that barely moved lightness at all. So the row is rebuilt the way
+# Midori's reads -- the page's lightness stepped by Midori's measured amount,
+# carrying Midori's row chroma of 0.013, rotated to Lemonardo's cyan hue (217.3
+# on paintpot, 196.0 on inkwell, from each theme's own selection colour). That
+# lands at dE 11.9 and 16.2 against the page, next to Midori's 8.05 and 14.56;
+# the residual is the 129-degree rotation itself, which costs distance at any
+# chroma because this page is warm.
+#
+# Text on the row stays legible: 6.58:1 on bond, 5.73:1 on inkwell.
+#
+# NOT CHANGED, and deliberately: selection_bg below. It paints the NAVIGATE-mode
+# cursor row, which is modal rather than persistent, and Midori's own is a loud
+# slab too (dE 20.42 / 26.65). Loud is correct there.
+active_row_bg = "#c4cfd3"   # paintpot's cyan hue at Midori's row step
 selection_bg  = "#d4b186"   # lemonardo-paintpot ANSI 7 (crust)
 surface1      = "#c6cbd3"   # lemonardo-paintpot split-divider-color
 surface_dim   = "#c6cbd3"   # same, and see the note above on why
@@ -208,7 +241,7 @@ mauve         = "lightmagenta"
 
 [theme.custom.dark]
 # inkwell: ground #2c2a28, fg #ede4d3, accent #1abd62
-active_row_bg = "#004553"   # lemonardo-inkwell selection-background
+active_row_bg = "#4f5959"   # inkwell's cyan hue at Midori's row step
 selection_bg  = "#171513"   # themes/lemonardo.json palette.secondary.dark
 surface1      = "#44484e"   # lemonardo-inkwell split-divider-color
 surface_dim   = "#44484e"   # same, and see the note above on why

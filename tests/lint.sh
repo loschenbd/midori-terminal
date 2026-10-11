@@ -221,6 +221,16 @@ if python3 tests/test_fonts_are_vendored.py; then :; else FAIL=1; fi
 echo "== lemonardo twins carry no midori-only colour =="
 if python3 tests/test_lemonardo_twins.py; then :; else FAIL=1; fi
 
+echo "== claude code token maps =="
+if python3 tests/test_claude_themes.py; then :; else FAIL=1; fi
+
+echo "== the claude theme model still reproduces midori =="
+# Not the same check as the one above. That one holds the four FILES to each
+# other and to the frozen heredoc extraction; this one re-derives Midori from
+# the rules in the generator and diffs the result, which is what catches a rule
+# edited to suit Lemonardo at Midori's expense. The files would still agree.
+if python3 tools/make-claude-theme.py --check; then :; else FAIL=1; fi
+
 echo
 [ "$FAIL" -eq 0 ] && echo "LINT: all green" || echo "LINT: failures above"
 exit "$FAIL"

@@ -41,7 +41,26 @@ SKIP_FILES = {"docs/cleanup-queue.md", "palette.json",
               # filter bug that hid exactly that line from the guard. Counting
               # a write-up as a usage site is what SKIP_FILES is for, and this
               # one pushed #44484e from three files to four.
-              "tests/test_lemonardo_twins.py"}
+              "tests/test_lemonardo_twins.py",
+              # A FROZEN COPY, not a usage site. watcher/midori-tokens-*.json
+              # was extracted from the two heredocs that used to live in
+              # watcher/midori-claude-theme.sh, and exists for one purpose:
+              # tests/test_claude_themes.py holds watcher/themes/midori-*.json
+              # byte-equal to it, which is the only evidence that moving the
+              # maps out of the watcher did not restyle Claude Code. Every
+              # value in it also appears in the live map beside it, so counting
+              # both doubled three Midori mix colours (#2c2b26, #e4e0d6,
+              # #ebe8e0) from three files to four and demanded palette roles
+              # for values that are derived, not declared.
+              "watcher/midori-tokens-light.json",
+              "watcher/midori-tokens-dark.json",
+              # AND THIS FILE ITSELF, which it did not do until the comment
+              # above named those three hexes and promptly became their fourth
+              # usage site -- the same failure, with the same three values,
+              # reported one run later against the explanation for it. Every
+              # entry in SKIP_FILES is a file that quotes colours in order to
+              # discuss them, and the list is now one of those files.
+              "tests/test_palette_is_defined.py"}
 # Directories that DEFINE colours rather than use them. themes/*.json is the
 # source a target's palette block is generated FROM, so counting it as a usage
 # site double-counts every value: adding themes/midori.json alone pushed seven

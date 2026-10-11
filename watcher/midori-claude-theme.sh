@@ -1,6 +1,6 @@
 #!/bin/sh
-# Keeps ~/.claude/themes/midori.json in sync with macOS appearance for
-# Claude Code (theme = custom:midori). Base light/dark (NOT -ansi: ANSI bases
+# Keeps ~/.claude/themes/$MIDORI_LANG.json in sync with macOS appearance for
+# Claude Code (theme = custom:$MIDORI_LANG). Base light/dark (NOT -ansi: ANSI bases
 # drop diff bg overrides). Full midori token map: diff bands = highlighter
 # washes (olive/terracotta seeds from tokentrail feature-colors chroma),
 # mode accents / semantic colors / chrome from the site + tokentrail palette.
@@ -20,9 +20,48 @@
 # #-literals through tweakcc; see the patcher's docstring for why that stopped.)
 # Also retints live tmux pane borders on appearance change.
 # Managed by: ~/Library/LaunchAgents/com.benjaminloschen.midori-claude-theme.plist
+#
+# THE TOKEN MAPS USED TO BE TWO HEREDOCS IN THIS FILE and are now four JSON
+# documents under ~/.local/share/midori/claude-themes/, installed from
+# watcher/themes/. Nothing about the Midori maps changed in the move:
+# tests/test_claude_themes.py holds watcher/themes/midori-{light,dark}.json
+# byte-equal to watcher/midori-tokens-{light,dark}.json, which was extracted
+# from those heredocs before they were removed, and that is the only reason to
+# trust that this refactor did not quietly restyle Claude Code.
+#
+# The Lemonardo maps are GENERATED, by tools/make-claude-theme.py, which states
+# each token as a rule (an ANSI slot, a palette role, an OKLCh wash off the
+# ground, a tint of a role) rather than a hex. `--check` rebuilds MIDORI from
+# those same rules and diffs it against the frozen reference; it reproduces 94
+# of 96 tokens within dE 3.0, and the two it does not are `skill`, whose hue
+# has no ancestor anywhere in this repo. Read that tool's TINT comment before
+# assuming the generator could simply replace these files.
+#
+# WHAT IS STILL MIDORI-ONLY HERE: set_scale, below. It flips the @1x/@2x
+# background-image symlinks, and ghostty/backgrounds holds Midori artwork only
+# -- the Lemonardo themes declare no background-image at all (they say so in
+# their own comments). Under MIDORI_LANG=lemonardo those symlinks are
+# maintained and referenced by nothing, which is harmless and is why this was
+# left alone rather than made conditional.
 
-THEME_FILE="$HOME/.claude/themes/midori.json"
+# MIDORI_LANG selects the design language, the same mechanism and the same
+# default as MIDORI_PROMPT in shell/zshrc.midori: the switch has to survive
+# install.sh, so it is an environment variable with a Midori default rather
+# than an edit to this file. launchd passes it through the plist template.
+: "${MIDORI_LANG:=midori}"
+THEME_DIR="$HOME/.local/share/midori/claude-themes"
+THEME_FILE="$HOME/.claude/themes/$MIDORI_LANG.json"
 BG_DIR="$HOME/.config/ghostty/backgrounds"
+
+# Inactive tmux pane border, per language and appearance. These are the only
+# colours still written by hand here, and they duplicate the if-shell lines in
+# tmux/midori.tmux.conf and tmux/lemonardo.tmux.conf on purpose: that file
+# picks a border at server START, and this retints a server already running
+# when the appearance flips. tests/test_lemonardo_twins.py reads both.
+case "$MIDORI_LANG" in
+  lemonardo) BORDER_DARK="#44484e"; BORDER_LIGHT="#c6cbd3" ;;
+  *)         BORDER_DARK="#2f2e2b"; BORDER_LIGHT="#e1dfd9" ;;
+esac
 # launchd gives us a bare PATH (/usr/bin:/bin:...) — resolve tmux across
 # Apple Silicon (/opt/homebrew) and Intel (/usr/local) brew prefixes.
 TMUX_BIN="$(command -v tmux || true)"
@@ -61,143 +100,45 @@ check_scale() {
   fi
 }
 
-write_light() {
-  cat > "$THEME_FILE" <<'EOF'
-{
-  "name": "Midori",
-  "base": "light",
-  "overrides": {
-    "text": "#2a2825",
-    "inverseText": "#faf9f6",
-    "subtle": "#8a8378",
-    "suggestion": "#3a5572",
-    "inactive": "#9c958a",
-    "inactiveShimmer": "#b5afa3",
-    "error": "#7a4a4a",
-    "warning": "#b88a3a",
-    "warningShimmer": "#cc9c42",
-    "success": "#5f6f5e",
-    "remember": "#653f7f",
-    "merged": "#7a5f8d",
-    "planMode": "#3a5572",
-    "permission": "#3a5572",
-    "permissionShimmer": "#4d7095",
-    "autoAccept": "#b88a3a",
-    "autoAcceptShimmer": "#cc9c42",
-    "fastMode": "#b06d4a",
-    "fastModeShimmer": "#c9916b",
-    "ide": "#548373",
-    "skill": "#4a6a6b",
-    "professionalBlue": "#3a5572",
-    "claudeBlue_FOR_SYSTEM_SPINNER": "#3a5572",
-    "claudeBlueShimmer_FOR_SYSTEM_SPINNER": "#4d7095",
-    "chromeYellow": "#b88a3a",
-    "effortUltra": "#653f7f",
-    "claude": "#b06d4a",
-    "claudeShimmer": "#c9916b",
-    "clawd_body": "#c9916b",
-    "clawd_background": "#f0e0d4",
-    "briefLabelYou": "#5f6f5e",
-    "briefLabelClaude": "#b06d4a",
-    "selectionBg": "#ced1c8",
-    "userMessageBackground": "#ebe8e0",
-    "userMessageBackgroundHover": "#e4e0d6",
-    "bashMessageBackgroundColor": "#edeae2",
-    "bashBorder": "#64457b",
-    "memoryBackgroundColor": "#dfe7e0",
-    "promptBorder": "#c9c4b8",
-    "promptBorderShimmer": "#9ebfb4",
-    "rate_limit_fill": "#5f6f5e",
-    "rate_limit_empty": "#ddd8cc",
-    "diffAdded": "#c9cebb",
-    "diffAddedDimmed": "#e3e3d9",
-    "diffAddedWord": "#a9b197",
-    "diffRemoved": "#ddc7b7",
-    "diffRemovedDimmed": "#ebe1d8",
-    "diffRemovedWord": "#cea892"
-  }
-}
-EOF
-}
-
-write_dark() {
-  cat > "$THEME_FILE" <<'EOF'
-{
-  "name": "Midori",
-  "base": "dark",
-  "overrides": {
-    "text": "#ebe8e2",
-    "inverseText": "#1a1917",
-    "subtle": "#857e72",
-    "suggestion": "#6c87a4",
-    "inactive": "#6f685d",
-    "inactiveShimmer": "#857e72",
-    "error": "#b8868a",
-    "warning": "#d8b06a",
-    "warningShimmer": "#e6c489",
-    "success": "#9aab97",
-    "remember": "#a079be",
-    "merged": "#a38eb3",
-    "planMode": "#6c87a4",
-    "permission": "#6c87a4",
-    "permissionShimmer": "#8ba3bd",
-    "autoAccept": "#d8b06a",
-    "autoAcceptShimmer": "#e6c489",
-    "fastMode": "#d4a07a",
-    "fastModeShimmer": "#e0b899",
-    "ide": "#9ebfb4",
-    "skill": "#7f9a9b",
-    "professionalBlue": "#6c87a4",
-    "claudeBlue_FOR_SYSTEM_SPINNER": "#6c87a4",
-    "claudeBlueShimmer_FOR_SYSTEM_SPINNER": "#8ba3bd",
-    "chromeYellow": "#d8b06a",
-    "effortUltra": "#a079be",
-    "claude": "#d4a07a",
-    "claudeShimmer": "#e0b899",
-    "clawd_body": "#d4a07a",
-    "clawd_background": "#2c2520",
-    "briefLabelYou": "#9aab97",
-    "briefLabelClaude": "#d4a07a",
-    "selectionBg": "#40453d",
-    "userMessageBackground": "#262521",
-    "userMessageBackgroundHover": "#2c2b26",
-    "bashMessageBackgroundColor": "#22211e",
-    "bashBorder": "#a186b7",
-    "memoryBackgroundColor": "#292d2a",
-    "promptBorder": "#4a463f",
-    "promptBorderShimmer": "#9aab97",
-    "rate_limit_fill": "#9aab97",
-    "rate_limit_empty": "#33322e",
-    "diffAdded": "#363c2b",
-    "diffAddedDimmed": "#262a20",
-    "diffAddedWord": "#4b553a",
-    "diffRemoved": "#473226",
-    "diffRemovedDimmed": "#302620",
-    "diffRemovedWord": "#744b36"
-  }
-}
-EOF
+# Install the map for one appearance. A theme file Claude Code cannot parse is
+# worse than a stale one -- the loader falls back to a stock preset and the
+# whole UI changes -- so the source is parsed before it replaces the live file,
+# and a missing or broken map leaves the previous one in place and says so.
+write_mode() {
+  src="$THEME_DIR/$MIDORI_LANG-$1.json"
+  if [ ! -f "$src" ]; then
+    echo "midori-claude-theme: no $src -- leaving $THEME_FILE alone" >&2
+    return 1
+  fi
+  if ! /usr/bin/python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
+       "$src" 2>/dev/null; then
+    echo "midori-claude-theme: $src is not valid JSON -- leaving $THEME_FILE alone" >&2
+    return 1
+  fi
+  mkdir -p "$(dirname "$THEME_FILE")"
+  cp -f "$src" "$THEME_FILE"
 }
 
 # Self-heal ~/.claude/settings.json: picking a stock preset in /theme silently
-# overwrites "custom:midori" and everything looks broken until someone
+# overwrites "custom:$MIDORI_LANG" and everything looks broken until someone
 # remembers this file. Re-pin it (cheap grep short-circuits the common case;
 # python rewrite only on actual mismatch, so we don't race Claude Code's own
 # writes on every tick).
 heal_theme_setting() {
   local settings="$HOME/.claude/settings.json"
   [ -f "$settings" ] || return 0
-  grep -q '"theme"[[:space:]]*:[[:space:]]*"custom:midori"' "$settings" && return 0
-  /usr/bin/python3 - "$settings" <<'PYEOF' 2>/dev/null
+  grep -q "\"theme\"[[:space:]]*:[[:space:]]*\"custom:$MIDORI_LANG\"" "$settings" \
+    && return 0
+  /usr/bin/python3 - "$settings" "custom:$MIDORI_LANG" <<'PYEOF' 2>/dev/null
 import json, sys
-path = sys.argv[1]
+path, want = sys.argv[1], sys.argv[2]
 try:
     with open(path) as f:
         settings = json.load(f)
 except Exception:
     sys.exit(0)  # malformed/mid-write: skip, retry next pass
-if settings.get("theme") != "custom:midori":
-    settings["theme"] = "custom:midori"
+if settings.get("theme") != want:
+    settings["theme"] = want
     with open(path, "w") as f:
         json.dump(settings, f, indent=2)
         f.write("\n")
@@ -212,12 +153,15 @@ while :; do
   fi
   if [ "$MODE" != "$LAST" ]; then
     if [ "$MODE" = "dark" ]; then
-      write_dark
-      "${TMUX_BIN:-tmux}" set -g pane-border-style "fg=#2f2e2b" 2>/dev/null
+      write_mode dark
+      "${TMUX_BIN:-tmux}" set -g pane-border-style "fg=$BORDER_DARK" 2>/dev/null
     else
-      write_light
-      "${TMUX_BIN:-tmux}" set -g pane-border-style "fg=#e1dfd9" 2>/dev/null
+      write_mode light
+      "${TMUX_BIN:-tmux}" set -g pane-border-style "fg=$BORDER_LIGHT" 2>/dev/null
     fi
+    # Only latch the appearance once the map is actually in place: a failed
+    # write_mode would otherwise be retried never, and the UI would sit on the
+    # other appearance's colours until the next flip.
     LAST="$MODE"
   fi
   # display-scale check every 10th tick (~30s); system_profiler is too slow for 3s
