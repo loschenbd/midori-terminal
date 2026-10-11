@@ -54,7 +54,23 @@ fi
 # --- 2. Fonts ---------------------------------------------------------------
 echo "-- fonts -> ~/Library/Fonts"
 mkdir -p "$HOME/Library/Fonts"
-cp -f "$REPO/fonts/"*.ttf "$HOME/Library/Fonts/"
+# Counted, like the themes and shaders below, and for the same reason: a bare
+# cp of a glob that matches nothing succeeds silently on some shells and the
+# install reads as fine. Both design languages' faces live here -- Midori's
+# M PLUS/Spectral and Lemonardo's Besley/Instrument Sans/Special Elite/Reenie
+# Beanie -- and tests/test_fonts_are_vendored.py fails if a theme names a
+# family this directory does not carry.
+FONTS=0
+for f in "$REPO/fonts/"*.ttf; do
+  [ -f "$f" ] || continue
+  cp -f "$f" "$HOME/Library/Fonts/"
+  FONTS=$((FONTS + 1))
+done
+if [ "$FONTS" -eq 0 ]; then
+  echo "   !! no .ttf found in $REPO/fonts — nothing installed"
+  exit 1
+fi
+echo "   $FONTS font file(s) installed"
 
 # --- 3. Ghostty -------------------------------------------------------------
 echo "-- ghostty themes, backgrounds, shader"

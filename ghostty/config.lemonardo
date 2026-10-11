@@ -22,11 +22,43 @@ font-size = 14
 # Midori serves at 400;700 only and which synthesises anything between.
 font-variation = wght=400
 
-# Spectral, not Lemonardo's own Besley: Besley is not vendored in fonts/ and so
-# is not installed by install.sh. Instrument Sans, Special Elite and Reenie
-# Beanie are not either. Vendoring them is the open item; until then the window
-# title borrows Midori's serif, which is a visible seam and the honest one.
-window-title-font-family = Spectral Bold
+# Besley, Lemonardo's own heading serif. This read `Spectral Bold` until
+# 2026-10-11, borrowing Midori's serif because Besley was not vendored; all
+# four Lemonardo faces (Besley, Instrument Sans, Special Elite, Reenie Beanie)
+# are now in fonts/ and installed by install.sh, so the seam is closed.
+#
+# SEMIBOLD, NOT BOLD, and that is the weight rule rather than a preference.
+# themes/lemonardo.json "weights.cap" is 600, re-measured against the rendered
+# DOM of the source site where ZERO of 194 text elements render at 700. Besley
+# ships a wght 400-900 variable axis (fvar, measured from the binary), so 600
+# is a real interpolation, not a synthesis. Ghostty takes a style NAME here,
+# not a number, and resolves "SemiBold" against the named instances.
+#
+# "Besley SemiBold" NEEDS A STATIC INSTANCE, which fonts/Besley-SemiBold.ttf
+# is. This string is resolved as a FULL NAME, not family+weight, and a variable
+# font installed on macOS registers ONE full name -- Besley[wght].ttf registers
+# "Besley Regular Regular" and nothing else, so its SemiBold named instance is
+# unreachable by name even though the axis reaches 600. Measured 2026-10-11
+# through CoreText, which is what AppKit and Ghostty consult:
+#
+#   "Besley SemiBold"  -> Helvetica            BEFORE the static was installed
+#   "Besley SemiBold"  -> Besley SemiBold      after  (ps BesleyRoman-SemiBold)
+#   "Besley"           -> Besley Regular Regular
+#   "Spectral Bold"    -> Spectral Bold        (Spectral ships discrete statics,
+#                                               which is why Midori never hit
+#                                               this and the pattern looked safe)
+#
+# So fonts/ carries BOTH: the variable Besley[wght].ttf, which is what a CSS
+# target should use, and a wght=600 instance generated from it with fontTools
+# instancer(updateFontNames=True) purely so this one string resolves.
+#
+# And it fails SILENTLY: +validate-config exits 0 and the title takes Helvetica,
+# the same class of fallback as font-family (see the block above). Note that
+# `ghostty +show-face --style=` cannot check this -- it accepts only regular,
+# bold, italic, bold_italic, i.e. the slot and not a style name. Check through
+# CoreText instead: ask for the string, read back the FULL name, and require it
+# to equal what you asked for.
+window-title-font-family = Besley SemiBold
 
 # Exact family name required, and the cost of getting it wrong is MEASURED, not
 # supposed. Ghostty substitutes its bundled JetBrains Mono for a family it
