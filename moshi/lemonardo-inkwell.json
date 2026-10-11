@@ -1,0 +1,27 @@
+{
+  "v": 1,
+  "name": "Lemonardo Inkwell",
+  "mode": "dark",
+  "colors": {
+    "background": "#2c2a28",
+    "foreground": "#ede4d3",
+    "cursor": "#639dfc",
+    "black": "#313a48",
+    "red": "#f96c4b",
+    "green": "#1abd62",
+    "yellow": "#d58d15",
+    "blue": "#639dfc",
+    "magenta": "#d372de",
+    "cyan": "#19b5b0",
+    "white": "#dec4a6",
+    "brightBlack": "#8893a5",
+    "brightRed": "#fdad99",
+    "brightGreen": "#55e487",
+    "brightYellow": "#fdb34d",
+    "brightBlue": "#a3c6fd",
+    "brightMagenta": "#f4a0fd",
+    "brightCyan": "#21e0d9",
+    "brightWhite": "#ffedd8",
+    "selectionBackground": "#004553"
+  }
+}

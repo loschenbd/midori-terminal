@@ -1,0 +1,117 @@
+# Ghostty config — Lemonardo terminal theme
+# The ALTERNATIVE to ghostty/config, which is Midori's. install.sh renders this
+# to config.lemonardo next to the live config; it never becomes the live config
+# on its own. To switch, replace the live config with it (keep a backup) and
+# restart Ghostty — not just reload, see adjust-cell-height below.
+#
+# Theme pair carries the palette per mode and macOS appearance flips it.
+# It carries NO background image, and that is deliberate rather than an
+# omission: midori-paper / midori-night each set one from ghostty/backgrounds,
+# and that directory is Midori artwork. Putting one design language's art
+# behind the other's palette would make Lemonardo look like a Midori variant,
+# which is the one thing the separate ANSI derivation exists to prevent.
+theme = light:lemonardo-paintpot,dark:lemonardo-inkwell
+
+font-size = 14
+# Lemonardo's body weight is 400 (themes/lemonardo.json "weights.body"), which
+# is also Sometype Mono's wght default, so the roman renders with no
+# interpolation. The axis is 400-700 (measured from fvar), so 500 and 600 are
+# real interpolations if more ink is wanted — unlike M PLUS 1 Code, which
+# Midori serves at 400;700 only and which synthesises anything between.
+font-variation = wght=400
+
+# Spectral, not Lemonardo's own Besley: Besley is not vendored in fonts/ and so
+# is not installed by install.sh. Instrument Sans, Special Elite and Reenie
+# Beanie are not either. Vendoring them is the open item; until then the window
+# title borrows Midori's serif, which is a visible seam and the honest one.
+window-title-font-family = Spectral Bold
+
+# Exact family name required, and the cost of getting it wrong is MEASURED, not
+# supposed. Ghostty substitutes its bundled JetBrains Mono for a family it
+# cannot find, prints nothing, and `ghostty +validate-config` exits 0 — it
+# catches an unknown key and an unknown THEME name, but not this. Measured
+# 2026-10-11 on Ghostty 1.3.1:
+#
+#   ghostty +show-face --config-default-files=false \
+#           --font-family="Sometype Mono" --string=Mg
+#   -> U+4D « M » found in face "Sometype Mono"        correct
+#
+#   ...--font-family="Totally Nonexistent Face 99"
+#   -> U+4D « M » found in face "JetBrains Mono"       the fallback
+#
+# --config-default-files=false is NOT optional. Without it +show-face keeps the
+# live config's own font-family in the fallback chain, so a bogus name resolves
+# to whatever the config names and reads as correct. That is a trap inside the
+# check, and it is how this went unnoticed on the live machine for two months:
+# the config said "M PLUS 1 Code Latin 60" (no such family — the installed
+# names are "M PLUS 1 Code", "M PLUS Code Latin 50", "M PLUS Code Latin 60",
+# with no "1" in the Code Latin ones) and the terminal rendered JetBrains Mono
+# under a comment warning about exactly that.
+#
+# ON THE PROVENANCE OF THAT, because it matters which part is documented and
+# which part is only measured. Ghostty's docs do NOT state what happens to a
+# missing PRIMARY font-family. They state it only for the style variants: if
+# font-family-bold names a font that "cannot be found, Ghostty will use
+# whatever font is set for font-family". And JetBrains Mono being the built-in
+# is a maintainer's statement, not a reference entry -- the embedded font
+# "applies only when a user doesn't specify a font and Ghostty can't find
+# another default font on their system". So the silent-fallback design is
+# documented for the variants and corroborated for the primary by the
+# measurement above, which is the only evidence that covers this case. If a
+# future Ghostty starts warning, the measurement is what dates.
+font-family = "Sometype Mono"
+
+window-padding-x = 12
+window-padding-y = 12
+# Aim rows at the 24pt dot rhythm: one 48px step at 2x.
+#
+# THE ROUNDING MODEL, carried over from the M PLUS measurement in ghostty/config
+# because it is what the number below is derived from. Ghostty integer-izes the
+# BASE cell height BEFORE applying this percentage (measured 2026-07-14: both
+# 38.9% and 38.75% produced a 49px cell — ceil(35 * 1.38x) — even though
+# 34.585 * 1.3875 = 47.99). So the base is ROUNDED, not floored (34.585 -> 35),
+# and the product is CEILED (47.95 -> 48).
+#
+# SOMETYPE MONO, computed 2026-10-11 from the binary. hhea
+# ascent/descent/lineGap = 925/-275/0 over unitsPerEm 1000, so the cell is
+# 1.200em = 33.600px at 14pt on a 2x display, and the base rounds to 34.
+# (hhea is the right source, not OS/2: this model reproduces the M PLUS figure
+# above, 1.235em * 28 = 34.58px against the 34.585px recorded, whereas M PLUS's
+# OS/2 usWin pair gives 1.505em = 42.1px and would be wrong by 8px.) Then:
+#
+#   141%    -> 34 * 1.41   = 47.94   -> ceil 48   <- chosen
+#   141.18% -> 34 * 1.4118 = 48.0004 -> ceil 49   exactly 48/34, and WRONG:
+#              the ceiling tips it one past the target. The clean-looking
+#              quotient is the one to avoid, which is the same trap the 38.9%
+#              measurement above records.
+#   142%    -> 34 * 1.42   = 48.28   -> ceil 49
+#
+# Verify rather than trust the arithmetic: query the terminal for its own cell
+# with CSI 16 t (reply CSI 6 ; height ; width t) from a real tty.
+#
+# Applies at APP STARTUP only, not config reload. Since the dot grid is drawn
+# by the cursor shader anchored to the live cell (see
+# shaders/rounded-cursor.glsl), an off-by-one here no longer breaks alignment —
+# it only nudges the rhythm off 24pt. COUPLED to font-size and font-family.
+adjust-cell-height = 141%
+
+# Rounded cursor: native cursor hidden (opacity 0), the shader draws a
+# rounded replacement from the cursor uniforms. Steady (no blink).
+# To revert: delete these two lines.
+custom-shader = __HOME__/.config/ghostty/shaders/rounded-cursor.glsl
+cursor-opacity = 0
+
+unfocused-split-opacity = 0.9
+# unfocused-split-fill + split-divider-color live per-mode in the
+# lemonardo-paintpot / lemonardo-inkwell themes, as they do in the midori
+# pair — both pairs set them, so switching the theme switches these with it.
+
+focus-follows-mouse = true
+
+desktop-notifications = true
+
+# Suppress the native OSC 9;4 progress bar (the thin blue line at the top of
+# the window that Claude Code and other tools draw while working). Ghostty's
+# progress bar color is not configurable as of 1.3.1 — this is the only knob,
+# and it's all-or-nothing. Remove this line to bring the bar back.
+progress-style = false

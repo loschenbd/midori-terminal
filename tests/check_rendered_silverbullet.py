@@ -32,7 +32,9 @@ all-clear in this repo against nothing at all:
 Usage:  python3 tests/check_rendered_silverbullet.py [URL] [--cdp PORT]
 Needs:  websocket-client.  Exit 0 only if every assertion in both modes held.
 """
+import importlib.util
 import json
+import pathlib
 import re
 import sys
 import time
@@ -173,15 +175,62 @@ PROBES = [
     # and .sb-hr is a divider glyph rather than text emphasis.
     ("keyword weight", "#sb-editor .sb-keyword", "fontWeight", "=700"),
     # the measure
-    ("content maxwidth", "#sb-editor .cm-content", "maxWidth", "=647px"),
+    # filled in below from the same source the stylesheet is generated from
+    ("content maxwidth", "#sb-editor .cm-content", "maxWidth", None),
 ]
 
 # The text column, checked as a number rather than as the variable that sets
-# it: 70 characters at M PLUS 1p's 0.4818em average advance, at the 18px
-# editor size, is 607.07px, and --editor-width carries the 40px of border-box
-# padding on top. Asserting the rendered width is what proves the two agree.
-EXPECTED_TEXT_COLUMN = 70 * 0.4818 * 18.0  # 607.068px
+# it: measure_chars characters at the body font's average advance, at the
+# editor size, with --editor-width carrying the border-box padding on top.
+# Asserting the rendered width is what proves the two agree.
+#
+# DERIVED, NOT TYPED, and that is the whole point of this block. Until the
+# measure moved from 70 characters to 80 these numbers lived here as literals --
+# "=647px" below and `70 * 0.4818 * 18.0` here -- which made this file the THIRD
+# place the same constant was written, after themes/midori.json and the adapter
+# in tools/emit-theme.py. A check that hardcodes what it is checking stops being
+# a check the moment the thing moves: it would have gone red against a correct
+# stylesheet and sent the reader to fix the theme. Both now come from the same
+# source the stylesheet is generated from, so this file cannot disagree with it.
+MEASURE_TERMS = {}
+
+
+def _measure():
+    root = pathlib.Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("emit", root / "tools" / "emit-theme.py")
+    emit = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(emit)
+    except SystemExit:
+        pass
+    theme = json.loads((root / "themes" / "midori.json").read_text())
+    target = emit.TARGETS["silverbullet"]
+    met = {**theme.get("metrics", {}), **target.get("metrics", {})}
+    theme = dict(theme, metrics=met)
+    text = emit._calc("measure_chars * avg_advance * editor_font_px", theme)
+    total = round(text + met["editor_padding_px"])
+    MEASURE_TERMS.update(chars=met["measure_chars"],
+                         advance=theme["type"]["avg_advance_em"],
+                         size=met["editor_font_px"])
+    return text, total
+
+
+EXPECTED_TEXT_COLUMN, EXPECTED_EDITOR_WIDTH = _measure()
 TEXT_COLUMN_TOLERANCE = 0.6
+
+# Fill the one PROBES row that is a derived number. Asserted, not assumed: a
+# None left in the table would compare against nothing and pass.
+_filled = 0
+for _i, _row in enumerate(PROBES):
+    if _row[0] == "content maxwidth":
+        PROBES[_i] = _row[:3] + (f"={EXPECTED_EDITOR_WIDTH}px",)
+        _filled += 1
+if _filled != 1:
+    sys.exit(f"check_rendered_silverbullet: expected exactly one derived "
+             f"PROBES row, filled {_filled} -- the table changed shape")
+if any(r[3] is None for r in PROBES):
+    sys.exit("check_rendered_silverbullet: a PROBES row still has no expected "
+             "value, which would compare against nothing and pass")
 
 
 def cdp_targets(port):
@@ -378,7 +427,8 @@ def main():
             ok = abs(w - EXPECTED_TEXT_COLUMN) <= TEXT_COLUMN_TOLERANCE
             print(f"  {'ok' if ok else 'FAIL':>4} {'text column':20} "
                   f"{w:.2f}px (want {EXPECTED_TEXT_COLUMN:.2f}px "
-                  f"= 70ch x 0.4818em x 18px)")
+                  f"= {MEASURE_TERMS['chars']}ch x "
+                  f"{MEASURE_TERMS['advance']}em x {MEASURE_TERMS['size']}px)")
             if not ok:
                 failures.append(f"{mode}/text column: {w:.2f}px, "
                                 f"expected {EXPECTED_TEXT_COLUMN:.2f}px")

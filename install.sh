@@ -60,9 +60,27 @@ cp -f "$REPO/fonts/"*.ttf "$HOME/Library/Fonts/"
 echo "-- ghostty themes, backgrounds, shader"
 mkdir -p "$HOME/.config/ghostty/themes" "$HOME/.config/ghostty/backgrounds" \
          "$HOME/.config/ghostty/shaders"
-for t in midori-paper midori-night; do
-  render "$REPO/ghostty/themes/$t" "$HOME/.config/ghostty/themes/$t"
+# Every theme in ghostty/themes/, not a hand-maintained list. That list read
+# "midori-paper midori-night" after the Lemonardo pair landed, so the two
+# Lemonardo themes shipped in the repo and were never installed: `theme =
+# light:lemonardo-paintpot` in a config resolved to nothing. A missing theme at
+# least reports itself — `ghostty +validate-config` exits 1 and prints every
+# path it tried — which a missing FONT does not (see ghostty/config.lemonardo:
+# it exits 0 and renders JetBrains Mono). Globbing means adding a theme file is
+# the whole job.
+GH_THEMES=0
+for t in "$REPO/ghostty/themes/"*; do
+  [ -f "$t" ] || continue
+  render "$t" "$HOME/.config/ghostty/themes/$(basename "$t")"
+  GH_THEMES=$((GH_THEMES + 1))
 done
+# A loop over an unexpanded glob installs nothing and says nothing, which in
+# this repo is the documented failure mode rather than a pass.
+if [ "$GH_THEMES" -eq 0 ]; then
+  echo "   !! no theme files found in $REPO/ghostty/themes — nothing installed"
+  exit 1
+fi
+echo "   $GH_THEMES ghostty theme(s) installed"
 cp -f "$REPO/ghostty/backgrounds/"*.png "$HOME/.config/ghostty/backgrounds/"
 cp -f "$REPO/ghostty/shaders/rounded-cursor.glsl" "$HOME/.config/ghostty/shaders/"
 
@@ -88,6 +106,14 @@ else
   echo "      Merge or replace manually: $GHOSTTY_CFG_DIR"
 fi
 rm -f /tmp/midori-ghostty-config
+
+# The Lemonardo config is an ALTERNATIVE, never the live config: it is rendered
+# alongside so switching design language is a copy rather than a hand-edit.
+# Safe to overwrite unconditionally — the installer is the only writer of this
+# name, unlike config.midori above, which exists precisely because the live
+# config may be the user's own.
+render "$REPO/ghostty/config.lemonardo" "$GHOSTTY_CFG_DIR/config.lemonardo"
+echo "   wrote config.lemonardo next to it (swap in to switch design language)"
 
 # --- 4. Prompt (oh-my-posh) --------------------------------------------------
 echo "-- prompt -> ~/.config/midori.omp.json"

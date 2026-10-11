@@ -30,6 +30,7 @@ both themes (#3a5572 paper, #6c87a4 night) and is exactly what the shader draws.
 """
 
 import base64
+import argparse
 import json
 import re
 import subprocess
@@ -47,10 +48,59 @@ ANSI = [
     "brightBlue", "brightMagenta", "brightCyan", "brightWhite",
 ]
 
-THEMES = [
-    ("midori-paper", "Midori Paper", "light"),
-    ("midori-night", "Midori Night", "dark"),
-]
+# ONE SET PER DESIGN LANGUAGE, EACH WITH ITS OWN FOLDER on the phone. Two
+# themes in one folder means two import.html files, two READMEs and four QR
+# codes to tell apart by filename on a 6-inch screen; one folder per set means
+# you open the folder you want and everything in it belongs together.
+#
+# "fonts" is per set because the face is part of the design language, not of the
+# app. Shipping Midori's M PLUS 1 Code alongside a Lemonardo theme would put the
+# wrong face behind the right palette and read as a complete install.
+#
+# Lemonardo's list was empty for one release, with the recorded reason that its
+# mono face was not vendored in fonts/. It now is: Sometype Mono, roman and
+# italic, from google/fonts ofl/sometypemono, with its own OFL 1.1 alongside.
+#
+# EVERY CLAIM themes/lemonardo.json MAKES ABOUT THAT FACE WAS CHECKED AGAINST
+# THESE BINARIES, not taken from the specimen page, and all of it held:
+# post.isFixedPitch=1, all 94 printable ASCII glyphs present, exactly ONE
+# advance width of 580/1000 = 0.5800em across them, wght axis 400-700,
+# sxHeight 470/1000 = 0.4700em, sCapHeight 650/1000 = 0.6500em, OFL 1.1.
+#
+# THE ITALIC SHIPS TOO, AND ITS METRICS ARE WHY. A terminal paints comments and
+# emphasis in italic, and an italic whose advance differs from the roman's
+# breaks column alignment on exactly those runs. Measured, the italic is also
+# isFixedPitch=1 with the same single 580/1000 advance across the same 94
+# glyphs, so it is metric-compatible and safe to use in a grid. Midori's set
+# ships no italic because M PLUS 1 Code has none to ship, not because roman-only
+# was a decision -- worth saying, so nobody "fixes" the asymmetry by deleting
+# this one.
+SETS = {
+    "midori": {
+        "label": "Midori",
+        "themes": [("midori-paper", "Midori Paper", "light"),
+                   ("midori-night", "Midori Night", "dark")],
+        "fonts": [("MPLUS1Code[wght].ttf", "fonts/MPLUS1Code[wght].ttf"),
+                  ("OFL-MPLUS.txt", "fonts/OFL-MPLUS.txt")],
+        "readme": "README.md",
+    },
+    "lemonardo": {
+        "label": "Lemonardo",
+        "themes": [("lemonardo-paintpot", "Lemonardo Paintpot", "light"),
+                   ("lemonardo-inkwell", "Lemonardo Inkwell", "dark")],
+        "fonts": [("SometypeMono[wght].ttf", "fonts/SometypeMono[wght].ttf"),
+                  ("SometypeMono-Italic[wght].ttf",
+                   "fonts/SometypeMono-Italic[wght].ttf"),
+                  ("OFL-SometypeMono.txt", "fonts/OFL-SometypeMono.txt")],
+        # NO README, and this is the recorded reason. moshi/README.md is titled
+        # "Midori for Moshi" and names midori-paper.json, the Midori QR files and
+        # Midori's two background hexes -- thirteen Midori references. Copied into
+        # this folder it would describe files that are not in it, which reads as a
+        # complete install and is worse than no README at all. import.html carries
+        # both deep links and is theme-specific because it is generated.
+        "readme": None,
+    },
+}
 
 
 def parse_ghostty(path):
@@ -209,7 +259,7 @@ def _vars(c, mode):
     )
 
 
-def write_import_html(built):
+def write_import_html(built, out_name):
     light = next(t["colors"] for t, _ in built if t["mode"] == "light")
     dark = next(t["colors"] for t, _ in built if t["mode"] == "dark")
     cards = ""
@@ -223,7 +273,7 @@ def write_import_html(built):
     html = IMPORT_HTML.format(
         light_vars=_vars(light, "light"), dark_vars=_vars(dark, "dark"), cards=cards
     )
-    (OUT / "import.html").write_text(html)
+    (OUT / out_name).write_text(html)
     return html
 
 
@@ -233,32 +283,69 @@ def write_import_html(built):
 # hand-copied snapshot is exactly the drift this generator exists to prevent —
 # so publishing is part of the build, not a follow-up step. Skipped cleanly when
 # there is no iCloud Drive (another machine, CI), never fatal.
-ICLOUD = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Dev/midori-moshi-theme"
-PUBLISH = [
-    "import.html", "README.md",
-    "midori-paper.json", "midori-night.json",
-    "midori-paper.url", "midori-night.url",
-    "midori-paper-qr.png", "midori-night-qr.png",
-]
+# The Dev folder in iCloud Drive is where the phone picks things up. It holds a
+# flat font library already -- M PLUS 1 Code, eight weights of M PLUS 1p, seven
+# of M PLUS Code Latin 60 -- because iOS installs a font by tapping it in Files.
+#
+# EACH THEME SET GETS ITS OWN FOLDER under Dev, with its theme files and its own
+# fonts inside it. An earlier pass mirrored the tappable files FLAT into Dev
+# beside that font library, which put seven loose files with names like
+# midori-paper.url next to sixteen .ttf files and made neither set findable.
+ICLOUD_DEV = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Dev"
 
 
-def publish(dest=ICLOUD):
-    if not dest.parent.parent.is_dir():          # no CloudDocs root at all
+def set_dir(set_id):
+    return ICLOUD_DEV / f"{set_id}-moshi-theme"
+
+
+def publish(set_id, spec, built):
+    """Publish one set into its own folder: themes, links, QR codes, fonts."""
+    dest = set_dir(set_id)
+    if not ICLOUD_DEV.parent.is_dir():           # no CloudDocs root at all
         print(f"\n-- iCloud Drive not present; skipped publishing to {dest}")
         return 0
     dest.mkdir(parents=True, exist_ok=True)
+
+    names = [f"import-{set_id}.html"]
+    if spec.get("readme"):
+        names.append(spec["readme"])
+    for slug, _, _ in spec["themes"]:
+        names += [f"{slug}.json", f"{slug}.url", f"{slug}-qr.png"]
+
     copied, missing = [], []
-    for name in PUBLISH:
+    for name in names:
         src = OUT / name
         if not src.exists():
             missing.append(name)
             continue
+        # import-<set>.html lands as plain import.html inside the folder: the
+        # set is the folder name, so repeating it in the filename is noise.
+        out_name = "import.html" if name.startswith("import-") else name
+        (dest / out_name).write_bytes(src.read_bytes())
+        copied.append((name, out_name))
+
+    fonts_copied = []
+    for name, rel in spec["fonts"]:
+        src = ROOT / rel
+        if not src.exists():
+            missing.append(rel)
+            continue
         (dest / name).write_bytes(src.read_bytes())
-        copied.append(name)
+        fonts_copied.append((name, rel))
+
     # Read back rather than trust the write — this is a synced volume, and a
     # stale phone copy is indistinguishable from a fresh one by eye.
-    bad = [n for n in copied if (dest / n).read_bytes() != (OUT / n).read_bytes()]
-    print(f"\n-- published {len(copied)} files -> {dest}")
+    bad = [o for n, o in copied
+           if (dest / o).read_bytes() != (OUT / n).read_bytes()]
+    bad += [n for n, rel in fonts_copied
+            if (dest / n).read_bytes() != (ROOT / rel).read_bytes()]
+
+    print(f"\n-- {spec['label']}: {len(copied)} file(s) -> {dest}")
+    if fonts_copied:
+        mb = sum((dest / n).stat().st_size for n, _ in fonts_copied) / 1_048_576
+        print(f"   + {len(fonts_copied)} font file(s) ({mb:.1f} MB)")
+    else:
+        print("   + no fonts: this set's mono face is not vendored in fonts/")
     if missing:
         print(f"   NOT copied (build them first): {', '.join(missing)}")
     if bad:
@@ -267,38 +354,57 @@ def publish(dest=ICLOUD):
 
 
 def main():
+    ap = argparse.ArgumentParser(
+        description="Build the Moshi themes and publish them to iCloud.")
+    ap.add_argument("--set", action="append", choices=sorted(SETS),
+                    help="theme set to build (repeatable; default: all)")
+    ap.add_argument("--no-publish", action="store_true",
+                    help="build into moshi/ but do not touch iCloud")
+    a = ap.parse_args()
+    chosen = a.set or sorted(SETS)
+
     OUT.mkdir(exist_ok=True)
-    links, built = {}, []
-    for slug, name, mode in THEMES:
-        theme = build(slug, name, mode)
-        path = OUT / f"{slug}.json"
-        path.write_text(json.dumps(theme, indent=2) + "\n")
-        link = deep_link(theme)
-        links[slug] = link
-        built.append((theme, link))
-        (OUT / f"{slug}.url").write_text(link + "\n")
+    bad = 0
+    for set_id in chosen:
+        spec = SETS[set_id]
+        built = []
+        for slug, name, mode in spec["themes"]:
+            theme = build(slug, name, mode)
+            path = OUT / f"{slug}.json"
+            path.write_text(json.dumps(theme, indent=2) + "\n")
+            link = deep_link(theme)
+            built.append((theme, link))
+            (OUT / f"{slug}.url").write_text(link + "\n")
 
-        try:
-            subprocess.run(
-                ["qrencode", "-o", str(OUT / f"{slug}-qr.png"), "-s", "8", "-m", "2", link],
-                check=True,
-            )
-            qr = "qr ok"
-        except (FileNotFoundError, subprocess.CalledProcessError):
-            qr = "qr SKIPPED (install qrencode)"
+            try:
+                subprocess.run(
+                    ["qrencode", "-o", str(OUT / f"{slug}-qr.png"),
+                     "-s", "8", "-m", "2", link],
+                    check=True,
+                )
+                qr = "qr ok"
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                qr = "qr SKIPPED (install qrencode)"
 
-        bg, rows = report(theme)
-        print(f"\n=== {name} ({mode}) — background {bg} — {qr}")
-        print(f"    {len(link)} char deep link -> {path.name}")
-        worst = [r for r in rows if r[2] < 4.5]
-        for key, val, ratio in rows:
-            flag = "  <- under 4.5:1" if ratio < 4.5 else ""
-            print(f"    {key:<15} {val}  {ratio:5.2f}:1{flag}")
-        print(f"    {len(worst)}/{len(rows)} below 4.5:1")
+            bg, rows = report(theme)
+            print(f"\n=== {name} ({mode}) — background {bg} — {qr}")
+            print(f"    {len(link)} char deep link -> {path.name}")
+            worst = [r for r in rows if r[2] < 4.5]
+            for key, val, ratio in rows:
+                flag = "  <- under 4.5:1" if ratio < 4.5 else ""
+                print(f"    {key:<15} {val}  {ratio:5.2f}:1{flag}")
+            print(f"    {len(worst)}/{len(rows)} below 4.5:1")
 
-    write_import_html(built)
-    print(f"\n-- import.html rebuilt with both deep links")
-    bad = publish()
+        write_import_html(built, f"import-{set_id}.html")
+        print(f"\n-- import-{set_id}.html rebuilt with both deep links")
+        if not a.no_publish:
+            bad += publish(set_id, spec, built)
+
+    # A build that published nothing is not a success. The sets are declared
+    # above; if a run reports zero, the loop found no work and said so.
+    if not chosen:
+        print("\n-- no theme sets selected; nothing built")
+        return 1
     return 1 if bad else 0
 
 

@@ -64,6 +64,7 @@
    backticks. silverbullet/wrap-midori.sh checks for it and refuses to emit a
    page from a file that breaks it. */
 
+/* >>> theme palette: generated from themes/midori.json -- see tools/emit-theme.py */
 /* ====================================================================== *
  * RAW TOKENS, PAPER.
  * The Midori palette, copied from obsidian/theme.css via palette.json under
@@ -100,9 +101,15 @@ html {
      Each of these differs between paper and night for a reason that is not a
      hue change, and putting them here is what keeps the mapping single. */
 
-  /* Text ON the accent. Paper text on sage is 4.71:1, clearing AA for body
+  /* Text ON the accent. Paper text on sage is 4.74:1, clearing AA for body
      and AAA for large. On night ground the accent is light, so this inverts;
-     see the night block. */
+     see the night block.
+
+     CORRECTED, and now computed. This said 4.71:1 on paper and 7.4:1 on night;
+     the palette measures 4.74 and 7.23. Neither was far enough off to notice by
+     eye, which is the point -- they were typed once, correct to roughly a
+     rounding, and then outlived the values they described. Both numbers now
+     come from a computed substitution and cannot say anything the palette does not. */
   --midori-on-accent: var(--midori-paper);
 
   /* The selection needs more alpha on dark ground to register at all: sage at
@@ -134,10 +141,17 @@ html[data-theme="dark"] {
   --midori-border: rgba(235, 232, 226, 0.12);
 
   --midori-sage: #9aab97;
-  /* Indigo and wine take their lifted variants on dark ground. These are
-     separate palette entries (midori-indigo-lift, midori-wine-lift), not an
-     ad-hoc lightening: #6c87a4 is indigo's own dark value and sits too close
-     to the ground for code, which is what -lift exists for. */
+  /* Indigo takes its LIFTED variant on dark ground. That is a separate palette
+     entry (indigo-lift), not an ad-hoc lightening: #6c87a4 is indigo's own
+     dark value and sits too close to the ground for code, which is what -lift
+     exists for.
+
+     CORRECTED. This note used to say "indigo and wine" take their lifted
+     variants. Wine does not, and never did here -- it is declared below at
+     #b8868a, which is wine's own dark value; wine-lift is #d0a2a6 and is
+     unused in this file. The claim was plausible because the two roles are
+     adjacent in the palette and both have a -lift entry, so one sentence
+     covered both and only one half was ever checked. */
   --midori-indigo: #8ba3bd;         /* midori-indigo-lift */
   --midori-olive: #9eaf85;
   --midori-wine: #b8868a;
@@ -153,11 +167,12 @@ html[data-theme="dark"] {
   --midori-code-comment: #9c958a;
   --midori-code-punctuation: #c5bfb4;
 
-  --midori-on-accent: #1a1917;      /* 7.4:1 against night sage */
+  --midori-on-accent: #1a1917;      /* 7.23:1 against night sage */
   --midori-selection-alpha: 38%;
   --midori-wash-base: var(--midori-muted);
   --midori-comment-alpha: 14%;
 }
+/* <<< end theme palette -- everything below is hand-written */
 
 /* ====================================================================== *
  * THE SEMANTIC MAPPING, ONCE FOR BOTH MODES.
@@ -401,6 +416,7 @@ html[data-theme="dark"] {
   --editor-code-inserted-bg: color-mix(in srgb, var(--midori-olive) 16%, transparent);
   --editor-monospace-font: "M PLUS 1 Code", ui-monospace, Menlo, monospace;
 
+/* >>> theme type: generated from themes/midori.json -- see tools/emit-theme.py */
   /* ---------------- type ---------------- */
 
   /* Spectral for chrome, matching --font-interface-theme in
@@ -436,18 +452,29 @@ html[data-theme="dark"] {
   /* THE MEASURE, IN ABSOLUTE PX, AND IT MUST BE ABSOLUTE.
 
      Midori's line length is a setting in characters held through one measured
-     constant: 70 characters at M PLUS 1p's average advance of 0.4818em, taken
-     with a BoundsPen over a prose sample. See the long note at
-     --midori-set-measure in obsidian/theme.css; the constant is font-specific
-     and is only valid because the body font is fixed, which it is here too.
+     constant: 80 characters at M PLUS 1p's average advance of
+     0.4818em, taken with a BoundsPen over a prose sample. See the long
+     note at --midori-set-measure in obsidian/theme.css; the constant is
+     font-specific and is only valid because the body font is fixed, which it
+     is here too.
+
+     80 CHARACTERS, UP FROM 70, and the ceiling here is 87. --editor-width is a
+     border-box max-width and SilverBullet's stock value is 800px; at this
+     font 87 characters land at 794.5px and 88 at 803.2, past stock. The note
+     below reasons about the top bar staying where SilverBullet put it, and
+     that argument assumes the theme is no wider than stock, so the headroom
+     matters. The number itself lives in tools/emit-theme.py as this target's
+     metrics override, not in the theme: obsidian/theme.css offers 70 as a
+     DEFAULT the reader can move between 40 and 100, and SilverBullet has no
+     such control, so one is a starting point and the other is the setting.
 
      SilverBullet applies --editor-width as max-width on `.cm-content`, which
      is `box-sizing: border-box` with `padding: 5px 20px`, at font-size 18px:
 
-         70 * 0.4818 * 18px  =  607.07px of text
+         80 * 0.4818 * 18px  =  693.79px of text
                       + 40px     the two 20px paddings, inside the border box
          ------------------
-                       647px
+                       734px
 
      NOT em, for the same class of reason obsidian/theme.css records, in a
      different element. There the hazard is that `.cm-line` is also the heading
@@ -456,12 +483,13 @@ html[data-theme="dark"] {
      shared `.cm-content` parent, and h1 and p lines both measure 760px at the
      stock 800px, verified. But --editor-width has four consumers, and one of
      them is `#sb-top .main .inner`, the page-title row, at `font-size: 28px`.
-     An em value resolves against each consumer's own font-size, so 33.726em
-     would be 607px in the text column and 944px in the top bar, pulling the
+     An em value resolves against each consumer's own font-size: 38.54em is
+     694px in the text column but 1079px in the top bar, pulling the
      title out of alignment with the text it names. The px form leaves the top
      bar where SilverBullet put it; the rendered check asserts the resulting
-     text column at 607.07px to 0.6px. */
-  --editor-width: 647px;
+     text column at 693.79px to 0.6px. */
+  --editor-width: 734px;
+/* <<< end theme type -- everything below is hand-written */
 }
 
 /* ====================================================================== *
