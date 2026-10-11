@@ -9,6 +9,17 @@
     <string>/bin/sh</string>
     <string>__HOME__/.local/bin/midori-claude-theme.sh</string>
   </array>
+  <!-- The design language. install.sh renders __LANG__ from MIDORI_LANG, so
+       re-running the installer is what switches this; editing the installed
+       plist by hand works until the next install. launchd gives a job almost
+       no environment, so the watcher's `: "${MIDORI_LANG:=midori}"` default is
+       what runs if this key is ever missing — which is the Midori behaviour
+       this file had before the key existed. -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>MIDORI_LANG</key>
+    <string>__LANG__</string>
+  </dict>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>

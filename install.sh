@@ -8,8 +8,19 @@ REPO="$(cd "$(dirname "$0")" && pwd)"
 GHOSTTY_CFG_DIR="$HOME/Library/Application Support/com.mitchellh.ghostty"
 LABEL="com.benjaminloschen.midori-claude-theme"
 
-render() {  # __HOME__ -> real home
-  sed "s|__HOME__|$HOME|g" "$1" > "$2"
+# MIDORI_LANG picks the design language for every target that has a twin, the
+# same variable and the same default the watcher and shell/zshrc.midori use. It
+# is read ONCE here so a half-switched install is impossible: one value drives
+# the plist's environment, the prompt and the Claude Code theme together.
+: "${MIDORI_LANG:=midori}"
+case "$MIDORI_LANG" in
+  midori|lemonardo) ;;
+  *) echo "!! MIDORI_LANG=$MIDORI_LANG is not a design language in this repo"
+     echo "   known: midori, lemonardo"; exit 1 ;;
+esac
+
+render() {  # __HOME__ -> real home, __LANG__ -> the design language
+  sed -e "s|__HOME__|$HOME|g" -e "s|__LANG__|$MIDORI_LANG|g" "$1" > "$2"
 }
 
 echo "== Midori terminal theme system =="
@@ -197,6 +208,30 @@ echo "-- appearance watcher (Claude Code theme + tmux borders + display scale)"
 mkdir -p "$HOME/.local/bin" "$HOME/Library/LaunchAgents"
 cp -f "$REPO/watcher/midori-claude-theme.sh" "$HOME/.local/bin/midori-claude-theme.sh"
 chmod +x "$HOME/.local/bin/midori-claude-theme.sh"
+
+# The Claude Code token maps. These used to be heredocs inside the watcher; it
+# now copies one of these into ~/.claude/themes/ on every appearance flip, so
+# an empty install here is the watcher silently leaving a stale theme in place
+# rather than an obvious failure. Count them and refuse an empty glob, the same
+# shape as the font and theme copies above.
+CLAUDE_THEME_DIR="$HOME/.local/share/midori/claude-themes"
+mkdir -p "$CLAUDE_THEME_DIR"
+ct_n=0
+for f in "$REPO"/watcher/themes/*.json; do
+  [ -e "$f" ] || continue
+  cp -f "$f" "$CLAUDE_THEME_DIR/"
+  ct_n=$((ct_n + 1))
+done
+if [ "$ct_n" -eq 0 ]; then
+  echo "!! no watcher/themes/*.json — the watcher would leave the live Claude"
+  echo "   Code theme untouched forever. Aborting rather than half-installing."
+  exit 1
+fi
+echo "   installed $ct_n Claude Code token map(s) (language: $MIDORI_LANG)"
+if [ ! -f "$REPO/watcher/themes/$MIDORI_LANG-light.json" ] ||
+   [ ! -f "$REPO/watcher/themes/$MIDORI_LANG-dark.json" ]; then
+  echo "!! $MIDORI_LANG has no light+dark pair in watcher/themes/"; exit 1
+fi
 render "$REPO/watcher/$LABEL.plist.template" "$HOME/Library/LaunchAgents/$LABEL.plist"
 if [ -n "$MIDORI_SKIP_LAUNCHD" ]; then
   echo "   skipping launchd registration (MIDORI_SKIP_LAUNCHD set)"
