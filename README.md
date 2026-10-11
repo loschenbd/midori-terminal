@@ -282,12 +282,21 @@ docking/undocking.
 
 Residual gotchas:
 
-- `adjust-cell-height` nudges the row pitch toward the 24 pt rhythm, but
-  Ghostty integer-izes the *base* cell height before applying the percentage
-  (35 px × 1.37 → 48, not 34.585 × 1.37) and applies it **at app startup
-  only**. An off-by-one no longer breaks alignment — the shader follows
-  whatever the cell is — it only nudges the rhythm off 24 pt. Coupled to
-  font size.
+- `adjust-cell-height` nudges the row pitch toward the 24 pt rhythm. Two
+  things about it, both measured here:
+  - **The percentage is an amount to change by, not a target.** `41%` means
+    "make the cell 41% taller", not "make it 41% of the base" — `ghostty(5)`
+    under `adjust-cell-width`: "a value of 20% increases the value by 20%".
+    Midori's `37%` is right under either reading, so nothing in this repo
+    distinguished them until Lemonardo needed a value past 100 and got `141%`,
+    which doubled the row pitch (measured 41 pt where 24 was intended).
+  - Ghostty integer-izes the *base* cell height before applying the percentage
+    (35 px × 1.37 → 48, not 34.585 × 1.37).
+
+  It applies **on config reload**; an earlier note here said app startup only,
+  which was never measured and is wrong. An off-by-one no longer breaks
+  alignment — the shader follows whatever the cell is — it only nudges the
+  rhythm off 24 pt. Coupled to font size.
 - The font family must be exactly `"M PLUS 1 Code"` — a wrong name silently
   falls back to JetBrains Mono and changes the cell metrics. **This warning
   came true on the machine it was written for**, and the measurement is now
@@ -318,9 +327,11 @@ Residual gotchas:
   Ghostty documents this silent fallback only for the *style variants* — if
   `font-family-bold` names a font that "cannot be found, Ghostty will use
   whatever font is set for `font-family`" — and says nothing about a missing
-  **primary** family, about whether `+validate-config` checks font families, or
-  about `adjust-cell-height` needing a restart. Those three rest on the
-  measurements recorded here, not on anything published.
+  **primary** family, or about whether `+validate-config` checks font families.
+  Those two rest on the measurements recorded here, not on anything published.
+  A third claim once stood in this list — that `adjust-cell-height` needs a
+  restart — and it was refuted by measurement on 2026-10-11; the percentage
+  semantics above *are* documented, at `adjust-cell-width`.
 - Dots disappear in full-screen TUIs that hide the cursor (no cursor uniform,
   no anchor) — a known trade-off.
 - Box-drawing rules (TUI separators) render at cell *center* and can never

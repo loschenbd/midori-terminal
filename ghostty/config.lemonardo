@@ -2,7 +2,9 @@
 # The ALTERNATIVE to ghostty/config, which is Midori's. install.sh renders this
 # to config.lemonardo next to the live config; it never becomes the live config
 # on its own. To switch, replace the live config with it (keep a backup) and
-# restart Ghostty — not just reload, see adjust-cell-height below.
+# reload Ghostty's configuration. A full restart is NOT required: every key in
+# this file including adjust-cell-height was measured taking effect on reload
+# (2026-10-11), correcting an earlier note here that claimed otherwise.
 #
 # Theme pair carries the palette per mode and macOS appearance flips it.
 # It carries NO background image, and that is deliberate rather than an
@@ -79,21 +81,49 @@ window-padding-y = 12
 # above, 1.235em * 28 = 34.58px against the 34.585px recorded, whereas M PLUS's
 # OS/2 usWin pair gives 1.505em = 42.1px and would be wrong by 8px.) Then:
 #
-#   141%    -> 34 * 1.41   = 47.94   -> ceil 48   <- chosen
-#   141.18% -> 34 * 1.4118 = 48.0004 -> ceil 49   exactly 48/34, and WRONG:
-#              the ceiling tips it one past the target. The clean-looking
-#              quotient is the one to avoid, which is the same trap the 38.9%
-#              measurement above records.
-#   142%    -> 34 * 1.42   = 48.28   -> ceil 49
+#   41%    -> 34 * 1.41   = 47.94   -> ceil 48   <- chosen
+#   41.18% -> 34 * 1.4118 = 48.0004 -> ceil 49   exactly 48/34, and WRONG:
+#             the ceiling tips it one past the target. The clean-looking
+#             quotient is the one to avoid, which is the same trap the 38.9%
+#             measurement above records.
+#   42%    -> 34 * 1.42   = 48.28   -> ceil 49
+#
+# THE UNITS WERE WRONG HERE, corrected 2026-10-11 the same day they were
+# written, and the screen is what caught it. This field first read 141%,
+# because the derivation above produces the MULTIPLIER 1.41 and the multiplier
+# got written into the field. The field does not take a multiplier. ghostty(5)
+# under adjust-cell-width: "the values represent the amount to change the
+# original value. For example, a value of 1 increases the value by 1; it does
+# not set it to literally 1. A value of 20% increases the value by 20%." So
+# 141% asked for 34 * 2.41 = 82px, a 41pt row against the 24 intended.
+#
+# MEASURED, not inferred: on a screenshot of a Ghostty window running that
+# config, the ink-band centres of consecutive text rows sit 41.0 logical px
+# apart and the per-character advance is 8.0 logical px. 8.0 is Sometype's
+# advance at 14pt, which fixes the screenshot at logical scale, so the cell
+# was 41pt = ceil(34 * 2.41) device px. After the correction, the same
+# measurement on the same window reads a 24.00px pitch over a five-row run.
+#
+# WHY IT WAS BELIEVED: Midori's 37% in ghostty/config is correct under BOTH
+# readings, because an additive 37% IS * 1.37 — so the one neighbouring record
+# that could have caught this agrees with the wrong reading. The two readings
+# only separate once the percentage passes 100, which is the first time this
+# repo ever crossed.
+#
+# APPLIES ON CONFIG RELOAD. An earlier note here said app startup only. That
+# was wrong, and the evidence against it was already in hand when it was
+# written: the screenshot above, which measures the 41pt pitch, was taken after
+# a Reload Configuration with no restart in between. Nothing was ever measured
+# for the startup claim.
 #
 # Verify rather than trust the arithmetic: query the terminal for its own cell
 # with CSI 16 t (reply CSI 6 ; height ; width t) from a real tty.
 #
-# Applies at APP STARTUP only, not config reload. Since the dot grid is drawn
-# by the cursor shader anchored to the live cell (see
-# shaders/rounded-cursor.glsl), an off-by-one here no longer breaks alignment —
-# it only nudges the rhythm off 24pt. COUPLED to font-size and font-family.
-adjust-cell-height = 141%
+# Since the dot grid is drawn by the cursor shader anchored to the live cell
+# (see shaders/rounded-cursor.glsl), an off-by-one here no longer breaks
+# alignment — it only nudges the rhythm off 24pt. COUPLED to font-size and
+# font-family.
+adjust-cell-height = 41%
 
 # Rounded cursor: native cursor hidden (opacity 0), the shader draws a
 # rounded replacement from the cursor uniforms. Steady (no blink).
