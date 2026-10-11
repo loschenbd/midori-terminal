@@ -215,6 +215,9 @@ if python3 tests/test_lemonardo_ansi.py; then :; else FAIL=1; fi
 echo "== the two cursor shaders differ only in brand constants =="
 if python3 tests/test_lemonardo_shader.py; then :; else FAIL=1; fi
 
+echo "== every family a theme names is vendored in fonts/ =="
+if python3 tests/test_fonts_are_vendored.py; then :; else FAIL=1; fi
+
 echo
 [ "$FAIL" -eq 0 ] && echo "LINT: all green" || echo "LINT: failures above"
 exit "$FAIL"
