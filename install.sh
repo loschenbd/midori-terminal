@@ -82,7 +82,23 @@ if [ "$GH_THEMES" -eq 0 ]; then
 fi
 echo "   $GH_THEMES ghostty theme(s) installed"
 cp -f "$REPO/ghostty/backgrounds/"*.png "$HOME/.config/ghostty/backgrounds/"
-cp -f "$REPO/ghostty/shaders/rounded-cursor.glsl" "$HOME/.config/ghostty/shaders/"
+# Every shader in ghostty/shaders/, for the same reason the themes above are
+# globbed: this line named rounded-cursor.glsl alone, so when the Lemonardo
+# shader landed, config.lemonardo pointed at a path the installer never wrote.
+# Ghostty does NOT report a missing custom-shader the way it reports a missing
+# theme — it renders without it, so the symptom is a square cursor and no
+# lattice, with nothing on stderr and +validate-config still exiting 0.
+GH_SHADERS=0
+for s in "$REPO/ghostty/shaders/"*.glsl; do
+  [ -f "$s" ] || continue
+  cp -f "$s" "$HOME/.config/ghostty/shaders/"
+  GH_SHADERS=$((GH_SHADERS + 1))
+done
+if [ "$GH_SHADERS" -eq 0 ]; then
+  echo "   !! no .glsl found in $REPO/ghostty/shaders — nothing installed"
+  exit 1
+fi
+echo "   $GH_SHADERS ghostty shader(s) installed"
 
 # Default symlinks -> @2x (retina) — but only when missing: the watcher owns
 # them afterwards and may have flipped to @1x for the current display.

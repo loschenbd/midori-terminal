@@ -120,15 +120,30 @@ window-padding-y = 12
 # with CSI 16 t (reply CSI 6 ; height ; width t) from a real tty.
 #
 # Since the dot grid is drawn by the cursor shader anchored to the live cell
-# (see shaders/rounded-cursor.glsl), an off-by-one here no longer breaks
+# (see shaders/rounded-cursor-lemonardo.glsl), an off-by-one here no longer
+# breaks
 # alignment — it only nudges the rhythm off 24pt. COUPLED to font-size and
 # font-family.
 adjust-cell-height = 41%
 
-# Rounded cursor: native cursor hidden (opacity 0), the shader draws a
-# rounded replacement from the cursor uniforms. Steady (no blink).
-# To revert: delete these two lines.
-custom-shader = __HOME__/.config/ghostty/shaders/rounded-cursor.glsl
+# Rounded cursor + field guide: native cursor hidden (opacity 0), the shader
+# draws a rounded replacement from the cursor uniforms (steady, no blink) and
+# the 24pt lattice anchored to the same cell geometry.
+#
+# LEMONARDO'S OWN SHADER, and the -lemonardo suffix is load-bearing. This line
+# pointed at rounded-cursor.glsl for a day, which is MIDORI'S: it matches the
+# ground by DISTANCE against Midori's two hexes rather than looking up a theme,
+# so Paintpot (0.0372 from Midori Paper, tolerance 0.09) silently took Midori's
+# sage lattice while Inkwell (0.1178 against the same 0.09) took nothing. Light
+# mode wore another brand's art and dark mode had none, and neither was chosen.
+# The lattice is now Lemonardo's non-photo guide blue in BOTH modes; the
+# derivation, the matched alphas and the rejected alternatives are in the
+# shader's own header. tests/test_lemonardo_shader.py holds the two files to
+# identical executable code and fails if either names the other's grounds.
+#
+# To revert to no lattice at all: the shader header says which block to delete.
+# To revert to no shader: delete these two lines, losing the rounded cursor.
+custom-shader = __HOME__/.config/ghostty/shaders/rounded-cursor-lemonardo.glsl
 cursor-opacity = 0
 
 unfocused-split-opacity = 0.9
