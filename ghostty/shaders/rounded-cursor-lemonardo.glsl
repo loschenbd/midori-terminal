@@ -1,11 +1,12 @@
-// rounded-cursor-lemonardo.glsl — Lemonardo rounded cursor + field guide.
+// rounded-cursor-lemonardo.glsl — Lemonardo rounded cursor. NO LATTICE.
 //
-// DERIVED FROM rounded-cursor.glsl by replacing exactly three constant blocks:
-// the ground pair, the lattice colour/alpha pair, and the cursor ink pair.
-// Everything below the constants is byte-identical to Midori's, verified at
-// generation time, because the geometry is typographic (a 24pt rhythm anchored
-// to the cell) and not brand — the two design languages SHOULD share it. If
-// that file's cursor or lattice maths changes, re-derive rather than hand-edit.
+// DERIVED FROM rounded-cursor.glsl: same cursor maths, Lemonardo's ink, and
+// the dot lattice removed entirely. The CURSOR half is byte-identical to
+// Midori's and tests/test_lemonardo_shader.py holds it that way, because the
+// cursor geometry is typographic (a baseline lock, a rounded rect sized from
+// the cell) and not brand — a fix to one must reach the other. The lattice is
+// the opposite: it is decoration, and the two design languages differ on it.
+// If Midori's cursor maths changes, port it; do not port the lattice back.
 //
 //
 // Two jobs:
@@ -39,9 +40,6 @@
 
 const float BASELINE_LIFT = 0.178;
 
-// Lemonardo surfaces (sRGB). Dots are drawn only over near-background pixels
-// so text, selections, and TUI fills stay clean.
-//
 // WHY THIS FILE EXISTS AT ALL. Lemonardo loaded Midori's shader for the cursor
 // and silently got Midori's lattice with it, because the grounds below were
 // Midori's and the match is a distance test, not a theme lookup. Measured
@@ -54,7 +52,13 @@ const float BASELINE_LIFT = 0.178;
 // sides. Pointing a design language at the other one's shader is the general
 // form of that bug; install both and point each config at its own.
 //
-// THE LATTICE IS A FIELD GUIDE, and the colour is not invented here. Paintpot
+// LEMONARDO HAS NO LATTICE. That is the decision, taken 2026-10-11 after
+// seeing both candidates on screen, and everything from here to the end of
+// this block is the record of what was tried and rejected. It is kept in full
+// because the rejected option was measured, shipped, looked at and turned
+// down — which is a stronger reason not to re-propose it than any argument.
+//
+// REJECTED 1: A FIELD GUIDE, which is the one that nearly worked. Paintpot
 // is a golden-era drafting bench (see themes/lemonardo.json: bond, cel, manila,
 // graphite, paintpots), and the lattice that belongs on animation paper is the
 // registration grid you draft over in non-photo blue — col-erase, which the
@@ -72,10 +76,14 @@ const float BASELINE_LIFT = 0.178;
 //   paintpot  #f3eee2 + #a8d7ea @ 0.8514 -> #b3dae9   1.280:1  (1.0 = 1.34:1)
 //   inkwell   #2c2a28 + #3f5a68 @ 0.5400 -> #36444b   1.418:1  (1.0 = 1.96:1)
 //
-// Both land under the 2.0 guide ceiling with room, and both modes now get a
-// lattice, so the light/dark asymmetry above is gone rather than inverted.
+// Both land under the 2.0 guide ceiling with room, and both modes got a
+// lattice, so the light/dark asymmetry above was gone rather than inverted.
+// It was installed and measured on screen at #b3dae9 over bond — the solved
+// value to four places — and then removed, because a lattice that is correct
+// is still a lattice and Lemonardo was not asking for one. Nothing about the
+// derivation was wrong; it answers a question that had already been settled.
 //
-// REJECTED, so no later pass re-proposes them:
+// REJECTED ALONGSIDE IT, so no later pass reaches for them either:
 //   - `page-dot` #ffd700. Lemonardo declares it and it is the obvious reach,
 //     but it is a LEMON, not a guide: 1.21:1 on bond (fine) and 10.19:1 on
 //     inkwell (a field of yellow dots brighter than most of the text). The
@@ -83,16 +91,24 @@ const float BASELINE_LIFT = 0.178;
 //   - `guide-pale` #cde8f2 / #2f424c. Tops out at 1.105:1 and 1.365:1 — it
 //     cannot reach Midori's strength even at alpha 1.0. Correct for a second,
 //     quieter rule line in a target that has two; too faint to carry a lattice.
-//   - No lattice at all, keeping only the cursor. This was the chosen option
-//     until the drafting-bench reading surfaced a lattice with a real source
-//     and a test already guarding it. To go back: delete the dot-lattice block
-//     in mainImage and these six constants. Nothing else depends on them.
-const vec3  PAPER_BG  = vec3(243.0, 238.0, 226.0) / 255.0;  // #f3eee2 bond
-const vec3  NIGHT_BG  = vec3( 44.0,  42.0,  40.0) / 255.0;  // #2c2a28 inkwell
-const vec3  PAPER_DOT = vec3(168.0, 215.0, 234.0) / 255.0;  // #a8d7ea guide
-const vec3  NIGHT_DOT = vec3( 63.0,  90.0, 104.0) / 255.0;  // #3f5a68 guide
-const float PAPER_DOT_ALPHA = 0.8514;
-const float NIGHT_DOT_ALPHA = 0.5400;
+//   - `page-dot` and `guide` are still correct roles for TARGETS that paint a
+//     dot or a rule on a page — SilverBullet, Obsidian, MarkText. Nothing here
+//     says they are wrong; it says this shader draws neither.
+// THE CONSTANTS THAT WERE HERE ARE GONE, and the decision above is why. They
+// read, before removal on 2026-10-11:
+//
+//   const vec3  PAPER_BG  = vec3(243.0, 238.0, 226.0) / 255.0;  // #f3eee2
+//   const vec3  NIGHT_BG  = vec3( 44.0,  42.0,  40.0) / 255.0;  // #2c2a28
+//   const vec3  PAPER_DOT = vec3(168.0, 215.0, 234.0) / 255.0;  // #a8d7ea
+//   const vec3  NIGHT_DOT = vec3( 63.0,  90.0, 104.0) / 255.0;  // #3f5a68
+//   const float PAPER_DOT_ALPHA = 0.8514;
+//   const float NIGHT_DOT_ALPHA = 0.5400;
+//
+// They worked: measured on screen at #b3dae9 over bond, which is the solved
+// value to four places. The lattice was removed because it was not wanted, not
+// because it was wrong, and tests/test_lemonardo_shader.py now FAILS if a
+// ground constant reappears in this file — because the way it came back last
+// time was silently, by pointing at Midori's shader.
 
 // Cursor ink. The native cursor is composited AFTER this shader (so it can't be
 // erased here) and cursor-opacity=0 does NOT hide the hollow unfocused cursor,
@@ -121,14 +137,10 @@ float sdRoundBox(vec2 p, vec2 b, float r) {
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
-// "Is this pixel (glow-tinted) background?" — tested in BOTH sRGB and linear
-// encodings, since the sampled texture's transfer function isn't guaranteed.
-// Returns 0 = no, 1 = matched in sRGB, 2 = matched in linear.
-int bgMatch(vec3 c, vec3 bg, float tolS, float tolL) {
-    if (distance(c, bg) < tolS) return 1;
-    if (distance(pow(c, vec3(2.2)), pow(bg, vec3(2.2))) < tolL) return 2;
-    return 0;
-}
+// bgMatch() was here and is removed with the lattice: it tested a pixel
+// against a ground in BOTH sRGB and linear, since the sampled texture's
+// transfer function isn't guaranteed. It is the function whose tolerances let
+// Paintpot match MIDORI's paper at 0.0372 < 0.09. Midori's copy is unchanged.
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord / iResolution.xy;
@@ -137,33 +149,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 halfSize = iCurrentCursor.zw * 0.5;
     if (halfSize.x <= 0.0 || halfSize.y <= 0.0) return;  // no cursor, no anchor
 
-    // ---- dot lattice, anchored to the cursor's cell geometry ----
-    float pitch = iCurrentCursor.w;
-    if (pitch < 16.0)  // thin bar/underline cursor can't give us the cell height
-        pitch = (iResolution.y > 1600.0) ? 48.0 : 24.0;
-    float baseline = iCurrentCursor.y - BASELINE_LIFT * pitch;
-
-    // rows on baselines; columns every pitch, first at half a pitch from the
-    // left edge (matches the retired baked tiles: cx = tile/2)
-    vec2 rel = vec2(fragCoord.x - 0.5 * pitch, fragCoord.y - baseline);
-    vec2 wrapped = rel - pitch * floor(rel / pitch + 0.5);
-    float dd = length(wrapped);
-    float rIn = pitch * (2.0 / 48.0);
-    float rOut = pitch * (2.7 / 48.0);
-    float cov = clamp((rOut - dd) / (rOut - rIn), 0.0, 1.0);
-    if (cov > 0.0) {
-        int mp = bgMatch(fragColor.rgb, PAPER_BG, 0.09, 0.17);
-        int mn = (mp == 0) ? bgMatch(fragColor.rgb, NIGHT_BG, 0.09, 0.015) : 0;
-        if (mp != 0) {
-            vec3 dot_ = (mp == 2) ? pow(PAPER_DOT, vec3(2.2)) : PAPER_DOT;
-            fragColor.rgb = mix(fragColor.rgb, dot_, cov * PAPER_DOT_ALPHA);
-        } else if (mn != 0) {
-            vec3 dot_ = (mn == 2) ? pow(NIGHT_DOT, vec3(2.2)) : NIGHT_DOT;
-            fragColor.rgb = mix(fragColor.rgb, dot_, cov * NIGHT_DOT_ALPHA);
-        }
-    }
-
-    // ---- rounded cursor, drawn over the dots ----
+    // NO LATTICE. Midori's shader draws a 24pt dot grid here; Lemonardo draws
+    // none, by decision 2026-10-11. The block removed was byte-identical to
+    // Midori's and is recoverable from it — restoring it needs the six colour
+    // constants above as well, and a reason.
+    // ---- rounded cursor ----
     // Apps that hide the cursor (Claude Code's choice UI, fzf, TUIs) send
     // CSI ?25l; the native cursor stops rendering but our replacement must
     // opt in, or it ghosts at the stale iCurrentCursor position.
