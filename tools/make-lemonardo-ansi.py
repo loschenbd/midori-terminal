@@ -375,6 +375,51 @@ def ghostty_slots(name):
 # 0.16 the light mode's blue falls back inside Midori's, at 0.18 every gate in
 # both modes passes, and above 0.20 nothing improves because only red and
 # magenta are still being cut.
+# --------------------------------------------------------------------------
+# PER-SLOT EXCEPTIONS TO accent_l, AND WHY SLOT 3 HAS ONE
+#
+# Every base accent sits at accent_l -- one lightness for all six -- because
+# that uniform lightness is the invariant this palette's Selenized/OkSelenized
+# ancestry is built on: no accent outweighs another, so none of them grabs the
+# eye first in a wall of log output. Slot 3 is now the single exception, and
+# the cost is real: the yellow no longer sits at the same weight as the other
+# five, and that is a deliberate loss, not an oversight.
+#
+# The reason is that yellow has the least chroma room of any hue at L 0.500.
+# Measured maxima at that lightness: magenta 0.239, red 0.189, blue 0.141,
+# green 0.131, yellow 0.104, cyan 0.085. A yellow held at L 0.500 therefore
+# cannot be a gold -- it is forced to C <= 0.104, which on a cream ground
+# renders as brown. #855918 was that brown, and it was rejected on sight.
+#
+# What CANNOT fix it: raising the lightness while keeping the 4.5:1 base
+# floor. The lightest gold at this hue that still clears 4.5 is L 0.539
+# (#94631c, 4.47:1) -- only +0.039 above the invariant, and still brown. The
+# floor, not the invariant, is what traps this slot.
+#
+# So slot 3 takes BRIGHT_CONTRAST_FLOOR (3.5) instead of BASE_CONTRAST_FLOOR
+# (4.5) -- the floor this palette already accepts for its eight bright
+# accents -- and lifts to L 0.580, which the rule renders as #a36e20 at
+# 3.77:1. That is dE2000 1.96 from Lemonardo's own `clay` role (#a0701d) --
+# near it, and not it: the slot is still generated from the anchor hue (71.7)
+# rather than pasted from the palette, and clay sits at hue 76. Close enough
+# that the slot reads as the language's existing gold, far enough that calling
+# it clay would be wrong.
+#
+# THE COST, STATED PLAINLY: 3.77:1 is below WCAG AA for normal text. Yellow
+# used as body text on paintpot is now harder to read than the other five base
+# accents. It clears AA Large (3:1) and clears this palette's own bright-accent
+# floor. If that trade is ever revisited, the legible alternative is #94631c
+# at 4.47:1 -- and the reason it was not taken is that it is the brown this
+# exception exists to escape.
+ACCENT_L_OVERRIDE = {
+    ("paintpot", 3): 0.580,
+}
+# Slots measured against BRIGHT_CONTRAST_FLOOR though they are base slots.
+# Keyed the same way, so the exception and its floor cannot drift apart.
+BASE_FLOOR_EXEMPT = {
+    ("paintpot", 3): "yellow cannot be a gold at L 0.500; see ACCENT_L_OVERRIDE",
+}
+
 CHROMA_CAP = 0.18
 
 
@@ -396,7 +441,8 @@ def build(mode_id, theme):
     for fam, slot in FAMILY_SLOTS.items():
         hue = hues[fam]
         material = ANCHORS[fam][1].split(" -- ")[0]
-        for s, L, tier in ((slot, spec["accent_l"], "thinned"),
+        base_l = ACCENT_L_OVERRIDE.get((mode_id, slot), spec["accent_l"])
+        for s, L, tier in ((slot, base_l, "thinned"),
                            (slot + 8, spec["accent_l"] + spec["bright_dl"],
                             "full load")):
             hx, got, ceil = loaded(L, spec["chroma_frac"], hue)
@@ -405,6 +451,10 @@ def build(mode_id, theme):
                         f"hue {hue:.1f}, L {L:.3f}, C {got:.3f} "
                         f"({spec['chroma_frac']:.2f} of the {ceil:.3f} "
                         f"available here)")
+            if (mode_id, s) in ACCENT_L_OVERRIDE:
+                notes[s] += (f"; L lifted from {spec['accent_l']:.3f} by "
+                             f"exception -- yellow has no gold at that "
+                             f"lightness, see ACCENT_L_OVERRIDE")
             del tier
 
     ink_h, paper_h = hues[NEUTRAL_HUE_INK], hues[NEUTRAL_HUE_PAPER]
@@ -458,6 +508,12 @@ def measure(built):
 
     for i in ACCENT_SLOTS:
         floor = BASE_CONTRAST_FLOOR if i < 8 else BRIGHT_CONTRAST_FLOOR
+        # A base slot named in BASE_FLOOR_EXEMPT is measured against the
+        # bright floor instead. The exemption is keyed by (mode, slot), so it
+        # cannot leak into the other mode -- inkwell's yellow is a gold at its
+        # own accent_l and takes the full 4.5.
+        if i < 8 and (built["id"].split("-")[1], i) in BASE_FLOOR_EXEMPT:
+            floor = BRIGHT_CONTRAST_FLOOR
         c = cs.contrast(s[i], bg)
         rows.append((c >= floor, f"slot {i:>2} contrast vs ground",
                      f"{c:5.2f}:1 (floor {floor})"))

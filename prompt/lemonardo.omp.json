@@ -30,12 +30,20 @@
     "",
     "   lightGreen (10)  #105028  8.24:1 bond   #55e487  8.74:1 inkwell",
     "   cyan (6)         #1c716e  4.99:1        #19b5b0  5.64:1",
-    "   yellow (3)       #855918  5.27:1        #d58d15  5.21:1",
+    "   yellow (3)       #a36e20  3.77:1        #d58d15  5.21:1",
     "   green (2)        #1c763f  4.89:1        #1abd62  5.79:1",
     "   red (1)          #ab3417  5.61:1        #f96c4b  4.95:1",
     "   darkGray (8)     #5c6470  5.16:1        #8893a5  4.60:1",
     "",
-    "Worst case 4.60:1, against Midori's 2.96:1. The slot names are from the",
+    "Worst case 3.77:1 -- yellow on paintpot -- against Midori's 2.96:1. It was"
+    ,"4.60:1 until 2026-10-11, when ANSI 3 on paintpot moved from #855918 (5.27:1)"
+    ,"to #a36e20 (3.77:1). That was not a drift: #855918 is the brown a yellow is"
+    ,"forced into at the palette's uniform accent lightness, it was rejected on"
+    ,"sight, and tools/make-lemonardo-ansi.py now carries a documented per-slot"
+    ,"exception for slot 3 with the full reasoning and the alternatives measured."
+    ,"The consequence HERE is that the git-dirty indicator on paintpot now sits at"
+    ,"3.77:1 rather than 5.27:1 -- above AA Large, below AA for normal text. The"
+    ,"slot names are from the",
     "schema's own color_string pattern (oh-my-posh 26.14.3): black, red, green,",
     "yellow, blue, magenta, cyan, white, darkGray, light*, plus bare 0-255.",
     "",

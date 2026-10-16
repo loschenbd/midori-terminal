@@ -74,8 +74,8 @@ palette = 0=#09101a
 palette = 1=#ab3417
 # 2: green: Paris green / emerald green (copper acetoarsenite), hue 151.5, L 0.500, C 0.120 (0.90 of the 0.133 available here)
 palette = 2=#1c763f
-# 3: yellow: chrome yellow (lead chromate, from crocoite), hue 71.7, L 0.500, C 0.097 (0.90 of the 0.107 available here)
-palette = 3=#855918
+# 3: yellow: chrome yellow (lead chromate, from crocoite), hue 71.7, L 0.580, C 0.112 (0.90 of the 0.124 available here); L lifted from 0.500 by exception -- yellow has no gold at that lightness, see ACCENT_L_OVERRIDE
+palette = 3=#a36e20
 # 4: blue: cobalt blue (PB28, cobalt aluminate), hue 259.7, L 0.500, C 0.180 (0.90 of the 0.201 available here)
 palette = 4=#175cc7
 # 5: magenta: mauveine / Perkin's aniline purple, 1856, hue 323.4, L 0.500, C 0.180 (0.90 of the 0.236 available here)
