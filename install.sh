@@ -12,6 +12,15 @@ LABEL="com.benjaminloschen.midori-claude-theme"
 # same variable and the same default the watcher and shell/zshrc.midori use. It
 # is read ONCE here so a half-switched install is impossible: one value drives
 # the plist's environment, the prompt and the Claude Code theme together.
+# The language file is the single answer to "which design language am I in".
+# Defaulting to the literal `midori` here instead would have made every
+# install.sh run a silent switch BACK for anyone who had moved: the installer
+# re-renders the live Ghostty config, the plist and the tmux symlink, so a
+# default that ignored the current choice would undo it on the next run and
+# look like the switch had not stuck.
+if [ -z "${MIDORI_LANG:-}" ] && [ -f "$HOME/.config/midori/language" ]; then
+  MIDORI_LANG=$(cat "$HOME/.config/midori/language")
+fi
 : "${MIDORI_LANG:=midori}"
 case "$MIDORI_LANG" in
   midori|lemonardo) ;;
@@ -137,26 +146,51 @@ for m in paper night; do
 done
 
 mkdir -p "$GHOSTTY_CFG_DIR"
-render "$REPO/ghostty/config" /tmp/midori-ghostty-config
-if [ ! -f "$GHOSTTY_CFG_DIR/config" ]; then
-  cp /tmp/midori-ghostty-config "$GHOSTTY_CFG_DIR/config"
-  echo "   installed Ghostty config"
-elif cmp -s /tmp/midori-ghostty-config "$GHOSTTY_CFG_DIR/config"; then
-  echo "   Ghostty config already up to date"
-else
-  cp /tmp/midori-ghostty-config "$GHOSTTY_CFG_DIR/config.midori"
-  echo "   !! Existing Ghostty config differs — wrote config.midori next to it."
-  echo "      Merge or replace manually: $GHOSTTY_CFG_DIR"
-fi
-rm -f /tmp/midori-ghostty-config
 
-# The Lemonardo config is an ALTERNATIVE, never the live config: it is rendered
-# alongside so switching design language is a copy rather than a hand-edit.
-# Safe to overwrite unconditionally — the installer is the only writer of this
-# name, unlike config.midori above, which exists precisely because the live
-# config may be the user's own.
-render "$REPO/ghostty/config.lemonardo" "$GHOSTTY_CFG_DIR/config.lemonardo"
-echo "   wrote config.lemonardo next to it (swap in to switch design language)"
+# BOTH languages are rendered, every run, as config.<language>. These are the
+# switch SOURCES that midori-theme copies from; the live `config` is only ever
+# a copy of one of them.
+#
+# config.midori USED TO MEAN SOMETHING ELSE, and the rename matters. It was
+# written only when the live config differed from the repo's, as a "merge this
+# by hand" artifact, so its presence meant a conflict. It now always exists and
+# means "the Midori config". A live config that differs from both languages is
+# reported below and left alone; midori-theme is what backs it up, and only at
+# the moment it would overwrite it.
+GH_CONFIGS=0
+for lang in midori lemonardo; do
+  case "$lang" in
+    midori) src="$REPO/ghostty/config" ;;
+    *)      src="$REPO/ghostty/config.$lang" ;;
+  esac
+  [ -f "$src" ] || { echo "!! $src is missing"; exit 1; }
+  render "$src" "$GHOSTTY_CFG_DIR/config.$lang"
+  GH_CONFIGS=$((GH_CONFIGS + 1))
+done
+echo "   rendered $GH_CONFIGS switch source(s): config.midori, config.lemonardo"
+
+CHOSEN="$GHOSTTY_CFG_DIR/config.$MIDORI_LANG"
+if [ ! -f "$GHOSTTY_CFG_DIR/config" ]; then
+  cp -f "$CHOSEN" "$GHOSTTY_CFG_DIR/config"
+  echo "   installed Ghostty config ($MIDORI_LANG)"
+elif cmp -s "$CHOSEN" "$GHOSTTY_CFG_DIR/config"; then
+  echo "   Ghostty config already up to date ($MIDORI_LANG)"
+else
+  # Is it simply the OTHER language, i.e. a switch is pending? Say which,
+  # rather than the old message, which read as a conflict either way.
+  other=""
+  for l in midori lemonardo; do
+    cmp -s "$GHOSTTY_CFG_DIR/config" "$GHOSTTY_CFG_DIR/config.$l" && other="$l"
+  done
+  if [ -n "$other" ]; then
+    echo "   live Ghostty config is $other; language is $MIDORI_LANG."
+    echo "   Run: midori-theme $MIDORI_LANG"
+  else
+    echo "   !! Live Ghostty config matches neither language — left alone."
+    echo "      Your own settings belong in $GHOSTTY_CFG_DIR/user-overrides,"
+    echo "      which both language configs include; see the end of either."
+  fi
+fi
 
 # --- 4. Prompt (oh-my-posh) --------------------------------------------------
 echo "-- prompt -> ~/.config/midori.omp.json"
@@ -180,7 +214,14 @@ cp -f "$REPO/tmux/midori.tmux.conf" "$HOME/.config/midori/midori.tmux.conf"
 # design languages. Adding a twin would create a second copy of shell logic
 # that has to be kept in step for no benefit.
 cp -f "$REPO/tmux/lemonardo.tmux.conf" "$HOME/.config/midori/lemonardo.tmux.conf"
-echo "   wrote lemonardo.tmux.conf next to it (repoint source-file to switch)"
+
+# active.tmux.conf is a SYMLINK, and tmux sources that name rather than a
+# language's. ~/.tmux.conf is the user's own file; rewriting a line in it on
+# every switch is how a switch ends up half-applied when one of the four edits
+# is forgotten. One indirection means the switch is a symlink flip.
+ln -sfn "$HOME/.config/midori/$MIDORI_LANG.tmux.conf" \
+        "$HOME/.config/midori/active.tmux.conf"
+echo "   active.tmux.conf -> $MIDORI_LANG.tmux.conf"
 
 touch "$HOME/.zshrc"
 # Detect the actual source line (not any mention of "midori" — inline references
@@ -196,12 +237,51 @@ fi
 touch "$HOME/.tmux.conf"
 # Detect the actual source-file line (not any mention of "midori" — a comment
 # elsewhere used to false-match and leave the fragment unsourced).
-if grep -q "config/midori/midori.tmux.conf" "$HOME/.tmux.conf"; then
-  echo "   .tmux.conf already sources the midori fragment — not appending"
+#
+# MIGRATION, and it has to happen here rather than in midori-theme: a config
+# written before active.tmux.conf existed names a LANGUAGE fragment
+# (midori.tmux.conf or lemonardo.tmux.conf) directly, and such a line pins the
+# panes to one language however many times the symlink is flipped. That is a
+# half-switched terminal with no error anywhere. Repoint it once, in place.
+if grep -q "config/midori/active.tmux.conf" "$HOME/.tmux.conf"; then
+  echo "   .tmux.conf already sources active.tmux.conf — not appending"
+elif grep -qE "config/midori/(midori|lemonardo)\.tmux\.conf" "$HOME/.tmux.conf"; then
+  # Same shape as the repair in tools/midori-theme, and the same hazard: a
+  # redirect into the file sed reads from truncates it first, so a failed
+  # backup leaves an EMPTY ~/.tmux.conf. Write, then move.
+  # sed exiting 0 does not mean it wrote anything: BSD sed given a DIRECTORY
+  # emits nothing and exits 0 (measured, Darwin 25.6). Check the shape of the
+  # output, not just the status. Same reasoning as tools/midori-theme.
+  tmux_lines=$(wc -l < "$HOME/.tmux.conf")
+  if ! cp -f "$HOME/.tmux.conf" "$HOME/.tmux.conf.pre-midori-active"; then
+    echo "   !! could not back up .tmux.conf — left it alone"
+  elif sed -E 's|config/midori/(midori\|lemonardo)\.tmux\.conf|config/midori/active.tmux.conf|g' \
+         "$HOME/.tmux.conf.pre-midori-active" > "$HOME/.tmux.conf.midori-new" &&
+       [ -s "$HOME/.tmux.conf.midori-new" ] &&
+       [ "$(wc -l < "$HOME/.tmux.conf.midori-new" 2>/dev/null || echo -1)" \
+         -eq "$tmux_lines" ]; then
+    mv -f "$HOME/.tmux.conf.midori-new" "$HOME/.tmux.conf"
+    echo "   repointed .tmux.conf at active.tmux.conf (kept .tmux.conf.pre-midori-active)"
+  else
+    rm -f "$HOME/.tmux.conf.midori-new"
+    echo "   !! rewriting .tmux.conf failed — left it alone"
+  fi
 else
-  printf '\n# Midori terminal theme (midori-terminal repo)\nsource-file ~/.config/midori/midori.tmux.conf\n' >> "$HOME/.tmux.conf"
+  printf '\n# Midori terminal theme (midori-terminal repo)\nsource-file ~/.config/midori/active.tmux.conf\n' >> "$HOME/.tmux.conf"
   echo "   appended source-file line to .tmux.conf"
 fi
+
+# The language file: the one answer to "which design language am I in".
+# midori-theme writes it too; this seeds it so a fresh install has one.
+printf '%s\n' "$MIDORI_LANG" > "$HOME/.config/midori/language"
+echo "   language file = $MIDORI_LANG"
+
+# The switch command itself. mkdir here and not only in step 6, which used to
+# be the first thing to write into this directory and no longer is.
+mkdir -p "$HOME/.local/bin"
+cp -f "$REPO/tools/midori-theme" "$HOME/.local/bin/midori-theme"
+chmod +x "$HOME/.local/bin/midori-theme"
+echo "   installed midori-theme (run it with no argument to see every surface)"
 
 # --- 6. Appearance watcher (launchd) -----------------------------------------
 echo "-- appearance watcher (Claude Code theme + tmux borders + display scale)"
