@@ -3,15 +3,37 @@
    M PLUS (rows, controls, inherited). Sage accent for unread + selection.
    Uses Vivaldi derived vars where possible; !important beats inline UI vars. */
 
+/* Variables are prefixed --mmail- and not --m-, because this file and
+   midori-calendar.css both declared --m-sage-soft and
+   --m-sage-line on the SAME selector (#browser.theme-light) with DIFFERENT
+   alphas -- .12/.55 here vs .10/.5 there. Equal specificity on the same element
+   means source order decides, so whichever file Vivaldi loaded last set
+   BOTH surfaces and the deliberate per-surface difference never rendered.
+   Measured by reading the two declaration blocks, not from a screenshot.
+   Separate prefixes are what make the two values independent. */
 #browser.theme-light {
-  --m-sage: #5f6f5e; --m-sage-soft: rgb(95 111 94 / .12);
-  --m-sage-line: rgb(95 111 94 / .55); --m-ink: #2a2825; --m-muted: #8a8378;
-  --m-card: #faf9f6;
+  --mmail-sage: #5f6f5e; --mmail-sage-soft: rgb(95 111 94 / .12);
+  --mmail-sage-line: rgb(95 111 94 / .55); --mmail-ink: #2a2825; --mmail-muted: #8a8378;
+  --mmail-card: #faf9f6;
+  --mmail-label-clay: #b05140;
+  --mmail-label-ochre: #bd7f3c;
+  --mmail-label-dijon: #b0902f;
+  --mmail-label-moss: #5f7a4e;
+  --mmail-label-slate: #46617d;
+  --mmail-label-purple: #653f7f;
+  --mmail-label-taupe: #8a8378;
 }
 #browser.theme-dark {
-  --m-sage: #9aab97; --m-sage-soft: rgb(154 171 151 / .16);
-  --m-sage-line: rgb(154 171 151 / .6); --m-ink: #ebe8e2; --m-muted: #857e72;
-  --m-card: #262421;
+  --mmail-sage: #9aab97; --mmail-sage-soft: rgb(154 171 151 / .16);
+  --mmail-sage-line: rgb(154 171 151 / .6); --mmail-ink: #ebe8e2; --mmail-muted: #857e72;
+  --mmail-card: #262421;
+  --mmail-label-clay: #cf7a63;
+  --mmail-label-ochre: #d29a58;
+  --mmail-label-dijon: #cbab52;
+  --mmail-label-moss: #93a87e;
+  --mmail-label-slate: #7e9bbb;
+  --mmail-label-purple: #a079be;
+  --mmail-label-taupe: #a89e8f;
 }
 
 /* ── Panel: group headers → Spectral naming band ──────────────────────────── */
@@ -20,7 +42,7 @@
   font-weight: 600 !important;
   font-size: 12.5px !important;
   letter-spacing: .015em;
-  color: var(--m-muted) !important;
+  color: var(--mmail-muted) !important;
 }
 
 /* ── Panel: unread count pills — warm, not slate ─────────────────────────── */
@@ -32,31 +54,31 @@
 }
 #browser .mail_panel_node .item-count.counter-unseen,
 #browser .mail-panel-category .item-count.counter-unseen {
-  background: var(--m-sage-soft) !important;
-  color: var(--m-sage) !important;
+  background: var(--mmail-sage-soft) !important;
+  color: var(--mmail-sage) !important;
 }
 #browser .mail_panel_node .item-count.counter-unread,
 #browser .mail-panel-category .item-count.counter-unread {
   background: transparent !important;
-  color: var(--m-muted) !important;
+  color: var(--mmail-muted) !important;
 }
 
 /* ── Panel: selected folder → sage-tinted sheet w/ left rule ─────────────── */
 #browser .mail_panel_node.active,
 #browser .mail_panel_node.selected,
 #browser .mail_panel_node[aria-selected="true"] {
-  background: var(--m-sage-soft) !important;
-  box-shadow: inset 3px 0 0 var(--m-sage) !important;
+  background: var(--mmail-sage-soft) !important;
+  box-shadow: inset 3px 0 0 var(--mmail-sage) !important;
   border-radius: 6px !important;
 }
 
 /* ── List: unread status dot → sage (fill the SVG circle, not its box) ────── */
 #browser .mail_entry.unseen .mail-status-indicator svg path,
 #browser .mail_entry.unread .mail-status-indicator svg path {
-  fill: var(--m-sage) !important;
+  fill: var(--mmail-sage) !important;
 }
 #browser .mail_entry.unseen .mail-contact-name {
-  color: var(--m-ink) !important;
+  color: var(--mmail-ink) !important;
   font-weight: 600;
 }
 
@@ -64,8 +86,8 @@
       message list) via :has() so it never bleeds into bookmarks/history. ──── */
 #browser .tree-row-selected:has(.mail_panel_node),
 #browser .tree-row-selected:has(.mail_entry) {
-  background: var(--m-sage-soft) !important;
-  box-shadow: inset 3px 0 0 var(--m-sage) !important;
+  background: var(--mmail-sage-soft) !important;
+  box-shadow: inset 3px 0 0 var(--mmail-sage) !important;
   border-radius: 6px !important;
 }
 
@@ -76,7 +98,7 @@
 #browser .sortselector-button {
   font-family: "Spectral", ui-serif, Georgia, serif !important;
   font-weight: 600 !important;
-  color: var(--m-muted) !important;
+  color: var(--mmail-muted) !important;
 }
 
 /* ── Flag / Label colors → muted Midori palette ──────────────────────────────
@@ -95,31 +117,25 @@
    Target the painted <path> (the color lives on the icon's .fill-override group;
    setting the path fill with !important wins outright). Label rules cover this
    profile's labels — copy a title into a group if you add new ones. */
-#browser.theme-light [data-id="MAIL_FLAGS_Red"] svg.folder-icon path,
-#browser.theme-light [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Important"] svg.folder-icon path { fill: #b05140 !important; } /* clay */
-#browser.theme-light [data-id="MAIL_FLAGS_Orange"] svg.folder-icon path,
-#browser.theme-light [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Work"] svg.folder-icon path { fill: #bd7f3c !important; } /* ochre */
-#browser.theme-light [data-id="MAIL_FLAGS_Yellow"] svg.folder-icon path { fill: #b0902f !important; } /* dijon */
-#browser.theme-light [data-id="MAIL_FLAGS_Green"] svg.folder-icon path,
-#browser.theme-light [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Personal"] svg.folder-icon path { fill: #5f7a4e !important; } /* moss */
-#browser.theme-light [data-id="MAIL_FLAGS_Blue"] svg.folder-icon path,
-#browser.theme-light [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="To Do"] svg.folder-icon path { fill: #46617d !important; } /* slate */
-#browser.theme-light [data-id="MAIL_FLAGS_Purple"] svg.folder-icon path,
-#browser.theme-light [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Later"] svg.folder-icon path { fill: #653f7f !important; } /* purple */
-#browser.theme-light [data-id="MAIL_FLAGS_Gray"] svg.folder-icon path { fill: #8a8378 !important; } /* taupe */
-
-#browser.theme-dark [data-id="MAIL_FLAGS_Red"] svg.folder-icon path,
-#browser.theme-dark [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Important"] svg.folder-icon path { fill: #cf7a63 !important; }
-#browser.theme-dark [data-id="MAIL_FLAGS_Orange"] svg.folder-icon path,
-#browser.theme-dark [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Work"] svg.folder-icon path { fill: #d29a58 !important; }
-#browser.theme-dark [data-id="MAIL_FLAGS_Yellow"] svg.folder-icon path { fill: #cbab52 !important; }
-#browser.theme-dark [data-id="MAIL_FLAGS_Green"] svg.folder-icon path,
-#browser.theme-dark [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Personal"] svg.folder-icon path { fill: #93a87e !important; }
-#browser.theme-dark [data-id="MAIL_FLAGS_Blue"] svg.folder-icon path,
-#browser.theme-dark [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="To Do"] svg.folder-icon path { fill: #7e9bbb !important; }
-#browser.theme-dark [data-id="MAIL_FLAGS_Purple"] svg.folder-icon path,
-#browser.theme-dark [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Later"] svg.folder-icon path { fill: #a079be !important; }
-#browser.theme-dark [data-id="MAIL_FLAGS_Gray"] svg.folder-icon path { fill: #a89e8f !important; }
+/* The seven retints now come from --mmail-label-* so a second design language
+   can restate the palette without restating these selectors. Collapsed from 14
+   rules to 7 at the same time: there used to be a .theme-light set and a
+   .theme-dark set whose declarations became identical once the colour moved
+   into a variable, since the variable already carries the per-mode value. The
+   theme class is therefore gone from the selector -- nothing competes for this
+   fill except Vivaldi's own saturated rule, which the !important beats. */
+#browser [data-id="MAIL_FLAGS_Red"] svg.folder-icon path,
+#browser [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Important"] svg.folder-icon path { fill: var(--mmail-label-clay) !important; }
+#browser [data-id="MAIL_FLAGS_Orange"] svg.folder-icon path,
+#browser [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Work"] svg.folder-icon path { fill: var(--mmail-label-ochre) !important; }
+#browser [data-id="MAIL_FLAGS_Green"] svg.folder-icon path,
+#browser [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Personal"] svg.folder-icon path { fill: var(--mmail-label-moss) !important; }
+#browser [data-id="MAIL_FLAGS_Blue"] svg.folder-icon path,
+#browser [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="To Do"] svg.folder-icon path { fill: var(--mmail-label-slate) !important; }
+#browser [data-id="MAIL_FLAGS_Purple"] svg.folder-icon path,
+#browser [data-id^="MAIL_LABELS_"] .mail_panel_node[title^="Later"] svg.folder-icon path { fill: var(--mmail-label-purple) !important; }
+#browser [data-id="MAIL_FLAGS_Yellow"] svg.folder-icon path { fill: var(--mmail-label-dijon) !important; }
+#browser [data-id="MAIL_FLAGS_Gray"] svg.folder-icon path { fill: var(--mmail-label-taupe) !important; }
 
 /* ── Reading pane: subject → Spectral display; header labels muted.
       The subject text sits in a <button> inside h1.subject, so #browser button
@@ -130,10 +146,10 @@
 #browser .mail-detail-header .subject span {
   font-family: "Spectral", ui-serif, Georgia, serif !important;
   font-weight: 600 !important;
-  color: var(--m-ink) !important;
+  color: var(--mmail-ink) !important;
 }
 #browser .mail-detail-header .label {
-  color: var(--m-muted) !important;
+  color: var(--mmail-muted) !important;
   font-weight: 500;
 }
 /* soft hairline under the message header */

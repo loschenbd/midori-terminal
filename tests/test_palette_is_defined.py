@@ -37,6 +37,16 @@ SKIP_FILES = {"docs/cleanup-queue.md", "palette.json",
               # and demanded that #ff4000 have a palette role, which it must
               # not: it is a citation, not a colour this repo ships.
               "tools/colorspace.py",
+              # SAME REASON AS colorspace.py, and it is a GENERATOR besides.
+              # It names #ffffff and #000000 as the WCAG reference white and
+              # black that every contrast() call measures against, and as the
+              # two lamps the material layer's alphas are solved for. Neither
+              # is a colour this repo ships. Counting it pushed #ffffff from
+              # three files to four and demanded a palette role for white.
+              # Its own Lemonardo values are not lost by skipping it: they are
+              # declared in themes/lemonardo.json, and `make-lemonardo-palette
+              # .py --check` (in lint) holds the generated CSS to them.
+              "vivaldi/make-lemonardo-palette.py",
               # Quotes one tmux line verbatim in a docstring, to explain a
               # filter bug that hid exactly that line from the guard. Counting
               # a write-up as a usage site is what SKIP_FILES is for, and this
@@ -54,6 +64,20 @@ SKIP_FILES = {"docs/cleanup-queue.md", "palette.json",
               # for values that are derived, not declared.
               "watcher/midori-tokens-light.json",
               "watcher/midori-tokens-dark.json",
+              # Quotes the Lemonardo Paintpot accent and the value a
+              # SCREENSHOT of it reads back as, to record that
+              # Page.captureScreenshot does not return sRGB. Both are
+              # citations: the accent's home is themes/lemonardo.json and
+              # vivaldi/themes.json, and #d6882c is not a colour this repo
+              # ships at all -- it is what a display did to one that it does.
+              # Counting the write-up pushed #dc931e from three files to five
+              # and #ffffff from three to four.
+              "tests/check_vivaldi_tab_material.py",
+              # Same reason, one level up: CLAUDE.md states the screenshot
+              # finding with its two measured hexes so the next person does
+              # not re-derive it, and was promptly listed as a usage site for
+              # the accent.
+              "CLAUDE.md",
               # AND THIS FILE ITSELF, which it did not do until the comment
               # above named those three hexes and promptly became their fourth
               # usage site -- the same failure, with the same three values,
