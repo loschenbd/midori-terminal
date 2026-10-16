@@ -35,13 +35,31 @@ REPO="$REPO" python3 - <<'EOF'
 import json, os
 prefs = json.load(open(os.path.expanduser(
     "~/Library/Application Support/Vivaldi/Default/Preferences")))
-themes = [t for t in prefs["vivaldi"]["themes"]["user"]
-          if t.get("name", "").startswith("Midori")]
 out_path = os.path.join(os.environ["REPO"], "vivaldi", "themes.json")
 existing = json.load(open(out_path))
-existing["themes"] = themes
-json.dump(existing, open(out_path, "w"), indent=2)
-print(f"   exported: {[t['name'] for t in themes]}")
+
+# Match by ID against what the repo already ships, NOT by name prefix. The
+# filter here was startswith("Midori") for as long as Midori was the only
+# design language; the day Lemonardo Paintpot/Inkwell were added, that filter
+# would have dropped both from the repo on the next sync, with the export line
+# printing a confident "exported: ['Midori Paper', 'Midori Night']".
+repo_by_id = {t["id"]: t for t in existing["themes"]}
+live = [t for t in prefs["vivaldi"]["themes"]["user"] if t.get("id") in repo_by_id]
+if not live:
+    raise SystemExit(
+        "   no repo theme is present in the live Vivaldi profile -- refusing "
+        "to write an empty theme list. Run vivaldi/install-vivaldi.sh first.")
+
+# Keep repo order, and keep any repo theme this profile does not carry: a
+# profile with only one language installed must not delete the other.
+live_by_id = {t["id"]: t for t in live}
+existing["themes"] = [live_by_id.get(t["id"], t) for t in existing["themes"]]
+kept = [t["name"] for t in existing["themes"] if t["id"] not in live_by_id]
+with open(out_path, "w") as f:
+    json.dump(existing, f, indent=2)
+    f.write("\n")
+print(f"   exported {len(live)}: {[t['name'] for t in live]}"
+      + (f"; kept {len(kept)} not in this profile: {kept}" if kept else ""))
 EOF
 CSS_LIVE="$HOME/Library/Application Support/Vivaldi/CSSMods"
 if [ -d "$CSS_LIVE" ] && \

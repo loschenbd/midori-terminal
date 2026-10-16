@@ -119,6 +119,28 @@ else
   echo "  skip (node not found)"
 fi
 
+echo "== vivaldi ui mods resolve in both languages =="
+# The mods reference ~47 custom properties and two palettes declare them. An
+# undeclared custom property is not a CSS error -- the declaration is simply
+# dropped and the surface renders in Vivaldi's own colour -- so a typo in one
+# name is invisible until someone opens that pane in that mode. Sabotage-proved
+# with 9 cases (scratchpad sab_viv.py): typo'd name, a variable missing from one
+# mode only, an orphaned theme id, the specificity tie, a leaked Midori colour,
+# a dangling scheduleOS id, an emptied mods dir, a declaration left inside a
+# comment, and a reference no palette declares.
+if python3 tests/test_vivaldi_css_vars.py; then :; else FAIL=1; fi
+
+echo "== lemonardo vivaldi palette matches its generator =="
+# lemonardo-palette.css is GENERATED, and every number in it is gated on
+# derivation -- stack separation, label contrast, wash loudness against
+# Midori's, and the active tab's material layer. Those gates only bind if the
+# shipped file is the generator's output, so this re-runs the derivation and
+# refuses a file that has drifted from it. Without this a hand edit sails
+# through: tests/check_vivaldi_tab_material.py reads its alphas OUT of this
+# file, so it would faithfully confirm that whatever is written there is what
+# reaches the screen.
+if python3 vivaldi/make-lemonardo-palette.py --check; then :; else FAIL=1; fi
+
 echo "== palette has one definition =="
 if python3 tests/test_palette_is_defined.py; then :; else FAIL=1; fi
 
@@ -220,6 +242,31 @@ if python3 tests/test_fonts_are_vendored.py; then :; else FAIL=1; fi
 
 echo "== lemonardo twins carry no midori-only colour =="
 if python3 tests/test_lemonardo_twins.py; then :; else FAIL=1; fi
+
+echo "== midori-theme switches every surface =="
+# Runs midori-theme for real against a temp HOME, then reads the files back.
+#
+# ~72s MEASURED, and nearly all of it is process spawn, not work: the run uses
+# 0.6s of CPU across 72s of wall clock. midori-theme forks on the order of 60
+# commands per switch (cmp, cp, ln, id, dscl, awk, PlistBuddy, command -v) and
+# this machine costs ~80ms a fork; `sh -x` with a timestamped PS4 shows no
+# single gap over 0.2s, which is what rules out one slow call. So this roughly
+# doubles lint. It earns it by being the only check of what gets WRITTEN —
+# a dry run proves the decisions and nothing about the files, and the files
+# are the job.
+if python3 tests/test_midori_theme.py; then :; else FAIL=1; fi
+
+echo "== install-herdr.sh reads the live config correctly =="
+# The one installer whose destination the APPLICATION also writes: herdr
+# prepends `onboarding = false` when its onboarding overlay is dismissed, and
+# no language file has that line, so the `cmp -s` this script used to decide
+# "already up to date" could never match. Every run took the conflict branch
+# and said "matches neither language" while the config was in fact exactly
+# ours. Runs against a sandboxed HOME with a `herdr` recorder on PATH, then
+# proves the real ~/.config/herdr is byte-identical -- $HERDR_SOCKET_PATH is
+# an absolute path to the live server's socket, so HOME alone is not a sandbox
+# here either.
+if python3 tests/test_herdr_install.py; then :; else FAIL=1; fi
 
 echo "== claude code token maps =="
 if python3 tests/test_claude_themes.py; then :; else FAIL=1; fi
