@@ -192,3 +192,33 @@ desktop-notifications = true
 # progress bar color is not configurable as of 1.3.1 — this is the only knob,
 # and it's all-or-nothing. Remove this line to bring the bar back.
 progress-style = false
+
+# ── Your own settings go in `user-overrides`, not in this file ───────────────
+# midori-theme OVERWRITES this file on every switch, so an edit here is lost
+# the next time the design language changes. The include below is the place
+# that survives: create
+#   ~/Library/Application Support/com.mitchellh.ghostty/user-overrides
+# and put anything of your own in it. The `?` means "no error if absent", which
+# is measured, not assumed: without it `ghostty +validate-config` exits 1 with
+# "error opening config-file ...: error.FileNotFound", and with it exits 0.
+#
+# ONE TRAP, AND IT IS THE ONLY OPTION KIND WHERE IT BITES. `font-family` is a
+# LIST, not a scalar -- repeated entries build a fallback chain and the FIRST
+# one is the primary face. An include is loaded after its parent, so a bare
+# `font-family` in user-overrides lands SECOND and does nothing visible.
+# Measured on Ghostty 1.3.1 with `+show-face --string=A
+# --config-default-files=false`:
+#
+#   parent "M PLUS 1 Code", include "M PLUS Code Latin 60"  -> M PLUS 1 Code
+#   parent "M PLUS 1 Code", include "" then the same family -> M PLUS Code Latin 60
+#
+# So to change the font from user-overrides, clear the list first:
+#
+#   font-family = ""
+#   font-family = "Your Face"
+#
+# (`+show-config` cannot be used to check any of this: in 1.3.1 it exits 1 with
+# no output when given ANY flag, including --config-file. `+validate-config`
+# takes --config-file and works, but `--config-default-files=false` breaks that
+# one too. +show-face accepts both, which is why the measurement above uses it.)
+config-file = ?user-overrides

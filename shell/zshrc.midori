@@ -48,17 +48,29 @@ fi
 # Manuscript-style prompt: underlined path, middle-dot separators, plain
 # foreground colors only (no filled powerline blocks).
 #
-# THE ONE DESIGN-LANGUAGE SWITCH IN THIS FILE. install.sh writes both
-# ~/.config/midori.omp.json and ~/.config/lemonardo.omp.json; set
-# MIDORI_PROMPT=lemonardo in ~/.zshrc BEFORE the line that sources this
-# fragment to use the other one. It is a variable rather than an edit here
-# because install.sh overwrites this file, so an edit would not survive the
-# next run — which is exactly how a "switched" setting silently reverts.
+# THE ONE DESIGN-LANGUAGE SWITCH IN THIS FILE, and it now follows the rest of
+# the system instead of being set by hand. ~/.config/midori/language holds the
+# chosen language; `midori-theme <lang>` writes it along with every other
+# surface. This file reads it, so the prompt switches with everything else and
+# there is nothing per-shell to remember.
+#
+# The precedence is deliberate: an explicit MIDORI_PROMPT in the environment
+# still wins, so a single shell can run the other prompt without moving the
+# whole machine — which is the one thing the language file cannot express.
+# Setting MIDORI_PROMPT in ~/.zshrc still works too, and still has to come
+# BEFORE the line that sources this fragment.
+#
+# install.sh overwrites this file, so an edit HERE would not survive the next
+# run. That is why neither the language nor the override lives in this file:
+# both are read, never stored.
 #
 # The two prompts are not interchangeable in one respect: midori.omp.json pins
 # 24-bit hex and lemonardo.omp.json names ANSI slots, for reasons recorded in
 # t3/README.md and in lemonardo.omp.json's own header. Inside t3 specifically,
 # slot names are unreadable on a light ground.
+if [ -z "$MIDORI_PROMPT" ] && [ -r "$HOME/.config/midori/language" ]; then
+  MIDORI_PROMPT=$(cat "$HOME/.config/midori/language")
+fi
 : "${MIDORI_PROMPT:=midori}"
 if command -v oh-my-posh >/dev/null 2>&1; then
   _midori_omp="$HOME/.config/${MIDORI_PROMPT}.omp.json"

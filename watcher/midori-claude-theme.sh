@@ -44,10 +44,19 @@
 # maintained and referenced by nothing, which is harmless and is why this was
 # left alone rather than made conditional.
 
-# MIDORI_LANG selects the design language, the same mechanism and the same
-# default as MIDORI_PROMPT in shell/zshrc.midori: the switch has to survive
-# install.sh, so it is an environment variable with a Midori default rather
-# than an edit to this file. launchd passes it through the plist template.
+# MIDORI_LANG selects the design language. launchd passes it through the
+# plist, which midori-theme edits in place and then restarts the job.
+#
+# THE FILE IS THE FALLBACK, NOT `midori`, and the order matters. launchd
+# caches a loaded job's definition, so a plist edited without a restart leaves
+# this process running the OLD value; and a plist that somehow lost the key
+# would pin this watcher to Midori while every other surface had moved. Either
+# way the result is one surface in the wrong language with no error anywhere.
+# Reading the language file second means the worst case is a watcher that is
+# merely a restart behind, and never one that is confidently wrong.
+if [ -z "$MIDORI_LANG" ] && [ -r "$HOME/.config/midori/language" ]; then
+  MIDORI_LANG=$(cat "$HOME/.config/midori/language")
+fi
 : "${MIDORI_LANG:=midori}"
 THEME_DIR="$HOME/.local/share/midori/claude-themes"
 THEME_FILE="$HOME/.claude/themes/$MIDORI_LANG.json"

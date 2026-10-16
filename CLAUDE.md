@@ -61,6 +61,23 @@ proves the real vaults were untouched by checksum. Note that `HOME` redirection
 alone is NOT sufficient: `extra-vaults.txt` holds absolute paths that ignore
 `HOME` entirely, which is why the harness sandboxes the whole repo.
 
+**That is a rule, not an anecdote about one file.** It has now caught this repo
+twice, and the second time it cost the live system. Writing
+`tests/test_midori_theme.py` meant running `tools/midori-theme` against a temp
+`HOME` — but a launchd job is addressed as `gui/<uid>/<label>`, which has no
+home in it, so the sandboxed run booted out the real appearance watcher and
+bootstrapped the temp copy in its place. The temp directory was then removed
+and the job was left crash-looping on a path that no longer existed, while
+`launchctl list` still showed it present.
+
+So before sandboxing by `HOME`, ask what the code **names absolutely**: a
+launchd label, a D-Bus or XPC service name, a port, a well-known `/tmp` path,
+an absolute path in a config file. Each of those escapes the sandbox. Where the
+escape is unavoidable, make the code itself refuse — `midori-theme` resolves
+the login home from the directory service and will not speak to launchd when
+`$HOME` is not it — and have the test replace the escaping command with a
+recorder on `PATH`, so "was it called" is answerable without calling it.
+
 Never delete a snippet the installer did not write — `zen-mode.css` is renamed
 aside to `.superseded`, never removed.
 
@@ -71,5 +88,32 @@ aside to `.superseded`, never removed.
 - Rendered checks (`tests/check_rendered_grid.py`,
   `tests/check_rendered_headings.py`) need a running Obsidian with
   `--remote-debugging-port=9222` and are deliberately not in lint.
+- Vivaldi's UI is CSS and can only be checked by rendering it, which used to
+  mean relaunching the browser the operator is using. `tests/vivaldi-sandbox.sh`
+  starts a second Vivaldi on a debugging port with its own throwaway profile
+  wearing this repo's themes, so `tests/check_vivaldi_tab_material.py` (and
+  anything after it) measures real pixels without touching live data.
+  **`~/Library/Application Support/Vivaldi/CSSMods` is a symlink to
+  `vivaldi/css-mods` here**, even though `install-vivaldi.sh` copies — so a
+  write to a mod file in the repo is a write to what the live browser loads.
+  Anything that mutates one works on a copy and points the sandbox at it with
+  `MODS=`; see `tests/sabotage-vivaldi-tab-material.sh`.
+- **`Page.captureScreenshot` does not return sRGB.** It comes back in the
+  display's colour space — a div painted `#dc931e` reads `#d6882c`, ~4.9
+  dE2000 — and alpha layers composite *after* that transform, so a
+  pre-blended hex is wrong too. Compare a screenshot against a patch painted
+  and captured the same way, never against a nominal value. Same trap as the
+  t3 night grounds.
+- **An installer's destination may also be written by the application.**
+  `~/.config/herdr/config.toml` is the one here: herdr prepends
+  `onboarding = false` to it when its onboarding overlay is dismissed, and no
+  language file contains that line. So `cmp -s` against a language file could
+  never match — `midori-theme` printed `herdr  ?` forever and
+  `install-herdr.sh` announced "matches neither language" on a config that was
+  exactly ours — and the `cp -f` that switched it deleted a line this repo did
+  not write. Both now go through `herdr_is` / `herdr_compose`, which compare
+  and compose ignoring the top-level keys herdr owns; the functions carry the
+  measurements. Before `cmp`-ing or `cp`-ing over any live config, ask whether
+  the app writes it too.
 - Plugins under `obsidian/plugins/` must be a single self-contained `main.js`
   plus `manifest.json` — the installer copies nothing else.
