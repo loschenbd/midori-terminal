@@ -7,11 +7,14 @@
 # (2026-10-11), correcting an earlier note here that claimed otherwise.
 #
 # Theme pair carries the palette per mode and macOS appearance flips it.
-# It carries NO background image, and that is deliberate rather than an
-# omission: midori-paper / midori-night each set one from ghostty/backgrounds,
-# and that directory is Midori artwork. Putting one design language's art
-# behind the other's palette would make Lemonardo look like a Midori variant,
-# which is the one thing the separate ANSI derivation exists to prevent.
+# It carries NO background image, and neither do the Midori themes any more:
+# since 2026-10-17 Midori's glow is drawn by its shader
+# (ghostty/shaders/rounded-cursor.glsl), and ghostty/backgrounds is gone. The
+# separation still holds, one level down: Lemonardo's shader draws no lattice
+# and no glow, and tests/test_lemonardo_shader.py asserts it declares no
+# ground, so Midori's decoration cannot switch itself on under Lemonardo's
+# palette -- which is the one thing the separate ANSI derivation exists to
+# prevent.
 theme = light:lemonardo-paintpot,dark:lemonardo-inkwell
 
 font-size = 14

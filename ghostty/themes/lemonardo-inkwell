@@ -116,6 +116,7 @@ unfocused-split-fill = #34211d
 # leaving ghostty's defaults, which belong to neither design language.
 palette-generate = true
 
-# NO background-image. ghostty/backgrounds holds Midori artwork only;
-# pointing Lemonardo at it would put Midori's ground under Lemonardo's
-# ink, which is the one thing a second design language must not do.
+# NO background-image. Midori's glow is drawn by Midori's shader, not by
+# an image, and Lemonardo's shader draws no glow and no lattice; putting
+# Midori's ground under Lemonardo's ink is the one thing a second design
+# language must not do.

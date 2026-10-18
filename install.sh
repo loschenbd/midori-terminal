@@ -93,9 +93,8 @@ fi
 echo "   $FONTS font file(s) installed"
 
 # --- 3. Ghostty -------------------------------------------------------------
-echo "-- ghostty themes, backgrounds, shader"
-mkdir -p "$HOME/.config/ghostty/themes" "$HOME/.config/ghostty/backgrounds" \
-         "$HOME/.config/ghostty/shaders"
+echo "-- ghostty themes, shaders"
+mkdir -p "$HOME/.config/ghostty/themes" "$HOME/.config/ghostty/shaders"
 # Every theme in ghostty/themes/, not a hand-maintained list. That list read
 # "midori-paper midori-night" after the Lemonardo pair landed, so the two
 # Lemonardo themes shipped in the repo and were never installed: `theme =
@@ -117,7 +116,6 @@ if [ "$GH_THEMES" -eq 0 ]; then
   exit 1
 fi
 echo "   $GH_THEMES ghostty theme(s) installed"
-cp -f "$REPO/ghostty/backgrounds/"*.png "$HOME/.config/ghostty/backgrounds/"
 # Every shader in ghostty/shaders/, for the same reason the themes above are
 # globbed: this line named rounded-cursor.glsl alone, so when the Lemonardo
 # shader landed, config.lemonardo pointed at a path the installer never wrote.
@@ -136,14 +134,12 @@ if [ "$GH_SHADERS" -eq 0 ]; then
 fi
 echo "   $GH_SHADERS ghostty shader(s) installed"
 
-# Default symlinks -> @2x (retina) — but only when missing: the watcher owns
-# them afterwards and may have flipped to @1x for the current display.
-for m in paper night; do
-  for k in glow dots; do
-    [ -e "$HOME/.config/ghostty/backgrounds/midori-$m-$k.png" ] || \
-      ln -sf "midori-$m-$k@2x.png" "$HOME/.config/ghostty/backgrounds/midori-$m-$k.png"
-  done
-done
+# No background images any more. Until 2026-10-17 this step copied eight baked
+# PNGs into ~/.config/ghostty/backgrounds and seeded @2x symlinks for the
+# watcher to flip per display; the glow is now drawn by the shader above, so
+# the themes name no image and there is nothing to copy. A backgrounds/
+# directory left from an earlier install is harmless and is not removed here:
+# this installer deletes nothing it did not write in this run.
 
 mkdir -p "$GHOSTTY_CFG_DIR"
 
@@ -455,5 +451,4 @@ Next steps:
   2. Restart Claude Code to pick up the Midori binary patch (inline code, tips).
   3. Vivaldi: applied to the Default profile above (if it was closed). To pick a
      specific profile, quit Vivaldi and run  ./vivaldi/install-vivaldi.sh
-  4. New display? See README "Calibrating the dot phase" + tools/bake-backgrounds.py
 EOF

@@ -37,12 +37,15 @@
 # has no ancestor anywhere in this repo. Read that tool's TINT comment before
 # assuming the generator could simply replace these files.
 #
-# WHAT IS STILL MIDORI-ONLY HERE: set_scale, below. It flips the @1x/@2x
-# background-image symlinks, and ghostty/backgrounds holds Midori artwork only
-# -- the Lemonardo themes declare no background-image at all (they say so in
-# their own comments). Under MIDORI_LANG=lemonardo those symlinks are
-# maintained and referenced by nothing, which is harmless and is why this was
-# left alone rather than made conditional.
+# NOTHING HERE IS MIDORI-ONLY ANY MORE. Until 2026-10-17 this file also owned
+# set_scale/check_scale, which polled system_profiler every ~30s and flipped
+# the @1x/@2x symlinks under ~/.config/ghostty/backgrounds when the main
+# display changed class, because the Midori glow was a PNG baked per display.
+# The glow is drawn by the Ghostty shader now, from the surface size, so there
+# is no asset to pick and the poll is gone with it. It was also only half a
+# fix while it existed: Ghostty re-reads images on config reload alone, so the
+# flipped link did nothing until the user pressed Cmd+Shift+, -- which is how
+# the ultrawide bake was still on the retina panel 25 minutes after the flip.
 
 # MIDORI_LANG selects the design language. launchd passes it through the
 # plist, which midori-theme edits in place and then restarts the job.
@@ -60,7 +63,6 @@ fi
 : "${MIDORI_LANG:=midori}"
 THEME_DIR="$HOME/.local/share/midori/claude-themes"
 THEME_FILE="$HOME/.claude/themes/$MIDORI_LANG.json"
-BG_DIR="$HOME/.config/ghostty/backgrounds"
 
 # Inactive tmux pane border, per language and appearance. These are the only
 # colours still written by hand here, and they duplicate the if-shell lines in
@@ -81,33 +83,8 @@ if [ -z "$TMUX_BIN" ]; then
 fi
 [ -z "$TMUX_BIN" ] && TMUX_BIN="tmux"
 LAST=""
-LAST_SCALE=""
 TICK=0
 
-# Ghostty draws background images in PHYSICAL pixels (fit=none), so the dot
-# grid / glow need @2x assets on the retina panel and @1x on the LG ultrawides.
-# Theme files reference stable symlink names; we flip the links when the main
-# display class changes. Ghostty only re-reads images on config reload —
-# user still hits Cmd+Shift+, after docking/undocking.
-set_scale() {
-  for m in paper night; do
-    for k in glow dots; do
-      ln -sf "midori-$m-$k@$1.png" "$BG_DIR/midori-$m-$k.png"
-    done
-  done
-}
-
-check_scale() {
-  if system_profiler SPDisplaysDataType 2>/dev/null | grep -B8 "Main Display: Yes" | grep -qi retina; then
-    SCALE="2x"
-  else
-    SCALE="1x"
-  fi
-  if [ "$SCALE" != "$LAST_SCALE" ]; then
-    set_scale "$SCALE"
-    LAST_SCALE="$SCALE"
-  fi
-}
 
 # Install the map for one appearance. A theme file Claude Code cannot parse is
 # worse than a stale one -- the loader falls back to a stock preset and the
@@ -173,9 +150,9 @@ while :; do
     # other appearance's colours until the next flip.
     LAST="$MODE"
   fi
-  # display-scale check every 10th tick (~30s); system_profiler is too slow for 3s
+  # settings heal every 10th tick (~30s); it reads and may rewrite a JSON
+  # file, which is not worth doing every 3s
   if [ $((TICK % 10)) -eq 0 ]; then
-    check_scale
     heal_theme_setting
   fi
   TICK=$((TICK + 1))

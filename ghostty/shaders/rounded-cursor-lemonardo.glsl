@@ -14,8 +14,9 @@
 //      via `cursor-opacity = 0` in the config), baseline-locked.
 //   2. Draw the 24pt dot grid anchored to the SAME cell geometry the cursor
 //      reports, so the lattice tracks the text rows by construction — a
-//      mis-rounded adjust-cell-height can no longer drift the grid. The glow
-//      backgrounds are baked WITHOUT dots (bake-backgrounds.py --without-dots).
+//      mis-rounded adjust-cell-height can no longer drift the grid. (Since
+//      2026-10-17 Midori's shader also draws its page glow; Lemonardo's draws
+//      neither — see the header of rounded-cursor.glsl for the record.)
 //
 // Uniform facts (learned the hard way):
 //   iCurrentCursor.xy = BOTTOM-left corner of the cursor cell, .zw = w/h.
