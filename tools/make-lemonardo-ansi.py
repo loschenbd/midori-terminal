@@ -666,9 +666,10 @@ def emit(built):
     if m == "light":
         w("palette-harmonious = true")
     w("")
-    w("# NO background-image. ghostty/backgrounds holds Midori artwork only;")
-    w("# pointing Lemonardo at it would put Midori's ground under Lemonardo's")
-    w("# ink, which is the one thing a second design language must not do.")
+    w("# NO background-image. Midori's glow is drawn by Midori's shader, not by")
+    w("# an image, and Lemonardo's shader draws no glow and no lattice; putting")
+    w("# Midori's ground under Lemonardo's ink is the one thing a second design")
+    w("# language must not do.")
     return "\n".join(out) + "\n"
 
 

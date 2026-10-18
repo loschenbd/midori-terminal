@@ -560,7 +560,7 @@ finding; the 5 survivors are almost an afterthought.
 |---|---|---|
 | glob copy | `install.sh:30` `cp "$REPO/fonts/"*.ttf` | 7 fonts |
 | glob copy | `vivaldi/install-vivaldi.sh:58` `cp "$REPO_DIR/css-mods/"*.css` | 8 css-mods |
-| **constructed name** | `install.sh:46-47` builds `midori-$m-$k@2x.png` from two loop variables | 8 backgrounds |
+| **constructed name** | `install.sh:46-47` builds `midori-$m-$k@2x.png` from two loop variables | 8 backgrounds (deleted on purpose 2026-10-17 — the glow moved into the shader; the point about the detector stands) |
 | **variable-interpolated path** | `install.sh:102` `render "$REPO/watcher/$LABEL.plist.template"` | 1 plist template |
 | **convention, never named** | `.vscodeignore` is read by `vsce` at package time; nothing in the repo mentions it, and nothing should | 1 |
 

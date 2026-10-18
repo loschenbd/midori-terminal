@@ -19,7 +19,6 @@ for t in midori-paper midori-night; do
   unrender "$HOME/.config/ghostty/themes/$t" "$REPO/ghostty/themes/$t"
 done
 unrender "$GHOSTTY_CFG" "$REPO/ghostty/config"
-cp -f "$HOME/.config/ghostty/backgrounds/"midori-*@*.png "$REPO/ghostty/backgrounds/"
 cp -f "$HOME/.config/ghostty/shaders/rounded-cursor.glsl" "$REPO/ghostty/shaders/"
 
 echo "-- watcher"

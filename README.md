@@ -140,10 +140,7 @@ and get a helper daemon (`watcher/midori-claude-theme.sh`, launchd):
 - **tmux pane borders** need per-mode hexes — no single ANSI slot reads as a
   subtle hairline in both modes.
 
-The watcher also checks the main display's scale (~30 s) and flips the
-background symlinks between `@1x`/`@2x` assets (see below).
-
-**Layer 2 — the Midori theme pack.** Ghostty themes with baked backgrounds,
+**Layer 2 — the Midori theme pack.** Ghostty themes plus the shader that draws the glow and dot grid,
 the Claude Code token map, tmux border hexes, and the Vivaldi themes. Swap
 this layer to re-skin everything without touching the infrastructure.
 
@@ -275,7 +272,6 @@ watcher and bootstrapped a temp copy in its place.
 | `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret`, `midori-confetti` and `midori-timer` companion plugins, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
 | `moshi/` | Midori Paper/Night for [Moshi](https://getmoshi.app) (the phone terminal for agents) — **generated** from the Ghostty themes by `build-moshi-themes.py`, which also publishes them to iCloud for the phone |
 | `fonts/` | Midori: M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI). Lemonardo: Sometype Mono (terminal, roman **and italic** — both measured `isFixedPitch=1` at a single 580/1000 = 0.58em advance across all 94 printable ASCII glyphs, so the italic is metric-compatible and safe in a terminal grid), Besley (headings, variable wght 400–900), Instrument Sans (body, variable wdth 75–100 + wght 400–700), Special Elite (labels — **not** monospaced, 86 distinct advances, so never put it in a mono slot) and Reenie Beanie (one handwritten aside). All SIL OFL 1.1 except Special Elite, which is Apache 2.0 — its licence file is named `LICENSE-` rather than `OFL-` for that reason. `Besley-SemiBold.ttf` is a static wght=600 instance generated from the variable file, and it exists for exactly one reason: macOS registers **one** full name per variable font (`Besley Regular Regular`), so `window-title-font-family = Besley SemiBold` resolved to Helvetica until a static instance carried that name. **`install.sh` copies every `.ttf` here into `~/Library/Fonts`** and now prints the count; `tests/test_fonts_are_vendored.py` fails if a theme names a family this directory does not carry. |
-| `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
 | `tests/` | `lint.sh` (run before every commit), the prose-typography guards, and `dryrun-installers.sh` — never run an installer to test one, it writes into nine live vaults |
 | `docs/cleanup-queue.md` | Cleanup work list plus FINDINGS: reports from the overnight loop, several of which falsify their own item's premise |
 | `docs/cleanup-loop.md` | How to launch, resume and review the overnight cleanup loop, and what its gate cannot protect against |
@@ -310,18 +306,34 @@ the one to leave alone; its 24px box is tight.
 
 ## How the dot grid stays aligned (Ghostty)
 
-**The dots are drawn by the cursor shader, not the background image.**
-`ghostty/shaders/rounded-cursor.glsl` anchors the lattice to the live cell
-geometry Ghostty reports via `iCurrentCursor`: pitch = cell height, rows = the
-text baseline. Dots therefore track the text rows *by construction* on any
-display, at any cell height — there is no phase to calibrate. The baked
-`*-glow` images carry only the low-frequency washes
-(`tools/bake-backgrounds.py --without-dots`); the `*-dots` tiles are retired.
+**The dots and the glow are both drawn by the cursor shader. There is no
+background image.** `ghostty/shaders/rounded-cursor.glsl` anchors the lattice
+to the live cell geometry Ghostty reports via `iCurrentCursor`: pitch = cell
+height, rows = the text baseline. Dots therefore track the text rows *by
+construction* on any display, at any cell height — there is no phase to
+calibrate. The three `--page-glow` washes are evaluated per pixel as fractions
+of the surface size (`iResolution`), so they fit any display, density, window
+or split the same way they fit any browser viewport on the site.
 
-Glow images still render at **physical pixels** (`fit = none`), so the watcher
-flips `@2x`/`@1x` symlinks when the main display class changes — Ghostty only
-re-reads images on config reload, so hit **Cmd+Shift+,** after
-docking/undocking.
+That was not always so, and the record matters because the old design looked
+finished. Until 2026-10-17 the glow was a PNG baked per display by
+`tools/bake-backgrounds.py` (@1x 2560×1080 for the LG ultrawides, @2x
+3456×2234 for the 16" retina panel), drawn by Ghostty at physical pixels and
+anchored top-centre; the dots had been baked the same way until July, when the
+vertical phase refused to scale between displays (11.5 px @2x did not land as
+5.75 @1x; 10.75 measured) and they moved into the shader. Two assets per mode
+meant a watcher polling `system_profiler` every ~30 s to flip `@1x`/`@2x`
+symlinks, plus a manual **Cmd+Shift+,** because Ghostty re-reads images only
+on config reload. When either lagged, the *other* display's bake showed: on
+2026-10-17 at 22:39 the ultrawide bake sat on the retina panel 448 px in from
+each edge, its right-hand wash centred at x = 3008 instead of the screen edge,
+and every sampled pixel matched that bake to within one level while the
+symlink had pointed at the right file for 25 minutes. The washes are
+low-frequency, so a per-pixel function loses nothing a bitmap had, and the
+poll, the symlinks, the reload step and the eight PNGs are gone.
+
+Verified the way the bug was found: screenshot, sample background pixels,
+compare to the retina bake. See the commit that made the change for the table.
 
 Residual gotchas:
 
