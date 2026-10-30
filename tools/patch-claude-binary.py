@@ -19,6 +19,23 @@ The call sites pass the base-mode NAME as `r`, so `_H` hands back the stock
 preset and a custom theme's value never applies: stock periwinkle
 rgb(87,105,247) whatever the theme file says.
 
+The inline-code anchor has two shapes. Through 2.1.301 the branch returns the
+call directly:
+
+    case"codespan":return Kn("permission",t)(e.text);
+
+From 2.1.304 it binds the call first, so it can wrap a URL in a hyperlink:
+
+    case"codespan":{let u=qn("permission",t)(e.text),f=d||o?.type==="link"||...
+
+The anchor regex takes either. Only the anchor moved: the helper (`qn`) still
+passes `ansi:` values through, and the binary still has 25 call sites (2
+permission, 23 suggestion), the count 2.1.272 had. Found 2026-10-20, when
+2.1.304 came up stock periwinkle because the 2.1.301 anchor matched nothing and
+the apply script recorded the build as unpatchable. 2.1.302 and 2.1.303 were
+installed but not launched through the wrapper, so it's not known which of the
+three first changed shape.
+
 What this does (measured on Claude Code 2.1.272, Sept 2026):
 
   1. Rewrites every `<helper>("permission",` and `<helper>("suggestion",` call to
@@ -91,7 +108,10 @@ BYTECODE_LENGTH_AT = 28
 # so one trailing space keeps every offset in the file where it was.
 ANSI_BLUE = b'"ansi:blue" '
 
-CODESPAN = re.compile(rb'case"codespan":return ([A-Za-z_$][\w$]*)\((?:"permission"|"ansi:blue" ),')
+# `return H(` through 2.1.301; `{let x=H(` from 2.1.304 (see the docstring).
+CODESPAN_AT = b'case"codespan":'
+CODESPAN = re.compile(
+    rb'case"codespan":(?:return |\{let [A-Za-z_$][\w$]*=)([A-Za-z_$][\w$]*)\((?:"permission"|"ansi:blue" ),')
 
 
 class Unpatchable(Exception):
@@ -135,12 +155,14 @@ IDENT_CHAR = re.compile(rb"[\w$]")
 
 
 def _find_codespan(data):
-    i = data.find(b'case"codespan":return ')
+    # marked's own renderer also has a `case"codespan":` ({r+=n.codespan(y)...});
+    # the regex skips it and keeps looking.
+    i = data.find(CODESPAN_AT)
     while i >= 0:
         anchor = CODESPAN.match(data, i)
         if anchor:
             return anchor
-        i = data.find(b'case"codespan":return ', i + 1)
+        i = data.find(CODESPAN_AT, i + 1)
     return None
 
 
