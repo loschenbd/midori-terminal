@@ -160,17 +160,37 @@ def test_refuses_an_unrecognised_module_table():
 def test_palette_4_is_the_colour_the_tokens_were_meant_to_be():
     # The patch trades the theme's suggestion/permission values for ANSI blue. That
     # only keeps Midori's colours while Ghostty palette 4 equals those values.
-    watcher = open(os.path.join(REPO, "watcher", "midori-claude-theme.sh"), encoding="utf-8").read()
-    for token in ("suggestion", "permission"):
-        values = [v.lower() for v in re.findall(rf'"{token}": "(#[0-9a-fA-F]{{6}})"', watcher)]
-        assert len(values) == 2, f"expected a light and a dark {token} in the watcher, found {values}"
-        for theme, value in zip(("midori-paper", "midori-night"), values):
+    #
+    # THIS USED TO READ watcher/midori-claude-theme.sh, which held the token map
+    # as two heredocs. The map moved to watcher/themes/*.json and this test
+    # found zero values and said so -- which is the only reason the move did not
+    # silently decouple the patch from the palette. It now reads the files, and
+    # it reads BOTH languages: the binary patch is global, so a Lemonardo map
+    # whose suggestion drifts from lemonardo palette 4 breaks the patch exactly
+    # as a Midori one would. (tests/test_claude_themes.py checks the same
+    # coupling from the other direction, per map rather than per language; this
+    # one is the patcher's own, and the patcher must not depend on that file.)
+    import json
+    langs = {"midori": ("midori-paper", "midori-night"),
+             "lemonardo": ("lemonardo-paintpot", "lemonardo-inkwell")}
+    seen = 0
+    for lang, themes in sorted(langs.items()):
+        for mode, theme in zip(("light", "dark"), themes):
+            path = os.path.join(REPO, "watcher", "themes", f"{lang}-{mode}.json")
+            assert os.path.exists(path), f"{path} is missing"
+            ov = json.load(open(path, encoding="utf-8"))["overrides"]
             text = open(os.path.join(REPO, "ghostty", "themes", theme), encoding="utf-8").read()
             palette = re.search(r"^palette = 4=(#[0-9a-fA-F]{6})\s*$", text, re.M)
             assert palette, f"{theme}: palette 4 not found"
-            assert palette.group(1).lower() == value, (
-                f"{theme} palette 4 is {palette.group(1)} but the watcher's {token} is {value}"
-            )
+            for token in ("suggestion", "permission"):
+                value = ov.get(token, "").lower()
+                assert value, f"{lang}-{mode} has no {token}"
+                assert palette.group(1).lower() == value, (
+                    f"{theme} palette 4 is {palette.group(1)} but "
+                    f"{lang}-{mode}'s {token} is {value}"
+                )
+                seen += 1
+    assert seen == 8, f"expected 8 token/theme pairs, checked {seen}"
 
 
 # ── runner ───────────────────────────────────────────────────────────────────

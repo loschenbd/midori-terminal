@@ -11,6 +11,15 @@ window-title-font-family = Spectral Bold
 # Exact family name required: "M PLUS 1 Code" (NOT "M PLUS 1 mono"/"Mono" —
 # no such family is installed; Ghostty silently falls back to JetBrains Mono,
 # which breaks the 48px cell = dot-grid lock below).
+#
+# THE MEASUREMENT THIS WARNING WAS MISSING, and it is not hypothetical: on the
+# machine this was written for, the live copy of this file read
+# "M PLUS 1 Code Latin 60" and rendered JetBrains Mono for two months. The
+# installed families are "M PLUS 1 Code", "M PLUS Code Latin 50" and
+# "M PLUS Code Latin 60" — there is no "1" in the Code Latin names.
+# `ghostty +validate-config` exits 0 on a family that does not exist. The check
+# that catches it, and the --config-default-files=false flag without which the
+# check lies, are recorded in ghostty/config.lemonardo and in README.md.
 font-family = "M PLUS 1 Code"
 
 window-padding-x = 12
@@ -20,7 +29,15 @@ window-padding-y = 12
 # cell height BEFORE applying this percentage (measured 2026-07-14: both
 # 38.9% and 38.75% produced a 49px cell — ceil(35 * 1.38x) — even though
 # 34.585 * 1.3875 = 47.99). 37% -> 35 * 1.37 = 47.95 -> 48px under every
-# surviving rounding model. Applies at APP STARTUP only, not config reload.
+# surviving rounding model.
+#
+# A CORRECTION. This line read "Applies at APP STARTUP only, not config
+# reload." That is false, and the same sentence was corrected in
+# ghostty/config.lemonardo on 2026-10-11 against a screenshot taken after a
+# Reload Configuration with no restart in between, which already showed the
+# applied value. Nothing was ever measured for the startup claim; it was
+# believed because a restart always followed a change, so the two were never
+# separated. This copy was missed in that pass.
 # Since the dot grid is drawn by the cursor shader anchored to the live cell
 # (see shaders/rounded-cursor.glsl), an off-by-one here no longer breaks
 # alignment — it only nudges the rhythm off 24pt. COUPLED to font-size.
@@ -45,3 +62,33 @@ desktop-notifications = true
 # progress bar color is not configurable as of 1.3.1 — this is the only knob,
 # and it's all-or-nothing. Remove this line to bring the bar back.
 progress-style = false
+
+# ── Your own settings go in `user-overrides`, not in this file ───────────────
+# midori-theme OVERWRITES this file on every switch, so an edit here is lost
+# the next time the design language changes. The include below is the place
+# that survives: create
+#   ~/Library/Application Support/com.mitchellh.ghostty/user-overrides
+# and put anything of your own in it. The `?` means "no error if absent", which
+# is measured, not assumed: without it `ghostty +validate-config` exits 1 with
+# "error opening config-file ...: error.FileNotFound", and with it exits 0.
+#
+# ONE TRAP, AND IT IS THE ONLY OPTION KIND WHERE IT BITES. `font-family` is a
+# LIST, not a scalar -- repeated entries build a fallback chain and the FIRST
+# one is the primary face. An include is loaded after its parent, so a bare
+# `font-family` in user-overrides lands SECOND and does nothing visible.
+# Measured on Ghostty 1.3.1 with `+show-face --string=A
+# --config-default-files=false`:
+#
+#   parent "M PLUS 1 Code", include "M PLUS Code Latin 60"  -> M PLUS 1 Code
+#   parent "M PLUS 1 Code", include "" then the same family -> M PLUS Code Latin 60
+#
+# So to change the font from user-overrides, clear the list first:
+#
+#   font-family = ""
+#   font-family = "Your Face"
+#
+# (`+show-config` cannot be used to check any of this: in 1.3.1 it exits 1 with
+# no output when given ANY flag, including --config-file. `+validate-config`
+# takes --config-file and works, but `--config-default-files=false` breaks that
+# one too. +show-face accepts both, which is why the measurement above uses it.)
+config-file = ?user-overrides

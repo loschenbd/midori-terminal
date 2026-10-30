@@ -1,0 +1,556 @@
+#!/bin/sh
+# midori-theme — switch the design language across every surface at once.
+#
+# Usage:
+#   midori-theme                 show the current language and every surface
+#   midori-theme <language>      switch to it and reload what can be reloaded
+#   midori-theme <language> -n   say what would change, touch nothing
+#
+# WHY THIS EXISTS. Before it, switching meant four hand edits in four formats:
+# copy a Ghostty config, copy a herdr config, repoint a `source-file` line in
+# ~/.tmux.conf, and set an environment variable for the prompt. Three of those
+# are a `cp` over a live file, so a half-finished switch left the terminal in
+# two design languages at once and looked like a theme bug. There is now one
+# answer to "which language am I in": ~/.config/midori/language. Everything
+# else reads it or is set from it.
+#
+# THIS READS THE INSTALLED COPIES, NOT THE REPO. install.sh puts both
+# languages' files in place; this only chooses between them. That boundary is
+# deliberate: switching must work on a machine where the repo is not checked
+# out, and it must not be able to ship an unreviewed repo edit onto a live
+# surface as a side effect of a theme switch.
+#
+# WHAT IT CANNOT DO, so you are not left wondering:
+#   * Ghostty has no reload-from-CLI. The config is swapped; you press
+#     Cmd+Shift+, (or open a new window). Said out loud every time.
+#   * A new prompt needs a new shell. ~/.config/midori/zshrc.midori reads the
+#     language file at source time, so existing shells keep the old prompt.
+#   * launchctl refuses a bootstrap for a job already loaded ("Input/output
+#     error"), so the Claude Code watcher is booted OUT first. If that fails,
+#     the plist is still correct and the next login picks it up.
+set -e
+
+MIDORI_DIR="$HOME/.config/midori"
+LANG_FILE="$MIDORI_DIR/language"
+GHOSTTY_DIR="$HOME/Library/Application Support/com.mitchellh.ghostty"
+HERDR_DIR="$HOME/.config/herdr"
+CLAUDE_MAPS="$HOME/.local/share/midori/claude-themes"
+PLIST="$HOME/Library/LaunchAgents/com.benjaminloschen.midori-claude-theme.plist"
+
+DRY=0
+WANT=""
+for a in "$@"; do
+  case "$a" in
+    -n|--dry-run) DRY=1 ;;
+    -h|--help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -*) echo "midori-theme: unknown option $a" >&2; exit 2 ;;
+    *) if [ -n "$WANT" ]; then
+         echo "midori-theme: one language at a time (got $WANT and $a)" >&2
+         exit 2
+       fi
+       WANT="$a" ;;
+  esac
+done
+
+current() { [ -f "$LANG_FILE" ] && cat "$LANG_FILE" || echo midori; }
+
+# A language is available when BOTH halves of the pair that cannot fall back
+# are installed: the Ghostty config, and the Claude Code light/dark maps. The
+# tmux fragment and the herdr config are checked per surface below, because a
+# language missing one of those can still switch the rest — but a language
+# with no Ghostty config would switch the chrome and leave the terminal.
+languages() {
+  for f in "$GHOSTTY_DIR"/config.*; do
+    [ -f "$f" ] || continue
+    l=${f##*/config.}
+    case "$l" in
+      pre-*|repo-version) continue ;;   # backups, not languages
+    esac
+    [ -f "$CLAUDE_MAPS/$l-light.json" ] || continue
+    [ -f "$CLAUDE_MAPS/$l-dark.json" ] || continue
+    echo "$l"
+  done
+}
+
+say() { printf '   %s\n' "$1"; }
+
+# ── herdr's config is not ours alone ────────────────────────────────────────
+# WHY THESE FUNCTIONS EXIST. Every other surface switched here is a file only
+# this repo writes, so "which language is live" is a `cmp` and switching is a
+# `cp`. herdr is not one of those: herdr writes into config.toml itself.
+# Dismissing the onboarding overlay leaves `onboarding = false` PREPENDED at
+# line 1, and neither language file contains it — so a live herdr config is
+# always a language file PLUS keys this repo did not write.
+#
+# That broke this in both directions, and both symptoms read as someone else's
+# problem rather than as a bug here:
+#
+#   * `cmp -s` could never match, so the report said `herdr  ?` forever and
+#     install-herdr.sh announced "matches neither language" and wrote a
+#     config.repo-version.toml nobody needed. A report that is permanently
+#     wrong is worse than no report: it teaches you to ignore the one time it
+#     is right.
+#   * the switch was `cp -f config.<lang>.toml config.toml`, which DELETED
+#     that line — a line this repo did not write, out of a live user config.
+#     Same rule as the zen-mode.css snippet in CLAUDE.md: never remove what
+#     the installer did not put there.
+#
+# WHAT THE DROPPED LINE COSTS, measured rather than assumed — herdr 0.9.4, an
+# isolated XDG_CONFIG_HOME per herdr/README.md "Verifying", same config in both
+# arms, only the key differing. Key absent: herdr draws the onboarding overlay
+# over the workspace ("this is a mouse-first terminal … ↵ continue", 2 matching
+# lines in the capture). `onboarding = false` present: no overlay, 0 matching
+# lines. So dropping it costs that panel on the next herdr start.
+#
+# AND HERDR DOES NOT PUT IT BACK BY ITSELF. The config came back byte-identical
+# (md5) after a full server start in every probe, including one where the key
+# was absent and one where it was `true`. So once dropped it stays dropped
+# until the overlay is dismissed again. A first reading of those probes said
+# the key was inert and there was nothing to preserve — wrong, and wrong for a
+# dull reason worth recording: the capture was truncated above the line the
+# overlay starts on, so arm and control looked identical.
+#
+# THE REGION IS "ABOVE THE FIRST TABLE HEADER", because that is the only place
+# TOML allows a top-level key. A key APPENDED to this file is filed under the
+# LAST section instead, which herdr/README.md records as having cost a
+# debugging round (`unknown config key ui.toast.pane_scrollbars` — a message
+# naming the wrong owner). So carried keys are prepended, never appended.
+#
+# tools/midori-theme and herdr/install-herdr.sh carry these functions
+# separately. That duplication is deliberate, for the reason CLAUDE.md gives
+# about the per-target installers: midori-theme must work on a machine with no
+# checkout, so it cannot source anything out of the repo.
+
+# Top-level `key = value` lines of $1 whose key is NOT a top-level key of $2 —
+# that is, the keys herdr wrote, as distinct from any this repo ships. Keyed on
+# the NAME, not the line, so a language file that later declares one of these
+# keys itself takes ownership of it and stops it being carried.
+herdr_foreign() {
+  awk -v lang="$2" '
+    BEGIN { while ((getline l < lang) > 0) {
+              if (l ~ /^\[/) break
+              if (l ~ /^[A-Za-z_][A-Za-z0-9_]*[ \t]*=/) {
+                split(l, a, /[ \t]*=/); own[a[1]] = 1 } }
+            close(lang) }
+    /^\[/ { exit }
+    /^[A-Za-z_][A-Za-z0-9_]*[ \t]*=/ {
+      split($0, a, /[ \t]*=/); if (!(a[1] in own)) print }
+  ' "$1"
+}
+
+# Just their names, for a one-line report.
+herdr_foreign_keys() {
+  herdr_foreign "$1" "$2" | sed 's/[[:space:]]*=.*//' | tr '\n' ' '
+}
+
+# Is the live config $1 the language file $2, ignoring what herdr wrote? This
+# replaces `cmp -s live lang`, which can only answer no.
+herdr_is() {
+  [ -f "$1" ] || return 1
+  awk -v lang="$2" '
+    BEGIN { while ((getline l < lang) > 0) {
+              if (l ~ /^\[/) break
+              if (l ~ /^[A-Za-z_][A-Za-z0-9_]*[ \t]*=/) {
+                split(l, a, /[ \t]*=/); own[a[1]] = 1 } }
+            close(lang) }
+    body { print; next }
+    /^\[/ { body = 1; print; next }
+    /^[A-Za-z_][A-Za-z0-9_]*[ \t]*=/ {
+      split($0, a, /[ \t]*=/); if (a[1] in own) print; next }
+    { print }
+  ' "$1" | cmp -s - "$2"
+}
+
+# Write language file $2 over live config $1, re-prepending the keys herdr
+# wrote into whatever was at $1. Leaves $1 untouched and returns non-zero if
+# the result is not the shape expected — a truncated config.toml is NOT a
+# visible failure, because herdr starts on its built-in defaults and simply
+# looks unthemed.
+herdr_compose() {
+  _live=$1; _lang=$2; _new="$1.midori-new"
+  _keep=""
+  if [ -f "$_live" ]; then _keep=$(herdr_foreign "$_live" "$_lang"); fi
+  _n=0
+  if [ -n "$_keep" ]; then _n=$(printf '%s\n' "$_keep" | wc -l | tr -d ' '); fi
+  # Write a new file and move it into place. NEVER redirect into the file being
+  # read from — the .tmux.conf repair further down records what that costs.
+  if [ "$_n" -eq 0 ]; then
+    cat "$_lang" > "$_new" || { rm -f "$_new"; return 1; }
+  else
+    { printf '%s\n' "$_keep"; cat "$_lang"; } > "$_new" ||
+      { rm -f "$_new"; return 1; }
+  fi
+  _want=$(( $(wc -l < "$_lang") + _n ))
+  _got=$(wc -l < "$_new")
+  if [ ! -s "$_new" ] || [ "$_got" -ne "$_want" ]; then
+    rm -f "$_new"
+    return 1
+  fi
+  mv -f "$_new" "$_live"
+}
+
+VIVALDI_DIR="$HOME/Library/Application Support/Vivaldi"
+
+# Vivaldi is the one surface this script cannot switch. It rewrites Preferences
+# from memory when it exits, so an edit made while it runs is discarded, and the
+# edit it would discard is a JSON file holding every other preference -- not a
+# risk worth taking for a theme. So: report what it is on, and name the command
+# that changes it.
+#
+# The language is read from the live profile's OWN theme names rather than from
+# the repo, because this script never reads the repo: install-vivaldi.sh copies
+# whole theme objects into Preferences, names included, so the scheduled id can
+# be looked up there and its name's first word IS the language.
+vivaldi_report() {
+  [ -d "$VIVALDI_DIR" ] || { printf 'not installed'; return 0; }
+  VIVALDI_DIR="$VIVALDI_DIR" python3 - <<'PYEOF'
+import json, os
+vdir = os.environ["VIVALDI_DIR"]
+try:
+    dirs = sorted(os.listdir(vdir))
+except OSError:
+    print("unreadable", end=""); raise SystemExit(0)
+profiles = [d for d in dirs
+            if (d == "Default" or d.startswith("Profile "))
+            and os.path.exists(os.path.join(vdir, d, "Preferences"))]
+seen = {}
+for d in profiles:
+    try:
+        v = json.load(open(os.path.join(vdir, d, "Preferences"))).get("vivaldi", {})
+    except (OSError, ValueError):
+        seen.setdefault("unreadable", []).append(d); continue
+    sched = (v.get("theme", {}).get("schedule", {}) or {}).get("o_s") or {}
+    names = {t.get("id"): t.get("name", "") for t in
+             (v.get("themes", {}) or {}).get("user", []) or []}
+    name = names.get(sched.get("light"), "")
+    seen.setdefault(name.split()[0].lower() if name else "unscheduled", []).append(d)
+if not profiles:
+    print("no profiles", end="")
+elif len(seen) == 1:
+    k = next(iter(seen))
+    print(f"{k} ({len(profiles)} profile{'s' if len(profiles) != 1 else ''})", end="")
+else:
+    print("; ".join(f"{k} x{len(v)}" for k, v in sorted(seen.items()))
+          + " -- profiles disagree", end="")
+PYEOF
+}
+do_() { if [ "$DRY" -eq 1 ]; then printf '   would: %s\n' "$*"; else "$@"; fi; }
+
+AVAIL=$(languages | sort)
+if [ -z "$AVAIL" ]; then
+  echo "midori-theme: no language is fully installed." >&2
+  echo "   Looked for $GHOSTTY_DIR/config.<lang> with a matching pair in" >&2
+  echo "   $CLAUDE_MAPS. Run install.sh." >&2
+  exit 1
+fi
+
+# ── no argument: report and stop ─────────────────────────────────────────────
+if [ -z "$WANT" ]; then
+  echo "language: $(current)"
+  echo "available: $(echo "$AVAIL" | tr '\n' ' ')"
+  echo
+  echo "surfaces:"
+  gl="?"
+  for l in $AVAIL; do
+    if [ -f "$GHOSTTY_DIR/config" ] &&
+       cmp -s "$GHOSTTY_DIR/config" "$GHOSTTY_DIR/config.$l"; then gl="$l"; fi
+  done
+  say "ghostty        $gl"
+  if [ -L "$MIDORI_DIR/active.tmux.conf" ]; then
+    t=$(readlink "$MIDORI_DIR/active.tmux.conf"); t=${t##*/}; t=${t%.tmux.conf}
+    say "tmux           $t"
+  else
+    say "tmux           not switchable (no active.tmux.conf symlink; run install.sh)"
+  fi
+  hl="?"
+  for l in $AVAIL; do
+    if herdr_is "$HERDR_DIR/config.toml" "$HERDR_DIR/config.$l.toml"; then
+      hl="$l"
+    fi
+  done
+  # Name the carried keys rather than hiding them. "herdr midori" alone would
+  # be the same confident one-word answer the old `?` was, and the whole point
+  # of this surface is that the live file is not only ours.
+  hk=""
+  if [ "$hl" != "?" ]; then
+    hk=$(herdr_foreign_keys "$HERDR_DIR/config.toml" "$HERDR_DIR/config.$hl.toml")
+  fi
+  if [ -n "$hk" ]; then
+    say "herdr          $hl  (+ herdr's own: ${hk% })"
+  else
+    say "herdr          $hl"
+  fi
+  if [ -f "$PLIST" ]; then
+    cl=$(/usr/libexec/PlistBuddy -c "Print :EnvironmentVariables:MIDORI_LANG" \
+         "$PLIST" 2>/dev/null || echo "unset (defaults to midori)")
+    say "claude code    $cl"
+  else
+    say "claude code    no launch agent installed"
+  fi
+  say "prompt         \$MIDORI_PROMPT or the language file, read at shell start"
+  vr=$(vivaldi_report 2>/dev/null) || vr="unreadable"
+  say "vivaldi        $vr"
+  say "               (not switched here: vivaldi/install-vivaldi.sh, Vivaldi closed)"
+  exit 0
+fi
+
+# ── switch ───────────────────────────────────────────────────────────────────
+ok=0
+for l in $AVAIL; do [ "$l" = "$WANT" ] && ok=1; done
+if [ "$ok" -eq 0 ]; then
+  echo "midori-theme: $WANT is not installed." >&2
+  echo "   available: $(echo "$AVAIL" | tr '\n' ' ')" >&2
+  exit 1
+fi
+
+echo "switching to $WANT$( [ "$DRY" -eq 1 ] && echo '  (dry run)' )"
+SWITCHED=0
+SKIPPED=0
+
+# 1. The language file. Everything that reads a variable reads this.
+echo "-- language file"
+do_ mkdir -p "$MIDORI_DIR"
+if [ "$DRY" -eq 1 ]; then
+  printf '   would: write %s <- %s\n' "$LANG_FILE" "$WANT"
+else
+  printf '%s\n' "$WANT" > "$LANG_FILE"
+  say "$LANG_FILE = $WANT"
+fi
+SWITCHED=$((SWITCHED + 1))
+
+# 2. Ghostty. A copy, not a symlink: the config is the file Ghostty opens, and
+#    a symlink here would make "edit your config" mean "edit the repo's copy".
+#    Your own settings belong in `user-overrides`, which every language config
+#    ends by including — see the comment at the end of either one.
+echo "-- ghostty"
+src="$GHOSTTY_DIR/config.$WANT"
+live="$GHOSTTY_DIR/config"
+if [ ! -f "$src" ]; then
+  say "!! $src is missing — skipped"
+  SKIPPED=$((SKIPPED + 1))
+elif [ -f "$live" ] && cmp -s "$live" "$src"; then
+  say "already $WANT"
+  SWITCHED=$((SWITCHED + 1))
+else
+  # Back up a live config that is not one of the installed languages: it is
+  # then something a person wrote, and this would be the command that ate it.
+  known=0
+  # `|| true` because this runs under `set -e` and the AND-list is a STATEMENT
+  # here, not a condition. Measured on /bin/sh (bash in sh-mode, Darwin 25.6):
+  # as the last command of a `for` body a failing AND-list does not trip
+  # `set -e`, so the bare form happens to work — on this shell. It is the
+  # common path (a live config that matches neither language is exactly when
+  # the backup below matters), so it is not worth resting on a quirk that dash
+  # or a future bash may not share.
+  for l in $AVAIL; do
+    { [ -f "$live" ] && cmp -s "$live" "$GHOSTTY_DIR/config.$l" && known=1; } \
+      || true
+  done
+  if [ -f "$live" ] && [ "$known" -eq 0 ]; then
+    bak="$live.before-midori-theme"
+    do_ cp -f "$live" "$bak"
+    say "!! the live config matched no installed language — kept it as ${bak##*/}"
+  fi
+  do_ cp -f "$src" "$live"
+  say "config <- config.$WANT   (press Cmd+Shift+, in Ghostty to reload)"
+  SWITCHED=$((SWITCHED + 1))
+fi
+
+# 3. tmux. A symlink, because ~/.tmux.conf is the user's file and this must not
+#    rewrite it on every switch: install.sh points it at active.tmux.conf once
+#    and the target is what moves.
+echo "-- tmux"
+frag="$MIDORI_DIR/$WANT.tmux.conf"
+if [ ! -f "$frag" ]; then
+  say "!! $frag is missing — skipped"
+  SKIPPED=$((SKIPPED + 1))
+else
+  do_ ln -sfn "$frag" "$MIDORI_DIR/active.tmux.conf"
+  say "active.tmux.conf -> $WANT.tmux.conf"
+  # A ~/.tmux.conf written before active.tmux.conf existed names a LANGUAGE
+  # fragment directly, and such a line pins the panes to one language through
+  # any number of symlink flips — a half-switched terminal with no error
+  # anywhere. install.sh repoints it too, but repairing it HERE is what makes
+  # the repair happen when it matters (at a switch) rather than only at the
+  # next reinstall, and it is what lets a test exercise the repair by running
+  # this command. Its first version lived only in install.sh and was "checked"
+  # by grepping install.sh for the sed line; a sabotage that prefixed that
+  # line with `false &&` left the grep green.
+  tc="$HOME/.tmux.conf"
+  if [ -f "$tc" ] &&
+     grep -qE "config/midori/(midori|lemonardo)\.tmux\.conf" "$tc"; then
+    if [ "$DRY" -eq 1 ]; then
+      say "would: repoint .tmux.conf at active.tmux.conf"
+    # NEVER REDIRECT INTO THE FILE BEING READ FROM, and this is not a style
+    # note. The first version was `sed ... "$tc.pre-midori-active" > "$tc"`,
+    # which truncates ~/.tmux.conf before sed runs. Two sabotage cases — one
+    # that disabled the backup `cp`, one that deleted it — both left the file
+    # EMPTY rather than merely unrepaired, because sed then had nothing to
+    # read and the redirect had already emptied the target. A full disk, a
+    # read-only home or any cp failure would do the same to a real config this
+    # repo does not own. Write a new file, and move it into place only after
+    # sed has succeeded.
+    # AND `sed` EXITING 0 IS NOT EVIDENCE IT PRODUCED ANYTHING. Measured on
+    # Darwin 25.6: BSD sed given a DIRECTORY as input writes nothing and exits
+    # 0, so `sed ... > new && mv new target` still lands an empty file. (A
+    # directory at the backup path is reachable: `cp -f file dir` succeeds by
+    # copying INTO it.) This transform rewrites one substring and changes no
+    # line count, so that is the check — same number of lines, and non-empty.
+    elif ! tc_lines=$(wc -l < "$tc"); then
+      say "!! could not read .tmux.conf — left it alone"
+    elif ! cp -f "$tc" "$tc.pre-midori-active"; then
+      say "!! could not keep a copy of .tmux.conf — left it alone"
+      say "   (it still names a language fragment, so switching will not"
+      say "    move the panes until that line is repointed by hand)"
+    elif sed -E 's|config/midori/(midori\|lemonardo)\.tmux\.conf|config/midori/active.tmux.conf|g' \
+           "$tc.pre-midori-active" > "$tc.midori-new" &&
+         [ -s "$tc.midori-new" ] &&
+         [ "$(wc -l < "$tc.midori-new" 2>/dev/null || echo -1)" -eq "$tc_lines" ]; then
+      mv -f "$tc.midori-new" "$tc"
+      say "repointed .tmux.conf at active.tmux.conf"
+      say "   (it named a language fragment, which no switch could move;"
+      say "    kept the original as .tmux.conf.pre-midori-active)"
+    else
+      rm -f "$tc.midori-new"
+      say "!! rewriting .tmux.conf did not produce a like-for-like file"
+      say "   (expected $tc_lines lines) — left the original alone"
+    fi
+  fi
+  if command -v tmux >/dev/null 2>&1 && tmux list-sessions >/dev/null 2>&1; then
+    if [ "$DRY" -eq 1 ]; then
+      say "would: tmux source-file ~/.tmux.conf"
+    elif tmux source-file "$HOME/.tmux.conf" 2>/dev/null; then
+      say "reloaded the running tmux server"
+    else
+      say "!! tmux source-file failed — applies at the next server start"
+    fi
+  else
+    say "no tmux server running — applies at the next one"
+  fi
+  SWITCHED=$((SWITCHED + 1))
+fi
+
+# 4. herdr. A copy and a hot reload; herdr reads one config.toml and has no
+#    include mechanism, so there is nothing subtler available.
+echo "-- herdr"
+# THE FILE IS SWITCHED WHETHER OR NOT THE BINARY IS ON PATH, and only the
+# reload is guarded. This was the other way round and it was wrong in both
+# directions: herdr's own installer already skips a machine with no herdr, so
+# a config.<lang>.toml being present IS the evidence that herdr was installed,
+# while `command -v herdr` additionally fails under a stripped PATH — a cron
+# job, a launchd agent, the sandbox this is tested in — and silently left one
+# surface on the old language. Ghostty is handled the same way: swap the file,
+# say that the reload is not ours to do.
+hsrc="$HERDR_DIR/config.$WANT.toml"
+if [ ! -f "$hsrc" ]; then
+  say "no $hsrc — herdr was never installed here; skipped"
+  SKIPPED=$((SKIPPED + 1))
+else
+  # A COMPOSE, NOT A COPY: see herdr_foreign above for why, and for what a
+  # plain `cp` here used to delete.
+  hlive="$HERDR_DIR/config.toml"
+  hk=$(herdr_foreign_keys "$hlive" "$hsrc" 2>/dev/null || true)
+  if [ "$DRY" -eq 1 ]; then
+    say "would: write config.toml from config.$WANT.toml"
+    [ -z "$hk" ] || say "would: carry over herdr's own keys: ${hk% }"
+  elif ! herdr_compose "$hlive" "$hsrc"; then
+    say "!! composing config.toml did not produce the expected shape —"
+    say "   left the live herdr config alone"
+    SKIPPED=$((SKIPPED + 1))
+    hskip=1
+  else
+    say "config.toml <- config.$WANT.toml"
+    [ -z "$hk" ] || say "carried over herdr's own keys: ${hk% }"
+  fi
+  if [ "${hskip:-0}" -eq 1 ]; then
+    :
+  elif [ "$DRY" -eq 1 ]; then
+    say "would: herdr server reload-config"
+  elif ! command -v herdr >/dev/null 2>&1; then
+    say "herdr is not on PATH — applies at the next server start"
+  elif herdr server reload-config >/dev/null 2>&1; then
+    say "reloaded the running herdr server"
+  else
+    say "no running herdr server to reload — applies at the next start"
+  fi
+  [ "${hskip:-0}" -eq 1 ] || SWITCHED=$((SWITCHED + 1))
+fi
+
+# 5. Claude Code. The watcher copies a token map into ~/.claude/themes on every
+#    appearance flip and re-pins ~/.claude/settings.json to match, so the only
+#    thing to change is the language in its launchd environment — then restart
+#    it, because launchd caches a loaded job's definition and will not re-read
+#    the plist on its own.
+echo "-- claude code"
+if [ ! -f "$PLIST" ]; then
+  say "no launch agent installed — skipped"
+  SKIPPED=$((SKIPPED + 1))
+else
+  if [ "$DRY" -eq 1 ]; then
+    say "would: set MIDORI_LANG=$WANT in the launch agent and restart it"
+  else
+    /usr/libexec/PlistBuddy -c \
+      "Set :EnvironmentVariables:MIDORI_LANG $WANT" "$PLIST" 2>/dev/null ||
+    /usr/libexec/PlistBuddy -c \
+      "Add :EnvironmentVariables:MIDORI_LANG string $WANT" "$PLIST"
+    say "launch agent MIDORI_LANG = $WANT"
+    label=com.benjaminloschen.midori-claude-theme
+    # A LAUNCHD LABEL IS MACHINE-GLOBAL AND IGNORES $HOME, which is why this
+    # guard exists and why it is not a test hook. Running this script with HOME
+    # pointed at a sandbox — which is how it is tested — still addresses the
+    # REAL job, because `gui/<uid>/<label>` has no home in it. Doing that once
+    # booted out the live watcher and bootstrapped the sandbox copy in its
+    # place; the sandbox was a temp directory, so when it was removed the job
+    # was left crash-looping on a path that no longer existed (exit 127), and
+    # `launchctl print` still reported it present. Nothing in the sandbox was
+    # touched, and the live system was the only casualty.
+    #
+    # This is the same shape as the warning in CLAUDE.md about
+    # obsidian/extra-vaults.txt: HOME redirection alone is NOT a sandbox when
+    # the thing being addressed is named absolutely. So: resolve the LOGIN
+    # home from the directory service, which an environment variable cannot
+    # move, and only speak to launchd when this run is really that user's.
+    real_home=$(dscl . -read "/Users/$(id -un)" NFSHomeDirectory 2>/dev/null |
+                awk '{print $2}')
+    if [ -n "$real_home" ] && [ "$real_home" != "$HOME" ]; then
+      say "HOME is $HOME, not the login home $real_home — leaving launchd"
+      say "   alone. The plist under this HOME is correct."
+    else
+      launchctl bootout "gui/$(id -u)/$label" 2>/dev/null || true
+      if launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null; then
+        say "watcher restarted (writes ~/.claude/themes/$WANT.json within ~3s)"
+      else
+        say "!! could not restart the watcher — the plist is correct, so it"
+        say "   takes effect at the next login. launchctl print gui/$(id -u)/$label"
+      fi
+    fi
+  fi
+  SWITCHED=$((SWITCHED + 1))
+fi
+
+# 6. Vivaldi: report only. See vivaldi_report() above for why nothing is
+# written here.
+echo "-- vivaldi"
+vr=$(vivaldi_report 2>/dev/null) || vr="unreadable"
+say "currently $vr"
+if [ -d "$VIVALDI_DIR" ]; then
+  say "Vivaldi rewrites Preferences when it quits, so this script does not touch"
+  say "it. To move Vivaldi too, with Vivaldi CLOSED, run:"
+  say "   MIDORI_LANG=$WANT ./vivaldi/install-vivaldi.sh"
+fi
+
+# 7. The prompt rides on the language file; nothing to copy.
+echo "-- prompt"
+if [ -f "$HOME/.config/$WANT.omp.json" ]; then
+  say "$WANT.omp.json is installed — new shells pick it up"
+else
+  say "!! ~/.config/$WANT.omp.json is missing; zshrc.midori will fall back to"
+  say "   midori.omp.json and say so"
+fi
+SWITCHED=$((SWITCHED + 1))
+
+echo
+echo "$SWITCHED surface(s) switched, $SKIPPED skipped."
+[ "$DRY" -eq 1 ] && echo "(dry run — nothing was written)"
+echo "Ghostty needs Cmd+Shift+, and a new shell needs a new window."
+exit 0

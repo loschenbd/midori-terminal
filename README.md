@@ -4,7 +4,8 @@ A complete terminal theme system built on the Midori design language from
 [benjaminloschen.com](https://benjaminloschen.com) — warm paper neutrals and a
 sage accent, taking their cue from Japanese MD-style notebook stock. It covers
 Ghostty, Claude Code, tmux, herdr, fzf, oh-my-posh, Vivaldi, Cursor/VS Code,
-Obsidian and Antinote, all switching light/dark together with macOS appearance.
+Obsidian, Antinote, MarkText and SilverBullet, all switching light/dark
+together with macOS appearance.
 
 **Midori Paper** (light) · **Midori Night** (dark)
 
@@ -52,7 +53,14 @@ to skip the prompt). After tweaking hotkeys in Vivaldi's UI, re-export them with
 (it prints the settings snippet to wire up auto light/dark + icons). For
 Obsidian: `./obsidian/install-obsidian.sh`. For Antinote:
 `./antinote/install-antinote.sh`, then Settings → Visuals → "Reload Custom
-Themes". herdr is handled by `install.sh` too (skipped when it isn't installed) —
+Themes". For MarkText: quit it, then `./marktext/apply-marktext.sh` — MarkText
+takes no theme files at all, only a Custom CSS string, and `marktext/README.md`
+explains why its own Import Theme UI cannot be used. SilverBullet is the one
+target `install.sh` deliberately leaves alone: its theme has no fixed
+destination on this machine — it goes either into a page inside a space, which
+is a live project folder, or into a server config — so `silverbullet/README.md`
+covers both routes and `silverbullet/wrap-midori.sh` renders the theme to
+stdout for you to place. herdr is handled by `install.sh` too (skipped when it isn't installed) —
 see `herdr/README.md`, which explains why herdr is the one component with no
 `midori-paper`/`midori-night` theme files.
 
@@ -132,10 +140,7 @@ and get a helper daemon (`watcher/midori-claude-theme.sh`, launchd):
 - **tmux pane borders** need per-mode hexes — no single ANSI slot reads as a
   subtle hairline in both modes.
 
-The watcher also checks the main display's scale (~30 s) and flips the
-background symlinks between `@1x`/`@2x` assets (see below).
-
-**Layer 2 — the Midori theme pack.** Ghostty themes with baked backgrounds,
+**Layer 2 — the Midori theme pack.** Ghostty themes plus the shader that draws the glow and dot grid,
 the Claude Code token map, tmux border hexes, and the Vivaldi themes. Swap
 this layer to re-skin everything without touching the infrastructure.
 
@@ -209,22 +214,64 @@ It is the one control flow already used: take an *extreme* lightness rung and
 buy separation with chroma. That is how `#175a98` got in at C 12.0 / L 46.1
 without colliding with anything.
 
+## Switching design language
+
+One command, one answer to "which language am I in":
+
+```sh
+midori-theme              # the current language, and every surface's own state
+midori-theme lemonardo    # switch all of them, and reload what can be reloaded
+midori-theme midori -n    # say what would change, write nothing
+```
+
+`~/.config/midori/language` is the single source of truth. The prompt
+(`shell/zshrc.midori`), the appearance watcher and `install.sh` all read it, so
+re-running the installer no longer switches you back.
+
+Before this, switching meant four hand edits in four formats — copy a Ghostty
+config, copy a herdr config, repoint a `source-file` line in `~/.tmux.conf`,
+and export `MIDORI_PROMPT`. Three of those are a `cp` over a live file, so a
+half-finished switch left the terminal in two design languages at once and
+looked like a theme bug rather than a missed step. `midori-theme` with no
+argument exists for exactly that: it reads each surface's *actual* state rather
+than the language file, so a disagreement is visible.
+
+Two things it cannot do, and says so every time: **Ghostty has no
+reload-from-CLI** (press Cmd+Shift+, or open a new window), and **a new prompt
+needs a new shell**, because `zshrc.midori` reads the language at source time.
+
+Your own Ghostty settings go in
+`~/Library/Application Support/com.mitchellh.ghostty/user-overrides`, which both
+language configs include — the live `config` is overwritten on every switch. One
+trap is documented at the end of either config: `font-family` is a **list**, not
+a scalar, and an include is loaded after its parent, so a bare `font-family`
+there lands second and does nothing. Clear the list first with `font-family = ""`.
+
+A launchd label is machine-global and ignores `$HOME`, so `midori-theme`
+resolves the login home from the directory service and refuses to speak to
+launchd when it is running under a redirected one. That guard is not
+theoretical: writing the test for this command without it booted out the live
+watcher and bootstrapped a temp copy in its place.
+
 ## What's in the box
 
 | Path | What |
 |---|---|
-| `ghostty/` | Main config, `midori-paper`/`midori-night` themes, background PNGs, rounded-cursor shader |
-| `watcher/` | Appearance/display watcher script + launchd plist template |
+| `ghostty/` | Midori config (`config`) and the Lemonardo alternative (`config.lemonardo`); `midori-paper`/`midori-night` and `lemonardo-paintpot`/`lemonardo-inkwell` themes; background PNGs (Midori only — the Lemonardo themes set no image on purpose); rounded-cursor shader |
+| `watcher/` | Appearance/display watcher script + launchd plist template, and `themes/` — the four Claude Code token maps. The Midori pair is the two heredocs that used to live in the watcher, extracted verbatim; the Lemonardo pair is generated by `tools/make-claude-theme.py` from stated rules (an ANSI slot, a palette role, an OKLCh wash off the ground, a tint of a role). `midori-tokens-{light,dark}.json` is the frozen extraction those rules are checked against, and is not a usage site |
+| `tools/midori-theme` | The one command that switches every surface. See **Switching design language** above |
+| `tools/make-claude-theme.py` | Generates a language's Claude Code maps, and `--check` re-derives **Midori** from the same rules and diffs it against the frozen extraction — 94 of 96 tokens within dE 3.0. The two it exempts are `skill`, whose hue (199) has no ancestor anywhere in this repo: mint is 171, indigo 251, nothing between. It is exempted **by name** rather than by loosening the tolerance |
 | `prompt/midori.omp.json` | Manuscript-style oh-my-posh prompt (24-bit hex, no powerline blocks). It named ANSI colours until 2026-08-20; see `t3/README.md` for why pinning them was necessary and what it costs |
-| `shell/zshrc.midori` | omp init, fzf ANSI palette, eza aliases, zoxide, zsh autosuggestions/highlighting, cursor-color reset (sourced from `.zshrc`) |
+| `prompt/lemonardo.omp.json` | The Lemonardo prompt, and the one twin that **reverses** a Midori decision: it names ANSI slots. Hex was tried first and collapses — hue-matched, the best straddle of both Lemonardo grounds gives two distinct colours for six roles, because this palette splits its tiers (-800 light, -300/-400 dark) where Midori's accents are mid-tone. Slot names measure 4.60:1 worst against 2.96:1 for Midori's hexes, but reintroduce the t3 problem `t3/README.md` records. It does not bind yet (t3 has no Lemonardo theme); the file says so, in full |
+| `shell/zshrc.midori` | omp init, fzf ANSI palette, eza aliases, zoxide, zsh autosuggestions/highlighting, cursor-color reset (sourced from `.zshrc`). **No Lemonardo twin, deliberately** — it holds no colour value at all: the fzf theme is `--color=16` with slot *indices*, so the one file already wears whichever palette is live. The one thing it does name is a prompt file, switched by `midori-theme`, which writes `~/.config/midori/language`; this file reads it. `export MIDORI_PROMPT=lemonardo` in `~/.zshrc` **before** the source line still wins, which is how one shell runs the other prompt without moving the machine. Both are read, never stored, because `install.sh` overwrites this file and an edit here would silently revert on the next run. A name with no matching `~/.config/<name>.omp.json` warns and falls back to `midori` rather than letting oh-my-posh render its stock prompt |
 | `tmux/midori.tmux.conf` | Pane borders, status/message styles (sourced from `.tmux.conf`) |
+| `tmux/lemonardo.tmux.conf` | The same, differing in **two lines** — the pane-border hexes, which take each Lemonardo theme's own `split-divider-color`. Everything else is ANSI slot names and was already correct |
 | `vivaldi/` | Midori Paper/Night browser themes, typography CSS mods, installer |
 | `vscode/` | Cursor/VS Code extension: Midori Paper/Night color themes, file icons recolored from Material Symbols Rounded (Apache-2.0), workbench-chrome product icons built from Phosphor (MIT) — see `midori-theme/CREDITS.md`; `build-icons.py` / `build-product-icons.py` regenerate — plus installer |
 | `antinote/` | Midori Paper/Night Antinote themes (24-key JSON), installer, and a transcription of Antinote's undocumented theme schema |
 | `obsidian/` | "Midori" Obsidian theme (palette, dot grid, page glow, embedded metric-normalised fonts), the `midori-caret`, `midori-confetti` and `midori-timer` companion plugins, installer for iCloud vaults; `build-fonts.py` regenerates the embedded faces |
 | `moshi/` | Midori Paper/Night for [Moshi](https://getmoshi.app) (the phone terminal for agents) — **generated** from the Ghostty themes by `build-moshi-themes.py`, which also publishes them to iCloud for the phone |
-| `fonts/` | M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI) — SIL OFL 1.1 |
-| `tools/bake-backgrounds.py` | Regenerates dot tiles + glow washes for new displays |
+| `fonts/` | Midori: M PLUS 1 Code (terminal), M PLUS 1p + Spectral (UI), M PLUS 2 Regular (Moshi's Chat View only — `moshi/build-moshi-themes.py` records why it is 2 and not 1p: the ellipsis). Lemonardo: Sometype Mono (terminal, roman **and italic** — both measured `isFixedPitch=1` at a single 580/1000 = 0.58em advance across all 94 printable ASCII glyphs, so the italic is metric-compatible and safe in a terminal grid), Besley (headings, variable wght 400–900), Instrument Sans (body, variable wdth 75–100 + wght 400–700), Special Elite (labels — **not** monospaced, 86 distinct advances, so never put it in a mono slot) and Reenie Beanie (one handwritten aside). All SIL OFL 1.1 except Special Elite, which is Apache 2.0 — its licence file is named `LICENSE-` rather than `OFL-` for that reason. `Besley-SemiBold.ttf` is a static wght=600 instance generated from the variable file, and it exists for exactly one reason: macOS registers **one** full name per variable font (`Besley Regular Regular`), so `window-title-font-family = Besley SemiBold` resolved to Helvetica until a static instance carried that name. **`install.sh` copies every `.ttf` here into `~/Library/Fonts`** and now prints the count; `tests/test_fonts_are_vendored.py` fails if a theme names a family this directory does not carry. |
 | `tests/` | `lint.sh` (run before every commit), the prose-typography guards, and `dryrun-installers.sh` — never run an installer to test one, it writes into nine live vaults |
 | `docs/cleanup-queue.md` | Cleanup work list plus FINDINGS: reports from the overnight loop, several of which falsify their own item's premise |
 | `docs/cleanup-loop.md` | How to launch, resume and review the overnight cleanup loop, and what its gate cannot protect against |
@@ -259,29 +306,87 @@ the one to leave alone; its 24px box is tight.
 
 ## How the dot grid stays aligned (Ghostty)
 
-**The dots are drawn by the cursor shader, not the background image.**
-`ghostty/shaders/rounded-cursor.glsl` anchors the lattice to the live cell
-geometry Ghostty reports via `iCurrentCursor`: pitch = cell height, rows = the
-text baseline. Dots therefore track the text rows *by construction* on any
-display, at any cell height — there is no phase to calibrate. The baked
-`*-glow` images carry only the low-frequency washes
-(`tools/bake-backgrounds.py --without-dots`); the `*-dots` tiles are retired.
+**The dots and the glow are both drawn by the cursor shader. There is no
+background image.** `ghostty/shaders/rounded-cursor.glsl` anchors the lattice
+to the live cell geometry Ghostty reports via `iCurrentCursor`: pitch = cell
+height, rows = the text baseline. Dots therefore track the text rows *by
+construction* on any display, at any cell height — there is no phase to
+calibrate. The three `--page-glow` washes are evaluated per pixel as fractions
+of the surface size (`iResolution`), so they fit any display, density, window
+or split the same way they fit any browser viewport on the site.
 
-Glow images still render at **physical pixels** (`fit = none`), so the watcher
-flips `@2x`/`@1x` symlinks when the main display class changes — Ghostty only
-re-reads images on config reload, so hit **Cmd+Shift+,** after
-docking/undocking.
+That was not always so, and the record matters because the old design looked
+finished. Until 2026-10-17 the glow was a PNG baked per display by
+`tools/bake-backgrounds.py` (@1x 2560×1080 for the LG ultrawides, @2x
+3456×2234 for the 16" retina panel), drawn by Ghostty at physical pixels and
+anchored top-centre; the dots had been baked the same way until July, when the
+vertical phase refused to scale between displays (11.5 px @2x did not land as
+5.75 @1x; 10.75 measured) and they moved into the shader. Two assets per mode
+meant a watcher polling `system_profiler` every ~30 s to flip `@1x`/`@2x`
+symlinks, plus a manual **Cmd+Shift+,** because Ghostty re-reads images only
+on config reload. When either lagged, the *other* display's bake showed: on
+2026-10-17 at 22:39 the ultrawide bake sat on the retina panel 448 px in from
+each edge, its right-hand wash centred at x = 3008 instead of the screen edge,
+and every sampled pixel matched that bake to within one level while the
+symlink had pointed at the right file for 25 minutes. The washes are
+low-frequency, so a per-pixel function loses nothing a bitmap had, and the
+poll, the symlinks, the reload step and the eight PNGs are gone.
+
+Verified the way the bug was found: screenshot, sample background pixels,
+compare to the retina bake. See the commit that made the change for the table.
 
 Residual gotchas:
 
-- `adjust-cell-height` nudges the row pitch toward the 24 pt rhythm, but
-  Ghostty integer-izes the *base* cell height before applying the percentage
-  (35 px × 1.37 → 48, not 34.585 × 1.37) and applies it **at app startup
-  only**. An off-by-one no longer breaks alignment — the shader follows
-  whatever the cell is — it only nudges the rhythm off 24 pt. Coupled to
-  font size.
+- `adjust-cell-height` nudges the row pitch toward the 24 pt rhythm. Two
+  things about it, both measured here:
+  - **The percentage is an amount to change by, not a target.** `41%` means
+    "make the cell 41% taller", not "make it 41% of the base" — `ghostty(5)`
+    under `adjust-cell-width`: "a value of 20% increases the value by 20%".
+    Midori's `37%` is right under either reading, so nothing in this repo
+    distinguished them until Lemonardo needed a value past 100 and got `141%`,
+    which doubled the row pitch (measured 41 pt where 24 was intended).
+  - Ghostty integer-izes the *base* cell height before applying the percentage
+    (35 px × 1.37 → 48, not 34.585 × 1.37).
+
+  It applies **on config reload**; an earlier note here said app startup only,
+  which was never measured and is wrong. An off-by-one no longer breaks
+  alignment — the shader follows whatever the cell is — it only nudges the
+  rhythm off 24 pt. Coupled to font size.
 - The font family must be exactly `"M PLUS 1 Code"` — a wrong name silently
-  falls back to JetBrains Mono and changes the cell metrics.
+  falls back to JetBrains Mono and changes the cell metrics. **This warning
+  came true on the machine it was written for**, and the measurement is now
+  here instead of the claim alone: a live config read
+  `font-family = "M PLUS 1 Code Latin 60"`, a family that does not exist (the
+  installed names are `M PLUS 1 Code`, `M PLUS Code Latin 50` and
+  `M PLUS Code Latin 60` — no `1` in the *Code Latin* ones), and the terminal
+  rendered JetBrains Mono for two months directly beneath this sentence.
+  `ghostty +validate-config` exits **0** on a nonexistent font family; it
+  catches an unknown key and an unknown `theme` name, but not this. The only
+  check that catches it:
+
+  ```sh
+  ghostty +show-face --config-default-files=false \
+          --font-family="M PLUS 1 Code" --string=Mg
+  ```
+
+  It names the face actually resolved, so `JetBrains Mono` in the output means
+  the name did not match. `--config-default-files=false` is **not optional**:
+  without it `+show-face` leaves the live config's own `font-family` in the
+  fallback chain, so a bogus name resolves to whatever the config names and
+  reads as correct — a trap inside the check itself. Note also that
+  `ghostty +list-fonts` lists **monospace families only** (19 here, with no
+  Helvetica or Georgia among them), so a proportional face's absence from it
+  proves nothing about whether it is installed.
+
+  Checked against the upstream docs, because which half is documented matters:
+  Ghostty documents this silent fallback only for the *style variants* — if
+  `font-family-bold` names a font that "cannot be found, Ghostty will use
+  whatever font is set for `font-family`" — and says nothing about a missing
+  **primary** family, or about whether `+validate-config` checks font families.
+  Those two rest on the measurements recorded here, not on anything published.
+  A third claim once stood in this list — that `adjust-cell-height` needs a
+  restart — and it was refuted by measurement on 2026-10-11; the percentage
+  semantics above *are* documented, at `adjust-cell-width`.
 - Dots disappear in full-screen TUIs that hide the cursor (no cursor uniform,
   no anchor) — a known trade-off.
 - Box-drawing rules (TUI separators) render at cell *center* and can never

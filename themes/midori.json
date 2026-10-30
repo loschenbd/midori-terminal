@@ -1,0 +1,173 @@
+{
+  "_comment": [
+    "MIDORI -- the design language from benjaminloschen.com.",
+    "LAYER 1 of 3. This file carries ONLY what a theme owns: the palette, the",
+    "type families, and the metric constants derived from them. It does NOT",
+    "carry the per-app token mappings. Those live in each target's stylesheet,",
+    "are hand-written, and must never be generated -- obsidian/theme.css is 61%",
+    "comments and that design record is the point of this repo.",
+    "Palette values were EXTRACTED from the shipped stylesheets, not retyped,",
+    "so this file cannot drift from them by transcription error."
+  ],
+  "name": "Midori",
+  "id": "midori",
+  "type": {
+    "_comment": [
+      "ui/heading is the serif; body is the prose sans; mono is code.",
+      "avg_advance_em is measured over a PROSE sample, not a pangram:",
+      "pangrams over-weight rare letters and run ~4% narrow."
+    ],
+    "ui": "Spectral, ui-serif, Georgia, serif",
+    "heading": "Spectral, ui-serif, Georgia, serif",
+    "body": "\"M PLUS 1p\", ui-sans-serif, system-ui, sans-serif",
+    "mono": "\"M PLUS 1 Code\", ui-monospace, Menlo, monospace",
+    "avg_advance_em": 0.4818,
+    "avg_advance_source": "M PLUS 1p, BoundsPen over a prose sample"
+  },
+  "weights": {
+    "_comment": [
+      "From app/layout.tsx: 'ONLY THE WEIGHTS THE DESIGN SYSTEM CAN",
+      "ACTUALLY REACH'. 300 and 700 were deleted as unreachable."
+    ],
+    "body": 400,
+    "strong_sans": 500,
+    "strong_serif": 600,
+    "heading": 600,
+    "cap": 600
+  },
+  "metrics": {
+    "ch_advance_em": 0.620,
+    "ch_advance_source": "M PLUS 1p, advance of U+0030 ZERO -- what the CSS ch unit resolves to",
+    "measure_chars": 70,
+    "editor_font_px": 18,
+    "editor_padding_px": 40,
+    "_comment": [
+      "editor_width_px = measure_chars * avg_advance_em *",
+      "editor_font_px + editor_padding_px (border-box)."
+    ]
+  },
+  "palette": {
+    "border-base": { "light": "#3c3a36", "dark": "#ebe8e2" },
+    "_comment_border_base": "Obsidian's border base, and the one neutral every hairline, hover wash, hr, scrollbar and shadow in obsidian/theme.css is mixed from. It was never a declared role: it reached silverbullet/midori.css and marktext/midori.css as the literal rgba(60, 58, 54, ...) copied by hand, which is why the alpha varies per use and the colour never did.",
+    "paper": {
+      "light": "#f3f1eb",
+      "dark": "#1a1917"
+    },
+    "card": {
+      "light": "#faf9f6",
+      "dark": "#22211e"
+    },
+    "secondary": {
+      "light": "#edeae2",
+      "dark": "#161513"
+    },
+    "ink": {
+      "light": "#2a2825",
+      "dark": "#ebe8e2"
+    },
+    "text": {
+      "light": "#3d3933",
+      "dark": "#ebe8e2"
+    },
+    "muted": {
+      "light": "#524d46",
+      "dark": "#9c958a"
+    },
+    "faint": {
+      "light": "#8a847b",
+      "dark": "#6e685f"
+    },
+    "on-accent": {
+      "light": "#f3f1eb",
+      "dark": "#1a1917"
+    },
+    "code-normal": {
+      "light": "#2a2825",
+      "dark": "#ebe8e2"
+    },
+    "code-comment": {
+      "light": "#8a8378",
+      "dark": "#9c958a"
+    },
+    "code-punctuation": {
+      "light": "#524d46",
+      "dark": "#c5bfb4"
+    },
+    "sage": {
+      "light": "#5f6f5e",
+      "dark": "#9aab97"
+    },
+    "sage-hover": {
+      "light": "#4a5749",
+      "dark": "#b4c0b0"
+    },
+    "indigo": {
+      "light": "#3a5572",
+      "dark": "#6c87a4"
+    },
+    "indigo-deep": {
+      "light": "#2d4259",
+      "dark": "#3a5572"
+    },
+    "indigo-lift": {
+      "light": "#8ba3bd",
+      "dark": "#8ba3bd"
+    },
+    "olive": {
+      "light": "#6c7d52",
+      "dark": "#9eaf85"
+    },
+    "wine": {
+      "light": "#7a4a4a",
+      "dark": "#b8868a"
+    },
+    "wine-lift": {
+      "light": "#9d6161",
+      "dark": "#d0a2a6"
+    },
+    "ochre": {
+      "light": "#b88a3a",
+      "dark": "#d8b06a"
+    },
+    "purple": {
+      "light": "#653f7f",
+      "dark": "#a079be"
+    },
+    "mint": {
+      "light": "#548373",
+      "dark": "#7fae9c"
+    },
+    "clay": {
+      "light": "#c9916b",
+      "dark": "#d4a07a"
+    },
+    "mythic": {
+      "light": "#6b5f52",
+      "dark": "#c4b8a8"
+    },
+    "terracotta": {
+      "light": "#b06d4a",
+      "dark": "#e0b899"
+    },
+    "page-dot": {
+      "light": "#9ebfb4",
+      "dark": "#9ebfb4"
+    },
+    "warm-wash": {
+      "light": "#f0e0d4",
+      "dark": "#2c2520"
+    },
+    "warm-light": {
+      "light": "#e4c4a8",
+      "dark": "#3e3530"
+    },
+    "warm-bridge": {
+      "light": "#d4a574",
+      "dark": "#ccb08c"
+    },
+    "warm-deep": {
+      "light": "#8f4f38",
+      "dark": "#b87d5c"
+    }
+  }
+}

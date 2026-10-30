@@ -2,20 +2,28 @@
    Spectral for day-names / date-range / view labels; sage today-column wash +
    sage now-line as the signature; hairline warm grid. */
 
+/* Variables are prefixed --mcal- and not --m-, because this file and
+   midori-mail.css both declared --m-sage-soft and
+   --m-sage-line on the SAME selector (#browser.theme-light) with DIFFERENT
+   alphas -- .10/.5 here vs .12/.55 there. Equal specificity on the same element
+   means source order decides, so whichever file Vivaldi loaded last set
+   BOTH surfaces and the deliberate per-surface difference never rendered.
+   Measured by reading the two declaration blocks, not from a screenshot.
+   Separate prefixes are what make the two values independent. */
 #browser.theme-light {
-  --m-sage: #5f6f5e; --m-sage-soft: rgb(95 111 94 / .10);
-  --m-sage-line: rgb(95 111 94 / .5); --m-ink: #2a2825; --m-muted: #8a8378;
+  --mcal-sage: #5f6f5e; --mcal-sage-soft: rgb(95 111 94 / .10);
+  --mcal-sage-line: rgb(95 111 94 / .5); --mcal-ink: #2a2825; --mcal-muted: #8a8378;
 }
 #browser.theme-dark {
-  --m-sage: #9aab97; --m-sage-soft: rgb(154 171 151 / .12);
-  --m-sage-line: rgb(154 171 151 / .55); --m-ink: #ebe8e2; --m-muted: #857e72;
+  --mcal-sage: #9aab97; --mcal-sage-soft: rgb(154 171 151 / .12);
+  --mcal-sage-line: rgb(154 171 151 / .55); --mcal-ink: #ebe8e2; --mcal-muted: #857e72;
 }
 
 /* ── Day-name headers → Spectral naming band ─────────────────────────────── */
 #browser .calendar-header-date {
   font-family: "Spectral", ui-serif, Georgia, serif !important;
   font-weight: 600 !important;
-  color: var(--m-ink) !important;
+  color: var(--mcal-ink) !important;
   letter-spacing: .01em;
 }
 
@@ -24,7 +32,7 @@
 #browser .calendar-grid-hour,
 #browser [class*="hour-label"],
 #browser [class*="timeline-label"] {
-  color: var(--m-muted) !important;
+  color: var(--mcal-muted) !important;
 }
 
 /* ── Today (signature) ───────────────────────────────────────────────────────
@@ -33,25 +41,25 @@
    overlay a FAINT sage wash and color only the marker. Month view: `.day.current`
    cell. Both get a sage top-rule on the header. */
 #browser .current-time {
-  background: var(--m-sage-soft) !important;
+  background: var(--mcal-sage-soft) !important;
 }
 #browser .current-time .marker {
-  background-color: var(--m-sage) !important;
+  background-color: var(--mcal-sage) !important;
   height: 2px !important;
 }
 #browser .current-time .marker::before {
-  background-color: var(--m-sage) !important;
-  border-color: var(--m-sage) !important;
+  background-color: var(--mcal-sage) !important;
+  border-color: var(--mcal-sage) !important;
 }
 #browser .calendar-drop-target.current,
 #browser .day.current {
-  background: var(--m-sage-soft) !important;
-  box-shadow: inset 0 2px 0 var(--m-sage) !important;
+  background: var(--mcal-sage-soft) !important;
+  box-shadow: inset 0 2px 0 var(--mcal-sage) !important;
 }
 #browser .calendar-header-date.current {
-  background: var(--m-sage-soft) !important;
-  box-shadow: inset 0 2px 0 var(--m-sage) !important;
-  color: var(--m-sage) !important;
+  background: var(--mcal-sage-soft) !important;
+  box-shadow: inset 0 2px 0 var(--mcal-sage) !important;
+  color: var(--mcal-sage) !important;
 }
 
 /* ── Grid hairlines → warm subtle ────────────────────────────────────────── */
@@ -124,5 +132,5 @@
 #browser [class*="DateHeader"] {
   font-family: "Spectral", ui-serif, Georgia, serif !important;
   font-weight: 600 !important;
-  color: var(--m-ink) !important;
+  color: var(--mcal-ink) !important;
 }

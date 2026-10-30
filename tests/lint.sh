@@ -119,6 +119,28 @@ else
   echo "  skip (node not found)"
 fi
 
+echo "== vivaldi ui mods resolve in both languages =="
+# The mods reference ~47 custom properties and two palettes declare them. An
+# undeclared custom property is not a CSS error -- the declaration is simply
+# dropped and the surface renders in Vivaldi's own colour -- so a typo in one
+# name is invisible until someone opens that pane in that mode. Sabotage-proved
+# with 9 cases (scratchpad sab_viv.py): typo'd name, a variable missing from one
+# mode only, an orphaned theme id, the specificity tie, a leaked Midori colour,
+# a dangling scheduleOS id, an emptied mods dir, a declaration left inside a
+# comment, and a reference no palette declares.
+if python3 tests/test_vivaldi_css_vars.py; then :; else FAIL=1; fi
+
+echo "== lemonardo vivaldi palette matches its generator =="
+# lemonardo-palette.css is GENERATED, and every number in it is gated on
+# derivation -- stack separation, label contrast, wash loudness against
+# Midori's, and the active tab's material layer. Those gates only bind if the
+# shipped file is the generator's output, so this re-runs the derivation and
+# refuses a file that has drifted from it. Without this a hand edit sails
+# through: tests/check_vivaldi_tab_material.py reads its alphas OUT of this
+# file, so it would faithfully confirm that whatever is written there is what
+# reaches the screen.
+if python3 vivaldi/make-lemonardo-palette.py --check; then :; else FAIL=1; fi
+
 echo "== palette has one definition =="
 if python3 tests/test_palette_is_defined.py; then :; else FAIL=1; fi
 
@@ -166,6 +188,98 @@ fi
 # away from the source that produced it.
 echo "== t3 theme matches its source =="
 if python3 t3/build-t3-theme.py --check; then :; else FAIL=1; fi
+
+# THE PALETTE ROUND-TRIP, which for a long time did not run. tools/emit-theme.py
+# documented a gate -- "emitting midori must reproduce the committed block byte
+# for byte" -- that nothing ever invoked, because no target carried the sentinels
+# and lint did not call it. Wiring it found the adapter dropped nine comment
+# lines and carried a correction that had never shipped. The loop below fails on
+# an EMPTY target list as well as on a mismatch: a round-trip over zero files is
+# this repo's documented failure mode, not a pass.
+echo "== theme palettes round-trip from themes/*.json =="
+RT_PAIRS=$(python3 - <<'EOF'
+import importlib.util
+spec = importlib.util.spec_from_file_location("e", "tools/emit-theme.py")
+m = importlib.util.module_from_spec(spec)
+try:
+    spec.loader.exec_module(m)
+except SystemExit:
+    pass
+# Every pair a target DECLARES. A target that ships no file for a theme is not
+# a gap here -- it declares nothing and nothing is checked. A target that
+# declares a file which is missing or stale fails, by name.
+for t in sorted(m.TARGETS):
+    for th in sorted(m.TARGETS[t]["files"]):
+        print(f"{t}:{th}")
+EOF
+)
+RT_N=0
+for pair in $RT_PAIRS; do
+  t=${pair%%:*}; th=${pair##*:}
+  if python3 tools/emit-theme.py --target "$t" --theme "$th" --check; then :; else FAIL=1; fi
+  RT_N=$((RT_N + 1))
+done
+if [ "$RT_N" -eq 0 ]; then
+  echo "  FAIL round-tripped 0 target/theme pairs -- the gate examined nothing"
+  FAIL=1
+else
+  echo "  $RT_N target/theme pair(s) round-tripped"
+fi
+
+echo
+echo "== colour arithmetic selftest =="
+# Run FIRST among the colour checks in spirit, even though it prints here: if
+# CIEDE2000 or the Oklab matrices are wrong, every distance and contrast number
+# the Lemonardo gates print is confidently wrong in the same direction.
+if python3 tools/colorspace.py; then :; else FAIL=1; fi
+
+echo
+echo "== lemonardo ansi matches its rules and clears its gates =="
+if python3 tests/test_lemonardo_ansi.py; then :; else FAIL=1; fi
+
+echo "== the two cursor shaders differ only in brand constants =="
+if python3 tests/test_lemonardo_shader.py; then :; else FAIL=1; fi
+
+echo "== every family a theme names is vendored in fonts/ =="
+if python3 tests/test_fonts_are_vendored.py; then :; else FAIL=1; fi
+
+echo "== lemonardo twins carry no midori-only colour =="
+if python3 tests/test_lemonardo_twins.py; then :; else FAIL=1; fi
+
+echo "== midori-theme switches every surface =="
+# Runs midori-theme for real against a temp HOME, then reads the files back.
+#
+# ~72s MEASURED, and nearly all of it is process spawn, not work: the run uses
+# 0.6s of CPU across 72s of wall clock. midori-theme forks on the order of 60
+# commands per switch (cmp, cp, ln, id, dscl, awk, PlistBuddy, command -v) and
+# this machine costs ~80ms a fork; `sh -x` with a timestamped PS4 shows no
+# single gap over 0.2s, which is what rules out one slow call. So this roughly
+# doubles lint. It earns it by being the only check of what gets WRITTEN —
+# a dry run proves the decisions and nothing about the files, and the files
+# are the job.
+if python3 tests/test_midori_theme.py; then :; else FAIL=1; fi
+
+echo "== install-herdr.sh reads the live config correctly =="
+# The one installer whose destination the APPLICATION also writes: herdr
+# prepends `onboarding = false` when its onboarding overlay is dismissed, and
+# no language file has that line, so the `cmp -s` this script used to decide
+# "already up to date" could never match. Every run took the conflict branch
+# and said "matches neither language" while the config was in fact exactly
+# ours. Runs against a sandboxed HOME with a `herdr` recorder on PATH, then
+# proves the real ~/.config/herdr is byte-identical -- $HERDR_SOCKET_PATH is
+# an absolute path to the live server's socket, so HOME alone is not a sandbox
+# here either.
+if python3 tests/test_herdr_install.py; then :; else FAIL=1; fi
+
+echo "== claude code token maps =="
+if python3 tests/test_claude_themes.py; then :; else FAIL=1; fi
+
+echo "== the claude theme model still reproduces midori =="
+# Not the same check as the one above. That one holds the four FILES to each
+# other and to the frozen heredoc extraction; this one re-derives Midori from
+# the rules in the generator and diffs the result, which is what catches a rule
+# edited to suit Lemonardo at Midori's expense. The files would still agree.
+if python3 tools/make-claude-theme.py --check; then :; else FAIL=1; fi
 
 echo
 [ "$FAIL" -eq 0 ] && echo "LINT: all green" || echo "LINT: failures above"

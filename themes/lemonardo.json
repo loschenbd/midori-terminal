@@ -1,0 +1,280 @@
+{
+  "_comment": [
+    "LEMONARDO -- blended from the live smartlemon.io design system and the",
+    "systematised brand ramps in lmnbar-v2.",
+    "SOURCES, so a reader can re-derive rather than trust:",
+    "  grounds/ink/accents  smartlemon.io, the .sb-root token block and its",
+    "                       :root[data-theme=dark] counterpart (both modes real)",
+    "  tint ramps           lmnbar-v2 app/globals.css, 7 ramps x 9 steps",
+    "  text/muted/faint     COMPOSITED from the site's own ink-soft / ink-mute",
+    "                       rgba() tokens over paper -- derived, not invented",
+    "The local ~/Projects/smartlemon globals.css is STALE (Comic Neue, no dark",
+    "mode). The live site is the source; it has moved to a six-face system and",
+    "a full data-theme=dark token set.",
+    "SUPERSEDED, KEPT FOR THE ALTERNATIVE IT REJECTS. This block used to read: 'ONE HUE IS NEW: SmartLemon has no purple anywhere. It is required because the code roles need nine separable hues. #6b4578 / #b792c4 is the single invented value in this file, and it is vintage-poster grape rather than Midori's #653f7f, which would read as a Midori import.' The premise was right -- the system has no purple -- but inventing one was the wrong answer; see the note below on grey and purple. The REJECTION still stands and is why no later pass should reach for it: Midori's #653f7f would read as a Midori import, not as this brand. The nine-hue requirement is met instead by brick, crust, warm, leaf, sky and lemon plus the two ink tiers.",
+    "SUPERSEDED BY THE RAMP REBUILD, KEPT FOR THE MEASUREMENTS. This block used to read: 'FOUR LIGHT VALUES WERE DARKENED FROM THEIR BRAND SOURCE, hue and saturation kept, because the site uses them on large type and fills while an editor uses them as small continuous text. indigo 4.21->6.01, indigo-deep 6.40->7.58, clay 2.30->2.46, faint 2.85->3.08, all against paper.' Those ratios were real and they describe a palette that no longer exists: every light value is now a ramp stop rather than a hand-darkened brand colour, and the same roles measure faint 3.62 and clay 3.57. The REASONING survives the rebuild and is why the -800 tier was chosen over -700 -- a hue that works on large type or a fill is not automatically legible as small continuous text.",
+    "A CORRECTION, AND WHY IT WAS BELIEVED. An earlier pass of this file set the light grounds to #ebe4d3 / #fcf6e1, sampled off a rendered screenshot of smartlemon.io, on the reasoning that <main> paints --paper #f8f1df and then an SVG paper-grain texture over it, so #ebe4d3 is what a reader actually sees and an editor carrying no grain layer should use it. The sampling was right and the conclusion was wrong. Compositing a texture is not a palette decision: it made every ground 5% darker than the system says, cost 4 contrast pairs (faint fell to 2.63 against a 3.0 floor, clay to 2.19), and put the grounds outside the ramp so no later value could be checked against a stop. The grounds are the declared tokens. Grain, if a target wants it, is a layer on top.",
+    "THE RAMP OF RECORD IS lmn.bar, NOT smartlemon.io. lmn.bar declares 67 --color-* stops; smartlemon.io declares 22, of which 19 are byte-identical and 3 are local overrides (crust-400 #e8c5a0 vs #e8c88a, lemon-300/400 shifted). Every light value here is a stop from that ramp, measured against the ground rather than chosen by eye: the -700 tier straddles the floors (warm-700 is 3.20 against a 3.56 secondary floor), so light accents come from -800 and dark ones from -300/-400, which is also the tier smartlemon.io's own dark block declares.",
+    "THERE IS NO GREY AND NO PURPLE IN THIS SYSTEM. An earlier pass invented both -- #888a8a / #62676f for quiet text and #6b4578 for the `purple` role -- because every theme needs those slots filled and nothing in the ramp is obviously either. Quiet text is the ink token at 86% / 68% over the ground, or the cream ramp, which is why the palette stays warm to the bottom. The `purple` key is kept because targets map it, but it now carries crust-800; if a target needs a hue genuinely distinct from brick and crust, that is a request to the brand, not a licence to invent one here.",
+    "DARK MODE IS REAL AND IS NOT A RECOLOURING OF LIGHT. smartlemon.io has no prefers-color-scheme block -- forcing dark leaves the page byte-identical. It ships a `button.sb-lights` toggle that sets html[data-theme=\"dark\"], the same mechanism SilverBullet uses, and that block declares its own grounds: --root-paper #2c2a28, --root-desk #171513, --root-ray hsla(43,64%,92%,.05) lifting a card to #363330, text #ede4d3 (89 nodes) and accent #ff8a6a (10). Those are warm near-blacks, not the navy ink. Two consequences: ink #1b263b is 1.06:1 on #2c2a28, so it appears nowhere in dark mode; and lemon #ffd700, which is background-only on paper at 1.24:1, is legible as TEXT on night at 10.19:1. The two modes do not share a foreground rule.",
+    "THE BRICK FAMILY NEEDS THREE SEPARATED STOPS ON THE DARK GROUND. sage, wine and terracotta are all brick-family roles, and on #2c2a28 the lower stops run out of contrast fast: brick-400 #d5734d is only 4.35:1, a 5.26 regression against Midori's value for the same role. They now take #ff8a6a (the site's own accent, 6.19), brick-300 #f1b29a (7.88) and brick-200 #ffdccc (11.80), with brick-100 #fff4ef as the lift above wine. Light mode has the opposite problem -- the same three roles sit at brick-600/700/500, because on paper it is the LIGHT end of each ramp that is unusable.",
+    "CODE DOES NOT GET ITS OWN GROUND. smartlemon.io paints ink panels on its cream page -- ink is its single most-painted background, 9 nodes -- and copying that gave the markdown targets a dark code block inside a light theme. It looked right and it does not port. In Obsidian, SilverBullet, MarkText and Antinote a code block is an island inside prose, so it can hold a ground of its own; in VS Code and Cursor the editor surface IS the code and there is no surrounding prose to contrast against. A theme whose code colours are chosen against an island ground mispredicts every full-window editor, and the syntax tier flips with it: the ink panel forced the DARK tier inside the LIGHT theme. Code panels therefore take the `card` tone of their own mode, and each mode's syntax tier is chosen against that mode's ground. Keep this when wiring the remaining targets.",
+    "THE THEME IS NAMED LEMONARDO; THE DESIGN LANGUAGE IS SMARTLEMON'S. Every mention of smartlemon.io, lmn.bar or ~/Projects/smartlemon in this file names a SOURCE, not the theme, and is deliberate: they are how a reader re-derives these values instead of trusting them. Renaming those would destroy the provenance, so only the theme's own name and id changed. Quotations of earlier versions of this file are likewise left verbatim, which is why 'SmartLemon' still appears inside them.",
+    "PAINTPOT IS NOW A DRAFTING BENCH, AND IT LEAVES THE RAMP ON PURPOSE. Every light value above used to be a stop from lmn.bar's 67, and the discipline was right while the brief was 'match the brand'. The brief changed: the light mode should read as golden-era animation paper -- bond, pencils, ink, paintpots. That cannot be done inside the ramp, because the ramp is entirely WARM (brick, crust, warm, leaf, sky, lemon, cream) plus one navy, and a drafting bench is warm paper under COOL tools: graphite is a cool grey, non-photo blue a cool cyan, cobalt a cool blue. The cool-on-warm tension is the whole effect. So the light palette is now materials -- bond #f3eee2, cel #fbf8f0, manila #e6dac2, India ink #1c1f24, graphite 2B/HB/4H, vermilion, viridian, cobalt, burnt sienna, ochre, cadmium, aniline violet -- measured to the same floors: 49 pairs, 0 failures. Inkwell is unchanged and stays warm; the two modes are a lit drafting table and an ink wash at night, and they are not meant to match in temperature.",
+    "GUIDE COLOURS ARE ASSERTED AGAINST A CEILING, NOT A FLOOR, and this is the one rule most likely to be 'fixed' by someone being helpful. Non-photo (col-erase) blue existed because the rostrum camera could not see it: you drafted in it and inked straight over without erasing. It measures 1.34:1 on bond, and that is the material being correct, not a defect. `guide`, `guide-pale` and `peg` rule lines, mark peg holes and never carry a word; blue that must be READ is cobalt #2e5c8a at 6.02. tests/check_theme_contrast.py now holds these three BELOW 2.0 and fails if one becomes legible, because a guide that reads as text has stopped being a guide."
+  ],
+  "name": "Lemonardo",
+  "id": "lemonardo",
+  "type": {
+    "_comment": [
+      "Besley (--font-heading) and Instrument Sans (--font-instrument) are the",
+      "site's own. Shrikhand (--font-title) renders 24 times on the site but is",
+      "deliberately NOT used here: it is a fat display face for poster titles and",
+      "is unreadable as editor chrome.",
+      "SPECIAL ELITE IS THE LABEL FACE, NOT THE MONO FACE, and that distinction is",
+      "the whole point. The site puts it in the mono slot (var(--font-typed),",
+      "monospace) and it is NOT monospaced -- measured, 86 distinct advance widths",
+      "across printable ASCII, post.isFixedPitch=0 -- so it would break column",
+      "alignment in a code editor. But it is the single most recognisable thing",
+      "about the brand: 58 of 194 rendered text elements, every slate and eyebrow",
+      "('SEQ. 01 \u00b7 SC. 1 TO 4', 'REEL 01', 'ACTION:'), at 11-13px, usually",
+      "uppercase, tracked +0.25 to +0.96px. It belongs on labels and chrome.",
+      "MONO IS SOMETYPE MONO, measured from the binary rather than taken on trust:",
+      "post.isFixedPitch=1 with exactly ONE advance width (580/1000 = 0.58em)",
+      "across all 94 printable ASCII glyphs, x-height 0.470em, cap 0.650em,",
+      "OFL 1.1. It is a variable font with a wght 400-700 axis, so 500 and 600 are",
+      "real interpolations -- which matters, because a face served at 400;700 only",
+      "(as M PLUS 1 Code is in Midori) cannot reach the 600 cap and synthesises",
+      "instead. At 0.58em it is 3.3% narrower than the 0.600em convention; that",
+      "affects code-block columns only, since the prose measure below is derived",
+      "from Instrument Sans.",
+      "Reenie Beanie is one handwritten aside, in brick, at ~25px. Used once per",
+      "screen at most -- it is a signature, not a text face."
+    ],
+    "ui": "Besley, ui-serif, Georgia, serif",
+    "heading": "Besley, ui-serif, Georgia, serif",
+    "body": "\"Instrument Sans\", ui-sans-serif, system-ui, sans-serif",
+    "label": "\"Special Elite\", ui-monospace, monospace",
+    "aside": "\"Reenie Beanie\", cursive",
+    "mono": "\"Sometype Mono\", ui-monospace, Menlo, monospace",
+    "avg_advance_em": 0.4527,
+    "avg_advance_source": "Instrument Sans, BoundsPen over the same prose sample",
+    "mono_advance_em": 0.58,
+    "mono_advance_source": "Sometype Mono, hmtx: single advance 580/1000 across U+0021-U+007E",
+    "label_tracking_px": [
+      0.25,
+      1.1
+    ],
+    "deck": {
+      "weight": 600,
+      "size_px": 13,
+      "tracking_px": 2,
+      "transform": "uppercase"
+    }
+  },
+  "weights": {
+    "_comment": [
+      "A CORRECTION. This block used to read: 'SmartLemon is a louder language than",
+      "Midori and its cap is 700, not 600. Measured from the live CSS: font-weight",
+      "400 x21, 700 x4, 600 x2, 500 x1 -- 700 is the display weight in use.' The",
+      "counts were real and the conclusion was wrong, because they counted CSS",
+      "DECLARATIONS rather than rendered text. Two of the entries ('400 900' x4 and",
+      "'400 700' x2) are @font-face src range descriptors -- the weight AXIS a",
+      "variable font carries, not a weight anything is set in -- and the four 700",
+      "rules never land on painted text.",
+      "Re-measured against the rendered DOM: of 194 text-painting elements on",
+      "smartlemon.io, ZERO render at 700. The distribution is Special Elite 400 x58,",
+      "Besley 600 x30, Instrument Sans 600 x30, Besley 500 x30, Shrikhand 400 x24,",
+      "Instrument Sans 500 x10, Instrument Sans 400 x9, Reenie Beanie 400 x2,",
+      "Besley 400 x1. So the cap is 600, the same as Midori's, and Besley carries",
+      "TWO heading tiers -- 600 for the primary head, 500 for the secondary -- which",
+      "is the distinction `heading` and `heading_soft` record.",
+      "Headings also carry negative tracking at display sizes: -0.72px at 36px,",
+      "-0.24px at 24px, -0.21px at 21px, i.e. about -0.02em, applied above ~20px."
+    ],
+    "body": 400,
+    "strong_sans": 600,
+    "strong_serif": 600,
+    "heading": 600,
+    "heading_soft": 500,
+    "cap": 600,
+    "heading_tracking_em": -0.02,
+    "heading_tracking_min_px": 20
+  },
+  "metrics": {
+    "measure_chars": 70,
+    "editor_font_px": 18,
+    "editor_padding_px": 40
+  },
+  "palette": {
+    "border-base": { "light": "#1c1f24", "dark": "#ede4d3" },
+    "_comment_border_base": "The hairline neutral. Paintpot tints India ink, Inkwell tints its text tone; the ALPHA belongs to each target (SilverBullet uses 0.1/0.12) and the colour belongs here.",
+    "paper": {
+      "light": "#f3eee2",
+      "dark": "#2c2a28"
+    },
+    "card": {
+      "light": "#fbf8f0",
+      "dark": "#363330"
+    },
+    "secondary": {
+      "light": "#e6dac2",
+      "dark": "#171513"
+    },
+    "ink": {
+      "light": "#1c1f24",
+      "dark": "#fdf6e3"
+    },
+    "text": {
+      "light": "#3a4048",
+      "dark": "#ede4d3"
+    },
+    "muted": {
+      "light": "#5a616a",
+      "dark": "#a49d93"
+    },
+    "faint": {
+      "light": "#767d85",
+      "dark": "#8c877e"
+    },
+    "on-accent": {
+      "light": "#fbf8f0",
+      "dark": "#2c2a28"
+    },
+    "code-normal": {
+      "light": "#3a4048",
+      "dark": "#ede4d3"
+    },
+    "code-comment": {
+      "light": "#767d85",
+      "dark": "#a49d93"
+    },
+    "code-punctuation": {
+      "light": "#5a616a",
+      "dark": "#d2cabc"
+    },
+    "sage": {
+      "light": "#b03e22",
+      "dark": "#ff8a6a"
+    },
+    "sage-hover": {
+      "light": "#9c3318",
+      "dark": "#ffb39a"
+    },
+    "indigo": {
+      "light": "#2e5c8a",
+      "dark": "#87ceeb"
+    },
+    "indigo-deep": {
+      "light": "#244a70",
+      "dark": "#6ba5a5"
+    },
+    "indigo-lift": {
+      "light": "#4a7cb0",
+      "dark": "#b8e0e8"
+    },
+    "olive": {
+      "light": "#1f6b4d",
+      "dark": "#66bb6a"
+    },
+    "wine": {
+      "light": "#9c3318",
+      "dark": "#f1b29a"
+    },
+    "wine-lift": {
+      "light": "#b03e22",
+      "dark": "#fff4ef"
+    },
+    "ochre": {
+      "light": "#8a5e14",
+      "dark": "#f4d896"
+    },
+    "purple": {
+      "light": "#6a4c7c",
+      "dark": "#c9a9d8"
+    },
+    "mint": {
+      "light": "#2e7d5b",
+      "dark": "#b8e0e8"
+    },
+    "clay": {
+      "light": "#a0701d",
+      "dark": "#e8c88a"
+    },
+    "mythic": {
+      "light": "#5a4632",
+      "dark": "#d7bfa0"
+    },
+    "terracotta": {
+      "light": "#b03e22",
+      "dark": "#ffdccc"
+    },
+    "page-dot": {
+      "light": "#ffd700",
+      "dark": "#ffd700"
+    },
+    "warm-wash": {
+      "light": "#f7efd9",
+      "dark": "#332f2b"
+    },
+    "warm-light": {
+      "light": "#ede0c6",
+      "dark": "#3e3833"
+    },
+    "warm-bridge": {
+      "light": "#ddd2bb",
+      "dark": "#c9a97f"
+    },
+    "warm-deep": {
+      "light": "#8a5e14",
+      "dark": "#d5734d"
+    },
+    "guide": {
+      "light": "#a8d7ea",
+      "dark": "#3f5a68"
+    },
+    "guide-pale": {
+      "light": "#cde8f2",
+      "dark": "#2f424c"
+    },
+    "peg": {
+      "light": "#c9bb9f",
+      "dark": "#3a3733"
+    }
+  },
+  "_comment_syntax": [
+    "WHICH HUE EACH CODE TOKEN TAKES. These are ROLE NAMES, not colours -- a",
+    "token may not introduce a tone, and the role it names is already contrast-",
+    "checked on both grounds by the HUES loop in tests/check_theme_contrast.py.",
+    "",
+    "WHY IT IS RECORDED HERE AND NOT DERIVED. Before this key existed, every",
+    "mockup board picked its own syntax hexes, and a sweep of 15 boards found 106",
+    "literals belonging to no role -- including #7a4420 for type and #ffe082 for",
+    "number, which exist in neither the ramp nor the palette. A theme that cannot",
+    "say what colour a keyword is cannot be emitted to VS Code, and the Editor",
+    "board was predicting a surface nobody could build.",
+    "",
+    "KEYWORD IS THE ONE TOKEN THAT CHANGES ROLE BETWEEN MODES, and that is not an",
+    "oversight. The brick family needs three separated stops in dark, and",
+    "wine.dark (#f1b29a) is a pale pink -- fine for a quote rule, too weak to",
+    "carry keywords. sage.dark (#ff8a6a) is smartlemon.io's own accent and is the",
+    "right keyword in an ink wash. In light, sage is spent on links and operators,",
+    "so keyword takes wine (#9c3318) to stay distinguishable from both."
+  ],
+  "syntax": {
+    "normal":      { "light": "code-normal",      "dark": "code-normal" },
+    "comment":     { "light": "code-comment",     "dark": "code-comment" },
+    "punctuation": { "light": "code-punctuation", "dark": "code-punctuation" },
+    "keyword":     { "light": "wine",             "dark": "sage" },
+    "string":      { "light": "olive",            "dark": "olive" },
+    "number":      { "light": "ochre",            "dark": "ochre" },
+    "function":    { "light": "indigo",           "dark": "indigo" },
+    "type":        { "light": "mythic",           "dark": "mythic" },
+    "operator":    { "light": "terracotta",       "dark": "terracotta" },
+  "constant":    { "light": "clay",             "dark": "clay" }
+  },
+  "modes": {
+    "light": "Paintpot",
+    "dark": "Inkwell"
+  }
+}
