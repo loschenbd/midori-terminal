@@ -953,28 +953,36 @@ body.midori-drawn .markdown-source-view.mod-cm6 .cm-content {
   caret-color: transparent;
 }
 
-/* THE CARVE-OUT FOR A FOCUSED WIDGET. The rule above paints the native caret
-   out on .cm-content so plugins/midori-caret can draw a replacement. A table
-   widget carries its OWN nested .cm-content, so that rule reached it as well —
-   and the drawn caret is positioned from the OUTER editor's selection
-   geometry, so it never appears inside the widget. Editing a table cell
-   therefore had no caret at all: the native one painted out, nothing drawn in
-   its place. Measured: caret-color transparent at both .cm-content ancestors,
-   with no .cm-cursor and no drawn marker anywhere in the DOM.
+/* NO CARVE-OUT FOR A FOCUSED WIDGET, AND THE ONE THAT USED TO SIT HERE WAS A
+   MISDIAGNOSIS. It restored the native caret inside the widget with
+   `.cm-table-widget .cm-content { caret-color: var(--caret-color) }`, on the
+   stated grounds that "the drawn caret is positioned from the OUTER editor's
+   selection geometry, so it never appears inside the widget". That reasoning
+   was wrong, and it is recorded rather than quietly deleted because it is the
+   kind of wrong that reads as obviously true.
 
-   CodeMirror's own drawSelection ships precisely this carve-out — it restores
-   the native caret and selection inside a focused widget — and the note at the
-   top of plugins/midori-caret/main.js cites that as a point in drawSelection's
-   favour. Hand-rolling the caret means hand-rolling the carve-out too.
+   The drawn caret DOES appear inside the widget, positioned correctly. The
+   plugin registers its layers through registerEditorExtension, so EVERY
+   EditorView gets them — the nested cell view included — and each layer
+   measures against its own view's scrollDOM (see layerBase in
+   plugins/midori-caret/main.js). Measured with a cell focused: the in-widget
+   marker carried inline `left: 67.45px; top: 5px` against a nested scroller at
+   left 706.4, top 502 — i.e. 773.85/507.0 — against a real selection rect at
+   773.83/506.97. Within 0.03px.
 
-   One class more specific than the rule above, and gated on the same body
-   class, so with the plugin disabled this says nothing about a caret nobody
-   painted out. Measured with it: the nested content's caret-color became
-   rgb(95, 111, 94) — the sage accent — while the outer .cm-content stayed
-   transparent, so the drawn caret still owns prose. */
-body.midori-drawn .markdown-source-view.mod-cm6 .cm-table-widget .cm-content {
-  caret-color: var(--caret-color);
-}
+   What actually broke it was the focus gate below, which used a DESCENDANT
+   combinator and so hid the nested layer whenever the OUTER editor lost focus,
+   which is exactly what focusing a cell does. The layer was display:none, not
+   missing — so the original investigation's "no drawn marker anywhere in the
+   DOM" got read as "the plugin cannot reach in here" when what it meant was
+   "this stylesheet hid it". The measurement was fine; the mechanism inferred
+   beside it was not.
+
+   Restoring the native caret on top of the fixed gate gives a cell TWO carets.
+   Photographed at 8x, 620ms apart: one frame holds the 19px indigo drawn bar,
+   the next the shorter sage native tick at the same x, the two blinking on
+   independent schedules. So this rule is gone rather than narrowed, and the
+   drawn caret owns table cells the way it owns prose. */
 
 /* CodeMirror's layer() gives the container position/containment; the marker
    only carries inline left/top/height. Both are restated so the caret does not
@@ -986,10 +994,39 @@ body.midori-drawn .midori-cursorLayer {
   pointer-events: none;
   contain: size style;
 }
-body.midori-drawn .cm-editor:not(.cm-focused) .midori-cursorLayer {
+/* CHILD-SCOPED, AND THAT IS THE WHOLE TABLE-CELL CARET FIX. These two rules
+   used to use a DESCENDANT combinator, which stops being correct the moment
+   editors nest. A live-preview table cell is edited in its OWN EditorView
+   inside .cm-table-widget, so that view's cursor layer has two .cm-editor
+   ancestors: the cell, which is focused, and the outer note, which is NOT —
+   focus moved into the cell. `.cm-editor:not(.cm-focused) .midori-cursorLayer`
+   therefore matched through the outer one and hid the caret belonging to the
+   editor that actually had focus.
+
+   Measured, with a cell focused: the in-widget layer computed display: none,
+   and CDP's getMatchedStylesForNode named exactly one rule setting display —
+   the old descendant form of the rule below — while the layer's ancestor
+   editors reported focused=true (the cell) and focused=false (the note).
+   Forcing display:block on that one layer put the bar at left 191.83 against a
+   selection at left 191.83, i.e. dx 0.00, 19px x 1.5px in rgb(58, 85, 114).
+   So the caret inside a cell was never mispositioned. It was drawn correctly
+   and then hidden.
+
+   The layer's parent is .cm-scroller, and the scroller's parent is .cm-editor —
+   measured in both the nested and the outer editor — so `> .cm-scroller >`
+   binds each rule to its own editor's layer and nothing else. If CodeMirror
+   ever moves the layer elsewhere these rules stop matching, and that failure is
+   a stale caret left visible in an unfocused pane rather than a missing one.
+
+   NOT DONE WITH A LATER display:block. The obvious alternative is to keep the
+   descendant selector and un-hide under .cm-focused; it lands at equal
+   specificity and would win on order. It reveals the wrong layer, though: a
+   cell whose nested editor outlives its focus still sits inside the focused
+   outer editor, so a caret would paint in a cell nobody is editing. */
+body.midori-drawn .cm-editor:not(.cm-focused) > .cm-scroller > .midori-cursorLayer {
   display: none;
 }
-body.midori-drawn .cm-editor.cm-focused .midori-cursorLayer {
+body.midori-drawn .cm-editor.cm-focused > .cm-scroller > .midori-cursorLayer {
   animation: midori-blink 1.2s steps(1) infinite;
 }
 
@@ -2006,6 +2043,25 @@ body {
    48 + 24 x (title + body lines) just above, and a transform moves the ink
    without touching that arithmetic. */
 .callout-title .callout-icon svg {
+  transform: translateY(calc(-1 * var(--midori-row) / 4));
+}
+/* THE FOLD CHEVRON NEEDS THE SAME ROW/4, AND CANNOT TAKE IT ON THE SAME
+   ELEMENT. A foldable callout's arrow sat low for exactly the reason the icon
+   did — centred on the line box while the letters occupy its top half — and
+   measured the same: chevron ink centre 426.47 against a cap centre of 420.47,
+   +6.00px, with the icon beside it already at 0.00 after the rule above.
+
+   BUT OBSIDIAN ROTATES THE SVG, NOT THE WRAPPER. Measured on a collapsed
+   callout: div.callout-fold.is-collapsed has transform: none, while the svg
+   inside it carries matrix(0, -1, 1, 0, 0, 0) — a -90deg rotation about
+   8px 8px. `transform` is one property, so translating the SVG would replace
+   that rotation and leave the arrow pointing the wrong way in exactly the state
+   where it matters. The shift therefore goes on the wrapper div, which owns no
+   transform of its own and carries the svg with it.
+
+   The theme had no .callout-fold rule at all before this, which is why the icon
+   fix could not reach it: the chevron was still on Obsidian's own alignment. */
+.callout-title .callout-fold {
   transform: translateY(calc(-1 * var(--midori-row) / 4));
 }
 .callout-content {

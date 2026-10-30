@@ -605,44 +605,81 @@ def test_indent_never_reaches_a_table_cell():
        f"({len(indented)} rule(s) checked)")
 
 
-def test_widget_editables_keep_a_caret():
-    """A focused widget editable keeps a native caret.
+def test_nested_editor_carets_are_not_hidden():
+    """A focused table cell shows the drawn caret, and only that one.
 
-    caret-color: transparent is painted on .cm-content so the drawn caret from
-    plugins/midori-caret can replace it. A table widget carries its OWN nested
-    .cm-content, so that rule reached it too -- while the drawn replacement
-    only covers the outer editor's selection geometry. MEASURED: caret-color
-    transparent at BOTH .cm-content ancestors, with no .cm-cursor and no drawn
-    marker in the DOM. No native caret, no drawn caret, no caret.
+    THIS TEST REPLACES ONE THAT ASSERTED THE OPPOSITE, and the reversal is the
+    point. The old test demanded a carve-out restoring the NATIVE caret inside
+    .cm-table-widget, on the belief that the drawn caret "only covers the outer
+    editor's selection geometry" and could never appear in a cell. That belief
+    was wrong. The plugin registers its layers through registerEditorExtension,
+    so every EditorView gets one -- the nested cell view included -- and each
+    measures against its own scrollDOM. MEASURED with a cell focused: the
+    in-widget marker sat at 773.85/507.0 against a real selection rect at
+    773.83/506.97, i.e. within 0.03px.
 
-    CodeMirror's own drawSelection ships exactly this carve-out -- it restores
-    the native caret and selection inside a focused widget -- and the header of
-    plugins/midori-caret/main.js records that as a point in drawSelection's
-    favour. The hand-rolled path has to write the carve-out out.
+    What actually hid it was the focus gate on .midori-cursorLayer, written
+    with a DESCENDANT combinator. A cell's layer has two .cm-editor ancestors:
+    the cell (focused) and the note (NOT focused, because focus moved into the
+    cell), so `.cm-editor:not(.cm-focused) .midori-cursorLayer` matched through
+    the outer one and hid the caret of the editor that had focus. CDP's
+    getMatchedStylesForNode named that single rule as the source of
+    display:none; forcing display:block put the bar on the text at dx 0.00.
 
-    GATED ON body.midori-drawn, like the rule it corrects: without the plugin
-    the native caret is untouched, and this must not start overriding a caret
-    nobody painted out.
+    So two things have to hold, and each fails differently:
 
-    SABOTAGE-PROVED: deleting the rule fails this test; removing its
-    body.midori-drawn gate fails it naming the gate.
+    1. Every focus gate on .midori-cursorLayer is CHILD-scoped through
+       .cm-scroller, binding it to its own editor's layer. Measured DOM shape:
+       layer -> .cm-scroller -> .cm-editor, in both the nested and the outer
+       editor.
+    2. NOTHING sets caret-color inside .cm-table-widget. With the gate fixed the
+       drawn caret paints there, so restoring the native one gives a cell two
+       carets -- photographed at 8x 620ms apart, one frame the 19px indigo bar,
+       the next the shorter sage native tick at the same x.
+
+    An empty gate set is a FAILURE, not a pass: if no rule gates the layer on
+    focus any more, this test has nothing to check and must say so rather than
+    report green.
+
+    SABOTAGE-PROVED in three arms: restoring the descendant combinator fails
+    naming the loose selector; re-adding the caret-color carve-out fails naming
+    the double caret; deleting the gate entirely fails on the empty set.
     """
-    restored = [sel for sel, decls in rules()
-                if ".cm-table-widget" in sel
-                and re.search(r"caret-color:\s*var\(--caret-color\)", decls)]
-    if not restored:
-        bad("no rule restores caret-color inside .cm-table-widget; editing a "
-            "table cell has no caret at all -- the native one is painted out "
-            "and the drawn one does not cover widget editables")
+    gates = [sel for sel, _ in rules()
+             if ".midori-cursorLayer" in sel and ".cm-focused" in sel]
+    if not gates:
+        bad("no rule gates .midori-cursorLayer on .cm-focused any more, so this "
+            "check has no input; the drawn caret is either always visible or "
+            "always hidden, and neither is the intended behaviour")
         return
-    ungated = [sel for sel in restored if "body.midori-drawn" not in sel]
-    if ungated:
-        bad("the widget caret carve-out is not gated on body.midori-drawn, so "
-            "it overrides the caret even with the plugin disabled, where "
-            f"nothing painted it out: {' '.join(ungated[0].split())[:90]}")
+
+    loose = []
+    for sel in gates:
+        for one in sel.split(","):
+            if ".midori-cursorLayer" not in one:
+                continue
+            norm = " ".join(one.split())
+            if not re.search(r"\.cm-editor\S*\s*>\s*\.cm-scroller\s*>\s*"
+                             r"\.midori-cursorLayer", norm):
+                loose.append(norm)
+    if loose:
+        bad("a .midori-cursorLayer focus gate is not child-scoped through "
+            ".cm-scroller, so an unfocused OUTER editor hides the caret of a "
+            "focused nested one -- editing a table cell loses its caret: "
+            f"{loose[0][:100]}")
         return
-    ok(f"a focused widget editable keeps its caret ({len(restored)} rule(s), "
-       "all gated on body.midori-drawn)")
+
+    carve = [sel for sel, decls in rules()
+             if ".cm-table-widget" in sel and re.search(r"caret-color\s*:", decls)]
+    if carve:
+        bad("a rule sets caret-color inside .cm-table-widget; with the focus "
+            "gate child-scoped the drawn caret already paints in a cell, so "
+            "this gives it a second, differently-blinking caret: "
+            f"{' '.join(carve[0].split())[:100]}")
+        return
+
+    ok(f"nested-editor carets survive an unfocused ancestor ({len(gates)} focus "
+       "gate(s), all child-scoped; no widget caret-color override)")
 
 
 if __name__ == "__main__":
@@ -656,6 +693,6 @@ if __name__ == "__main__":
     test_hanging_indent_keeps_the_list_exclusion()
     test_code_furniture_fits_a_row()
     test_indent_never_reaches_a_table_cell()
-    test_widget_editables_keep_a_caret()
+    test_nested_editor_carets_are_not_hidden()
     print("block geometry: all green" if not FAIL else "block geometry: failures above")
     sys.exit(1 if FAIL else 0)
