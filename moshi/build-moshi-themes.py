@@ -67,20 +67,39 @@ ANSI = [
 # advance width of 580/1000 = 0.5800em across them, wght axis 400-700,
 # sxHeight 470/1000 = 0.4700em, sCapHeight 650/1000 = 0.6500em, OFL 1.1.
 #
-# THE ITALIC SHIPS TOO, AND ITS METRICS ARE WHY. A terminal paints comments and
-# emphasis in italic, and an italic whose advance differs from the roman's
-# breaks column alignment on exactly those runs. Measured, the italic is also
-# isFixedPitch=1 with the same single 580/1000 advance across the same 94
-# glyphs, so it is metric-compatible and safe to use in a grid. Midori's set
-# ships no italic because M PLUS 1 Code has none to ship, not because roman-only
-# was a decision -- worth saying, so nobody "fixes" the asymmetry by deleting
-# this one.
+# ONE FILE PER MOSHI SLOT, AND MOSHI HAS TWO. The terminal font is imported
+# from Files as a single face (Settings -> Terminal Fonts -> Import font, Moshi
+# Pro; getmoshi.app/docs/personalization, read 2026-10-30), and the app has a
+# second font setting for Chat View, the markdown reading surface. Nothing in
+# the docs pairs a bold or italic file with an imported face -- they warn OFF
+# collections that carry variants -- so a second file per slot is a file the
+# app cannot use. The variable roman is the right single file: one face that
+# carries every weight, usable through the axis where the app knows how and at
+# its default weight where it does not.
+#
+# The ITALIC used to ship here with a paragraph arguing for it (metric-
+# compatible with the roman: isFixedPitch=1, the same single 580/1000 advance
+# across the same 94 glyphs, so safe in a grid). The measurements hold; the
+# conclusion did not, because it assumed a second file would be picked up
+# beside the first, and Moshi gives it no slot. It is still vendored in fonts/
+# for the surfaces that can use it.
+#
+# CHAT VIEW TAKES THE LANGUAGE'S BODY FACE: Instrument Sans for Lemonardo
+# (themes/lemonardo.json type.body) and M PLUS 2 Regular for Midori. Midori's
+# prose face elsewhere is M PLUS 1p, and M PLUS 2 is chosen over it for one
+# measured reason: 1p draws the ellipsis centred on the x-height (ink 290-430
+# of 1000, the Japanese leader convention, no OpenType alternate) while M PLUS
+# 2 puts it on the baseline like its full stop (0-107), and chat text is full
+# of ellipses. Same designer, same 520 x-height, same lowercase widths within
+# 0.4%; the differences are rounder dots and softer terminals. A static
+# Regular because no variable M PLUS 2 is vendored; 1.8 MB like the 1p files.
 SETS = {
     "midori": {
         "label": "Midori",
         "themes": [("midori-paper", "Midori Paper", "light"),
                    ("midori-night", "Midori Night", "dark")],
-        "fonts": [("MPLUS1Code[wght].ttf", "fonts/MPLUS1Code[wght].ttf"),
+        "fonts": [("MPLUS1Code[wght].ttf", "fonts/MPLUS1Code[wght].ttf"),   # terminal
+                  ("MPLUS2-Regular.ttf", "fonts/MPLUS2-Regular.ttf"),       # chat view
                   ("OFL-MPLUS.txt", "fonts/OFL-MPLUS.txt")],
         "readme": "README.md",
     },
@@ -88,10 +107,11 @@ SETS = {
         "label": "Lemonardo",
         "themes": [("lemonardo-paintpot", "Lemonardo Paintpot", "light"),
                    ("lemonardo-inkwell", "Lemonardo Inkwell", "dark")],
-        "fonts": [("SometypeMono[wght].ttf", "fonts/SometypeMono[wght].ttf"),
-                  ("SometypeMono-Italic[wght].ttf",
-                   "fonts/SometypeMono-Italic[wght].ttf"),
-                  ("OFL-SometypeMono.txt", "fonts/OFL-SometypeMono.txt")],
+        "fonts": [("SometypeMono[wght].ttf", "fonts/SometypeMono[wght].ttf"),  # terminal
+                  ("InstrumentSans[wdth,wght].ttf",
+                   "fonts/InstrumentSans[wdth,wght].ttf"),                   # chat view
+                  ("OFL-SometypeMono.txt", "fonts/OFL-SometypeMono.txt"),
+                  ("OFL-InstrumentSans.txt", "fonts/OFL-InstrumentSans.txt")],
         # NO README, and this is the recorded reason. moshi/README.md is titled
         # "Midori for Moshi" and names midori-paper.json, the Midori QR files and
         # Midori's two background hexes -- thirteen Midori references. Copied into
@@ -345,7 +365,7 @@ def publish(set_id, spec, built):
         mb = sum((dest / n).stat().st_size for n, _ in fonts_copied) / 1_048_576
         print(f"   + {len(fonts_copied)} font file(s) ({mb:.1f} MB)")
     else:
-        print("   + no fonts: this set's mono face is not vendored in fonts/")
+        print("   + no fonts: this set's faces are not vendored in fonts/")
     if missing:
         print(f"   NOT copied (build them first): {', '.join(missing)}")
     if bad:
