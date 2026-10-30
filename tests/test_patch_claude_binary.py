@@ -30,6 +30,10 @@ def _load():
 m = _load()
 
 CODESPAN_SRC = b'case"codespan":return mt("permission",t)(e.text);'
+# 2.1.304 binds the call before returning it. marked's renderer has its own
+# `case"codespan":`, which the patcher must step past.
+CODESPAN_SRC_LET = (b'case"codespan":{r+=n.codespan(y);break}'
+                    b'case"codespan":{let u=mt("permission",t)(e.text),f=d;return u}')
 SUGGESTION_SRC = b'a=mt("suggestion",w.theme)(s);b=mt("suggestion",gt)(q);'
 # `xmt(` is a different function whose name merely ends in the helper's.
 UNRELATED_SRC = b'c=xmt("suggestion",k);function f(){return 1}'
@@ -120,6 +124,18 @@ def test_captures_the_minified_helper_name():
 def test_leaves_longer_identifiers_alone():
     out = m.patch(stock())[0]
     assert b'xmt("suggestion",k)' in out, "rewrote a call to a different function (xmt)"
+
+
+def test_codespan_bound_with_let_since_2_1_304():
+    src = build([
+        (b"/$bunfs/root/chunk-render.js", CODESPAN_SRC_LET, 400),
+        (b"/$bunfs/root/chunk-tips.js", SUGGESTION_SRC, 300),
+    ])
+    out, report = m.patch(src)
+    assert b'{let u=mt("ansi:blue" ,t)' in out, "the let-bound codespan call was not rewritten"
+    assert report["rewritten"] == 3, f"expected 3 sites rewritten, got {report['rewritten']}"
+    assert b'{r+=n.codespan(y);break}' in out, "marked's renderer case was touched"
+    assert m.patch(out) is None, "second pass did not recognise its own let-form output"
 
 
 def test_refuses_without_the_codespan_anchor():
