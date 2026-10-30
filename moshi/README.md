@@ -24,6 +24,22 @@ Three ways, all on the phone. Easiest first:
 
 Nothing is installed on the host; `install.sh` does not touch these.
 
+## Fonts
+
+Moshi has two font slots and takes one single-face file in each, imported from
+Files (Settings → Terminal Fonts → Import font…, Moshi Pro). Each language's
+iCloud folder therefore carries exactly two fonts beside its themes:
+
+| slot | Midori | Lemonardo |
+|---|---|---|
+| terminal | `MPLUS1Code[wght].ttf` | `SometypeMono[wght].ttf` |
+| Chat View | `MPLUS2-Regular.ttf` | `InstrumentSans[wdth,wght].ttf` |
+
+The variable roman is the right single file for a slot: one face carrying
+every weight. No bold or italic companion ships, because nothing in Moshi's
+docs pairs one with an imported face (checked 2026-10-30), and the generator's
+comments hold the record of the italic that used to ship and why it stopped.
+
 ## These are generated — don't edit them
 
 `build-moshi-themes.py` reads `ghostty/themes/midori-paper` and
