@@ -1,6 +1,7 @@
 #!/bin/sh
-# Keeps ~/.claude/themes/$MIDORI_LANG.json in sync with macOS appearance for
-# Claude Code (theme = custom:$MIDORI_LANG). Base light/dark (NOT -ansi: ANSI bases
+# Keeps ~/.claude/themes/<language>.json in sync with macOS appearance for
+# Claude Code (theme = custom:$MIDORI_LANG) -- every language's file, not only
+# the active one; write_mode says why. Base light/dark (NOT -ansi: ANSI bases
 # drop diff bg overrides). Full midori token map: diff bands = highlighter
 # washes (olive/terracotta seeds from tokentrail feature-colors chroma),
 # mode accents / semantic colors / chrome from the site + tokentrail palette.
@@ -86,23 +87,53 @@ LAST=""
 TICK=0
 
 
-# Install the map for one appearance. A theme file Claude Code cannot parse is
-# worse than a stale one -- the loader falls back to a stock preset and the
-# whole UI changes -- so the source is parsed before it replaces the live file,
-# and a missing or broken map leaves the previous one in place and says so.
+# Install the map for one appearance -- for EVERY language in THEME_DIR, not
+# only $MIDORI_LANG. A theme file Claude Code cannot parse is worse than a
+# stale one -- the loader falls back to a stock preset and the whole UI
+# changes -- so each source is parsed before it replaces the live file, and a
+# missing or broken map leaves the previous one in place and says so. The
+# return value is the ACTIVE language's outcome, because that is the write
+# the loop below latches on; the others are best-effort.
+#
+# WHY EVERY LANGUAGE. This used to write $MIDORI_LANG.json alone, which left
+# the other language's file to rot the moment the switch happened. A Claude
+# Code session keeps the theme it started under (settings.json is read at
+# launch; `custom:midori` stays `custom:midori` in that process), and it
+# reads ~/.claude/themes/midori.json -- so after `midori-theme lemonardo` any
+# such session followed a file nobody maintained. Measured 2026-10-15 23:13,
+# screenshot of a session in a Midori Night Ghostty (ground #1a1917): the
+# selection block sampled rgb(207 209 201) and the error text rgb(115 76 75)
+# -- Midori LIGHT's selectionBg #ced1c8 and error #7a4a4a, not Night's #40453d
+# and #b8868a -- while ~/.claude/themes/midori.json sat at base "light" with
+# an mtime of 2026-10-07 07:56. (It had been light since the 7th because the
+# job itself was not running until 06e9559 fixed its log path; by the time it
+# ran again MIDORI_LANG was lemonardo and midori.json was no longer its
+# business.) Error text at #7a4a4a on #1a1917 is 2.3:1. Writing all of them
+# costs one cp per language per appearance flip and means no file a session
+# can be reading is ever a mode behind.
 write_mode() {
-  src="$THEME_DIR/$MIDORI_LANG-$1.json"
-  if [ ! -f "$src" ]; then
-    echo "midori-claude-theme: no $src -- leaving $THEME_FILE alone" >&2
-    return 1
+  mode="$1"
+  active="$THEME_DIR/$MIDORI_LANG-$mode.json"
+  if [ ! -f "$active" ]; then
+    echo "midori-claude-theme: no $active -- leaving $THEME_FILE alone" >&2
+    rc=1
+  else
+    rc=0
   fi
-  if ! /usr/bin/python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
-       "$src" 2>/dev/null; then
-    echo "midori-claude-theme: $src is not valid JSON -- leaving $THEME_FILE alone" >&2
-    return 1
-  fi
-  mkdir -p "$(dirname "$THEME_FILE")"
-  cp -f "$src" "$THEME_FILE"
+  for src in "$THEME_DIR"/*-"$mode".json; do
+    [ -f "$src" ] || continue
+    lang=$(basename "$src" "-$mode.json")
+    dest="$HOME/.claude/themes/$lang.json"
+    if ! /usr/bin/python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
+         "$src" 2>/dev/null; then
+      echo "midori-claude-theme: $src is not valid JSON -- leaving $dest alone" >&2
+      [ "$lang" = "$MIDORI_LANG" ] && rc=1
+      continue
+    fi
+    mkdir -p "$(dirname "$dest")"
+    cp -f "$src" "$dest"
+  done
+  return "$rc"
 }
 
 # Self-heal ~/.claude/settings.json: picking a stock preset in /theme silently
