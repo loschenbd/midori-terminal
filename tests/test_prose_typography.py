@@ -285,15 +285,20 @@ def test_no_stray_grid_literals():
 
     Allowances are explicit: --midori-row's own declaration, which is the
     fallback the @supports block refines (see test_row_has_a_plain_fallback),
-    and --dotgrid-offset-y, which is an offset FROM the historical row rather
-    than a length on the grid.
+    --dotgrid-offset-y, which is an offset FROM the historical row rather
+    than a length on the grid, and --midori-block-max, whose 96px is a
+    HORIZONTAL pane gutter that only numerically coincides with a grid
+    multiple -- it bounds a cqi-derived width, not a vertical measure that
+    must track a growing row, so it does not need to be row-derived to stay
+    correct as the base font size changes.
     """
     # Strip comments: the design record mentions 24px in prose, which is fine.
     body = re.sub(r"/\*.*?\*/", "", THEME, flags=re.S)
 
     ALLOWED = (
-        "--midori-row",        # the row's own declaration
-        "--dotgrid-offset-y",  # was measured against 24px; now an offset from it
+        "--midori-row",          # the row's own declaration
+        "--dotgrid-offset-y",    # was measured against 24px; now an offset from it
+        "--midori-block-max",    # 96px here is a horizontal pane gutter, not a row multiple
     )
 
     # SPLIT, DO NOT MATCH. A regex over whole declarations has to guess where
@@ -320,8 +325,8 @@ def test_no_stray_grid_literals():
         if len(non_allowed) > 5:
             bad(f"  ... and {len(non_allowed) - 5} more")
     else:
-        ok("no declaration outside the two allowances uses a literal "
-           "24/48/72/96px")
+        ok(f"no declaration outside the {len(ALLOWED)} allowances uses a "
+           "literal 24/48/72/96px")
 
 
 def test_snapped_vars_all_have_plain_fallbacks():

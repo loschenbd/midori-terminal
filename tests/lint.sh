@@ -135,6 +135,9 @@ if python3 tests/test_prose_typography.py; then :; else FAIL=1; fi
 echo "== no backticks inside injected stylesheets =="
 if python3 tests/check_style_literals.py; then :; else FAIL=1; fi
 
+echo "== block geometry =="
+if python3 tests/test_block_geometry.py; then :; else FAIL=1; fi
+
 echo "== obsidian plugins parse =="
 if command -v node >/dev/null 2>&1; then
   for js in obsidian/plugins/*/main.js; do
