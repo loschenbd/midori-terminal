@@ -64,3 +64,262 @@
   background: var(--colorBgLightIntense) !important;
   border: 1px solid var(--colorBorderSubtle) !important;
 }
+
+/* ── Ink: the site's hierarchy, not Vivaldi's ──────────────────────────────
+   WHY THE START PAGE WAS HARDER TO LOOK AT THAN THE SITE IT COPIES. Measured
+   2026-10-14 on a side-by-side @2x screenshot (benjaminloschen.com in the
+   left pane, the start page in the right), brightest pixel per text run,
+   with the sRGB luma in brackets:
+
+                                      site            start page
+     ground                           #1a1917         #1a1917      same
+     card                             #22211e         #21201e      same
+     body / nav / card blurbs         #9b958b (149)   --
+     widget body, labels, values      --              #ebe8e2 (232)
+     headings                         #ebe8e2 (232)   #ebe8e2 (232)
+     dial labels                      --              rgb 255 255 255 (254)
+
+   The grounds and the cards are identical, so the whole difference is ink.
+   The site reserves its full foreground (#ebe8e2, 14.4:1 on the ground) for
+   ONE naming element per block and sets everything else in --muted (#9c958a,
+   5.9:1). The start page set every run at the full foreground, with the
+   values in M PLUS 700, and the dial labels BRIGHTER than the theme's own
+   foreground: pure white, 17.6:1.
+
+   WHERE THE WHITE COMES FROM. `.SpeedDial--Icon .thumbnail-title` and
+   `.Dashboard-Widgets .transparent` paint var(--colorImageCenterFg), which
+   Vivaldi derives in JS from the theme's background image -- a legibility
+   ink for text over a wallpaper photograph. Our "wallpaper" is the 24px dot
+   tile, so the derivation samples a near-black field and answers
+   rgb(255 255 255); read off #browser's computed style in the sandbox, it is
+   not in common.css at all. The tile is not a wallpaper, it is the ground,
+   and the ink over it should be the ground's ink. Redefining the variable on
+   #browser retargets every consumer at once -- the same mechanism as
+   --colorBgIntense in midori-surfaces.css, and !important for the same
+   reason: Vivaldi writes it into #browser's inline style.
+
+   IT IS A FAMILY, NOT A PAIR. The first pass redefined CenterFg and TopFg
+   and called the white gone; the operator's next screenshot (2026-10-15)
+   still had a pure-white panel bar, status bar and "+ Shortcut / + Widget"
+   buttons. `grep -o -- '--colorImage[A-Za-z]*' common.css | sort -u` lists
+   the whole set: one derived Fg per EDGE of the image -- Top, Bottom, Left,
+   Right -- plus Center, plus --colorImageFg, which Vivaldi aliases to
+   whichever edge the tab bar sits on. Consumers in 8.2, all under
+   .unified-ui-transparent (the default):
+     LeftFg     #switch .toolbar               -- the panel bar's icons
+     BottomFg   footer#footer, .toolbar-statusbar button/span,
+                .SpeedDial-Add-Button, .bookmark-bar (when at the bottom)
+     TopFg      .bookmark-bar, the settings gear, the mainbar in address-top
+     CenterFg   dial titles, .transparent widgets, focus rings
+   Every one of them sampled rgb(255 255 255) off the dot tile. The edges
+   are chrome, so they take --msite-muted (the site's nav is muted, with the
+   active item in ink); Center stays --msite-ink because it is the one that
+   names things. --colorImageFg is NOT set here: it is an alias Vivaldi
+   assigns per tab position at #browser.unified-ui.tabs-* and resolves
+   through the edge var, so it follows. The *Alpha / *AlphaHeavy variants
+   are BACKGROUNDS (tabbar-wrapper tint, a divider, the Unsplash credit) and
+   are left as derived; muting them would wash out a surface, not an icon.
+
+   THE VALUES ARE THE SITE'S OWN, by role, from app/globals.css:
+     --msite-ink      --foreground      the one naming element per card
+     --msite-muted    --muted           everything else, dial labels included
+     --msite-eyebrow  --accent-mythic   .type-eyebrow, the label above a block
+   #524d46 / #9c958a is the site's --muted as read on 2026-10-14.
+   midori-calendar.css and midori-surfaces.css carry #8a8378 / #857e72 for the
+   same role from an earlier reading; they are left alone here because they
+   paint different panes and nobody has measured those panes against the
+   site. Reconcile them together or not at all.
+
+   Lemonardo restates the three in lemonardo-palette.css (generated): ink and
+   muted from its own INK / MUTED anchors, and eyebrow = muted, because that
+   language has no --accent-mythic and deriving one as a delta from Midori is
+   exactly the "Midori wearing different paint" mistake the generator's header
+   records. --colorImageCenterFg is defined THROUGH --msite-ink rather than as
+   a hex so the Lemonardo restatement flows into it too; both custom
+   properties live on #browser, so the var() resolves against whichever
+   --msite-ink won there. */
+#browser.theme-light {
+  --msite-ink: #2a2825;
+  --msite-muted: #524d46;
+  --msite-eyebrow: #6b5f52;
+  --colorImageCenterFg: var(--msite-ink) !important;
+  --colorImageTopFg: var(--msite-muted) !important;
+  --colorImageBottomFg: var(--msite-muted) !important;
+  --colorImageLeftFg: var(--msite-muted) !important;
+  --colorImageRightFg: var(--msite-muted) !important;
+}
+#browser.theme-dark {
+  --msite-ink: #ebe8e2;
+  --msite-muted: #9c958a;
+  --msite-eyebrow: #c4b8a8;
+  --colorImageCenterFg: var(--msite-ink) !important;
+  --colorImageTopFg: var(--msite-muted) !important;
+  --colorImageBottomFg: var(--msite-muted) !important;
+  --colorImageLeftFg: var(--msite-muted) !important;
+  --colorImageRightFg: var(--msite-muted) !important;
+}
+
+/* Dial labels: muted at rest, the naming ink on hover / focus. The site's
+   rows do the same (row-hover-bleed lifts the row, not the resting page), and
+   the house rule is that nothing enters the writing surface unbidden -- the
+   brighter ink is revealed on request. Vivaldi's own rule is (0,2,0); the
+   inner .button-title is targeted too because a <button> does not inherit
+   colour unless something resets it, and nothing here should depend on
+   Vivaldi having done so. */
+#browser .SpeedDial .thumbnail-title,
+#browser .SpeedDial .thumbnail-title .button-title {
+  color: var(--msite-muted) !important;
+  text-shadow: none !important;
+}
+#browser .SpeedDial:hover .thumbnail-title .button-title,
+#browser .SpeedDial:focus-within .thumbnail-title .button-title {
+  color: var(--msite-ink) !important;
+}
+
+/* Dial favicons are brand marks at full chroma and full white; the site's
+   project cards are illustrations whose brightest pixel is (221,185,153) and
+   whose accents sit at OKLCh chroma 6-9 (--accent-warm 8.1, --midori-olive
+   6.1, --midori-mint 5.7). Two numbers, both derived from that:
+     opacity .85   a white mark's peak on the #1a1917 ground becomes
+                   26 + .85 x 229 = 221 -- the illustration peak.
+     saturate(.6)  Claude's mark goes from chroma 10.9 to 6.5, Supabase's
+                   from 15.4 to 10.3 (sRGB saturate matrix, then OKLCh);
+                   .5 would land Claude at 5.4, under the site's floor.
+   Full strength on hover / focus, same reveal rule as the labels. */
+#browser .SpeedDial--Icon .thumbnail-favicon img {
+  filter: saturate(0.6);
+  opacity: 0.85;
+  transition: filter 120ms ease, opacity 120ms ease;
+}
+#browser .SpeedDial--Icon:hover .thumbnail-favicon img,
+#browser .SpeedDial--Icon:focus-within .thumbnail-favicon img {
+  filter: none;
+  opacity: 1;
+}
+
+/* Widgets: muted by default, like the site's card blurbs; then exactly the
+   naming elements are lifted to ink -- the city and temperature in Weather,
+   the weekday + date in Date. (1,2,0) outranks Vivaldi's
+   `.Dashboard-Widgets .transparent` (0,2,0), which is the other consumer of
+   the white derived ink. */
+#browser .Dashboard-Widgets .dashboard-widget {
+  color: var(--msite-muted) !important;
+}
+
+/* Naming elements at the site's display weight. midori-font.css sets the
+   naming voice to 600 for the whole UI, measured for 13px labels on the 1x
+   ultrawide where the Regular's hairlines break up. These runs are 23px, and
+   the site sets Spectral 400 for section headings (.type-section-heading)
+   and 20px card titles (.type-card-title) on the same displays -- which is
+   the look being asked for. 500 for the date line matches .type-hero-heading
+   (font-medium), the site's one heavier display role; Vivaldi's own
+   `.date-display .date` is 500 as well, so only the weekday changes. The
+   13px nav labels keep the 600 that was measured for them. */
+#browser .Dashboard-Widgets .weather-wrapper .heading,
+#browser .Dashboard-Widgets .Dashboard-Date .date-display {
+  color: var(--msite-ink) !important;
+  font-weight: 400;
+}
+#browser .Dashboard-Widgets .Dashboard-Date .date-display .date {
+  font-weight: 500;
+}
+/* The weather date line ("Wednesday, 10/14", 16px Spectral) is a secondary
+   run: muted ink from the widget rule above, and 400 here because it was
+   still inheriting the chrome-wide 600 and read as a second heading --
+   measured in the sandbox after the first pass (w600 at rgb(156,149,138)). */
+#browser .Dashboard-Widgets .weather-wrapper .date {
+  font-weight: 400;
+}
+
+/* Values ("Feels like 74°F"): ink, at the sans bold weight. The house scale
+   is 500 sans / 600 serif, never 700; Vivaldi's <strong> computed to M PLUS
+   700 and was the loudest run in the card. */
+#browser .Dashboard-Widgets .forecast-details strong {
+  color: var(--msite-ink);
+  font-weight: 500;
+}
+
+/* Widget title ("Weather", "Date") -> the site's eyebrow. On the site the
+   label ABOVE a block ("SELECTED", "HELLO. I AM") is .type-eyebrow: working
+   voice, 11px, 500, uppercase, 0.22em tracking, --accent-mythic; the naming
+   voice is spent on the block's own name below it. The widget title is that
+   label, so it takes that treatment, and the Spectral mapping in
+   midori-font.css (`#browser .dashboard-widget h1.title`, (1,2,1)) is
+   outranked here at (1,3,1) rather than edited, so the chrome-wide rule
+   stays one list. Opacity 1 because the colour is already the quiet one;
+   Vivaldi's 0.8 was dimming a full-foreground title. */
+#browser .Dashboard-Widgets .dashboard-widget-header h1.title {
+  font-family: var(--mfont-working) !important;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--msite-eyebrow);
+  opacity: 1;
+}
+
+/* Start-page nav: muted, active / hover in ink -- the site header's nav
+   links measured #9b958b with the wordmark alone in foreground. The
+   Illuminated themes set their own at (1,3,0) and keep winning. */
+#browser .startpage-navigation .button-startpage {
+  color: var(--msite-muted) !important;
+}
+#browser .startpage-navigation .button-startpage.active,
+#browser .startpage-navigation .button-startpage:hover {
+  color: var(--msite-ink) !important;
+}
+
+/* Icons: every chrome glyph in muted, ink only on hover.
+
+   Asked for on 2026-10-15 ("all icons to be the gray and not white") after
+   the edge-derived foregrounds above had been fixed. A sweep of every
+   rendered <svg> in the sandbox window, grouped by the computed paint of its
+   first shape (scratch sweep_icons.py), found 51 glyphs: 40 already at
+   --msite-muted through the edge vars and the toolbar rules, and these
+   holdouts --
+     6  .SpeedDial .close         rgb(255 255 255)  the X on a hovered dial
+     2  .dashboard-widget-header  #c4b8a8           the "..." inherits the
+                                                    eyebrow from h1.title's row
+     1  .UrlBar-AddressField      #d3d0ca           site-info shield; the
+                                                    field's own colorFg
+     1  #switch-btn               #ebe8e2 (stroke)  the panel-toggle chevron
+   Three of the four paint with currentColor (fill or stroke), so colour on
+   the button is enough. The dial chip's X does NOT: with the button's colour
+   already muted its <path> still computed fill rgb(255 255 255), from a
+   fill rule on the svg itself rather than inheritance (the first draft of
+   this comment claimed "all four", measured, and was wrong by one), so the
+   chip glyphs get fill as well. The chips keep Vivaldi's #2d2d2d ground --
+   a muted glyph on it is 4.0:1, the same role as a muted row on the site's
+   card. The second sweep also turned up the start-page search field's
+   submit glyph (.SearchField-ExecuteSearchButton) at full ink; it is a
+   chrome glyph like the rest. Favicons are images and are handled by the
+   dial rule above; tab favicons for internal pages are svg and were already
+   muted. */
+#browser .UrlBar-AddressField .button-toolbar,
+#browser #switch-btn,
+#browser .Dashboard-Widgets .dashboard-widget-header .button-toolbar,
+#browser .SpeedDial .close,
+#browser .SpeedDial .update-thumbnail,
+#browser .SpeedDial .set-custom-thumbnail,
+#browser .SearchField-ExecuteSearchButton {
+  color: var(--msite-muted) !important;
+}
+#browser .SpeedDial .close svg,
+#browser .SpeedDial .update-thumbnail svg,
+#browser .SpeedDial .set-custom-thumbnail svg {
+  fill: var(--msite-muted) !important;
+}
+#browser .UrlBar-AddressField .button-toolbar:hover,
+#browser #switch-btn:hover,
+#browser .Dashboard-Widgets .dashboard-widget-header .button-toolbar:hover,
+#browser .SpeedDial .close:hover,
+#browser .SpeedDial .update-thumbnail:hover,
+#browser .SpeedDial .set-custom-thumbnail:hover,
+#browser .SearchField-ExecuteSearchButton:hover {
+  color: var(--msite-ink) !important;
+}
+#browser .SpeedDial .close:hover svg,
+#browser .SpeedDial .update-thumbnail:hover svg,
+#browser .SpeedDial .set-custom-thumbnail:hover svg {
+  fill: var(--msite-ink) !important;
+}

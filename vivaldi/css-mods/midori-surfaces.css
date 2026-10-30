@@ -12,6 +12,8 @@
   --colorBgIntense: #faf9f6 !important;   /* site card white-warm */
   --colorBgIntenser: #fffdf9 !important;
   --colorBgLight: #faf9f6 !important;     /* .button-popup / menus surface */
+  --msurf-thumb: rgb(138 131 120 / 0.35);        /* --muted #8a8378 */
+  --msurf-thumb-strong: rgb(138 131 120 / 0.6);
 }
 #browser.theme-dark {
   --colorBgIntense: #262421 !important;   /* lifted warm card, not black */
@@ -19,6 +21,8 @@
   --colorBgLight: #262421 !important;     /* .button-popup: the search popup
                                              once text is typed lives in this
                                              portal — also derives to black */
+  --msurf-thumb: rgb(133 126 114 / 0.4);         /* --muted #857e72 */
+  --msurf-thumb-strong: rgb(133 126 114 / 0.65);
 }
 
 /* Dropdown panels on the card recipe: subtle hairline + soft shadow
@@ -33,17 +37,15 @@
    (--colorFgFadedMost) and our earlier widget override (--colorBorder) BOTH
    derive to near-black in Midori Night — that was the black pill. Explicit
    muted-warm thumbs on a transparent track, site style. */
-#browser.theme-light ::-webkit-scrollbar-thumb {
-  background-color: rgb(138 131 120 / 0.35) !important;  /* --muted #8a8378 */
+/* The thumb colour and its hover/active strengthening are per-mode values, so
+   they live in the palette blocks above as --msurf-thumb / -strong, and these
+   two rules are theme-agnostic. Note the alphas differ by mode (.35/.6 light,
+   .4/.65 dark) -- that is deliberate, not a transcription slip: the dark thumb
+   needs more alpha to read against a lifted warm ground. */
+#browser ::-webkit-scrollbar-thumb {
+  background-color: var(--msurf-thumb) !important;
 }
-#browser.theme-light ::-webkit-scrollbar-thumb:hover,
-#browser.theme-light ::-webkit-scrollbar-thumb:active {
-  background-color: rgb(138 131 120 / 0.6) !important;
-}
-#browser.theme-dark ::-webkit-scrollbar-thumb {
-  background-color: rgb(133 126 114 / 0.4) !important;   /* --muted #857e72 */
-}
-#browser.theme-dark ::-webkit-scrollbar-thumb:hover,
-#browser.theme-dark ::-webkit-scrollbar-thumb:active {
-  background-color: rgb(133 126 114 / 0.65) !important;
+#browser ::-webkit-scrollbar-thumb:hover,
+#browser ::-webkit-scrollbar-thumb:active {
+  background-color: var(--msurf-thumb-strong) !important;
 }

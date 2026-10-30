@@ -24,6 +24,22 @@ Three ways, all on the phone. Easiest first:
 
 Nothing is installed on the host; `install.sh` does not touch these.
 
+## Fonts
+
+Moshi has two font slots and takes one single-face file in each, imported from
+Files (Settings → Terminal Fonts → Import font…, Moshi Pro). Each language's
+iCloud folder therefore carries exactly two fonts beside its themes:
+
+| slot | Midori | Lemonardo |
+|---|---|---|
+| terminal | `MPLUS1Code[wght].ttf` | `SometypeMono[wght].ttf` |
+| Chat View | `MPLUS2-Regular.ttf` | `InstrumentSans[wdth,wght].ttf` |
+
+The variable roman is the right single file for a slot: one face carrying
+every weight. No bold or italic companion ships, because nothing in Moshi's
+docs pairs one with an imported face (checked 2026-10-30), and the generator's
+comments hold the record of the italic that used to ship and why it stopped.
+
 ## These are generated — don't edit them
 
 `build-moshi-themes.py` reads `ghostty/themes/midori-paper` and
@@ -54,11 +70,14 @@ border uses `selectionBackground` (a sage wash) rather than the Ghostty
 split-divider colour, because that hex isn't part of a Moshi theme and copying
 it in would reintroduce a hand-maintained value.
 
-## The format (undocumented — reverse-engineered)
+## The format
 
-Moshi publishes no theme schema. This is what its own theme pages emit
-(verified against `https://getmoshi.app/themes/<slug>.json` and the deep link
-on that page):
+This section used to be headed "undocumented — reverse-engineered" and open
+with "Moshi publishes no theme schema", which was true when it was written and
+is not now: <https://getmoshi.app/docs/personalization#custom-themes> documents
+v1 (checked 2026-10-16). The description below was derived from what Moshi's
+own theme pages emit (`https://getmoshi.app/themes/<slug>.json` and the deep
+link on that page) and the doc confirms it, with one addition noted below.
 
 ```json
 {"v":1,"name":"Rose Pine","mode":"dark","colors":{ ...20 keys... }}
@@ -67,6 +86,16 @@ on that page):
 * Exactly **20** colour keys: `background`, `foreground`, `cursor`, the 8 ANSI
   names, the 8 `bright*` names, and `selectionBackground`. No
   `selectionForeground`, no separate cursor-text colour.
+* The doc adds one optional key the gallery files never carry: `bold`, a hex
+  or `"bright"`, colouring bold text. **Deliberately omitted here.** Omitted,
+  Moshi keeps bold text in its normal colour, which is what Ghostty does with
+  `bold-color` unset, and both Midori Ghostty themes leave it unset. Adding it
+  would change the Moshi rendering away from Ghostty's, not bring it closer.
+* There is no key for the app chrome, links, accent or inline code. The doc
+  says the palette drives "the terminal and the derived app chrome", and that
+  is the whole story: inline code in Moshi's markdown is derived from `yellow`
+  on iOS (measured 2026-10-16), so it is ochre because ANSI 3 is ochre, and the
+  only way to change it is to change ANSI 3 for the terminal grid too.
 * `mode` is `"light"` or `"dark"` and drives Moshi's UI polarity.
 * Deep link is `moshi://theme?d=<base64>` over the **compact** JSON
   (no spaces), **standard** base64 (`+/`), with the trailing `=` padding

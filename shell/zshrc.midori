@@ -1,7 +1,11 @@
-# Midori terminal theme — shell fragment
+# Terminal theme — shell fragment, shared by BOTH design languages
 # Sourced from ~/.zshrc by midori-terminal/install.sh. Everything here speaks
 # ANSI-16 color names/indices, so it retints automatically when the Ghostty
-# theme pair (midori-paper / midori-night) flips with macOS appearance.
+# theme pair flips with macOS appearance — and, for the same reason, when the
+# pair is swapped from midori-paper/midori-night to lemonardo-paintpot/
+# lemonardo-inkwell. That is why this file has no `zshrc.lemonardo` twin: it
+# holds no colour VALUE to port, only slot names and indices. The one thing it
+# does name is a prompt file, and MIDORI_PROMPT below is how that is switched.
 
 # Re-entrancy guard: makes a second source a no-op so the precmd hook and
 # oh-my-posh init below aren't registered twice (double prompt render / double
@@ -41,10 +45,43 @@ if [ -n "$TMUX" ]; then
   export CLAUDE_CODE_TMUX_TRUECOLOR=1
 fi
 
-# Manuscript-style prompt: underlined sage path, middle-dot separators,
-# plain foreground colors only (no filled powerline blocks).
+# Manuscript-style prompt: underlined path, middle-dot separators, plain
+# foreground colors only (no filled powerline blocks).
+#
+# THE ONE DESIGN-LANGUAGE SWITCH IN THIS FILE, and it now follows the rest of
+# the system instead of being set by hand. ~/.config/midori/language holds the
+# chosen language; `midori-theme <lang>` writes it along with every other
+# surface. This file reads it, so the prompt switches with everything else and
+# there is nothing per-shell to remember.
+#
+# The precedence is deliberate: an explicit MIDORI_PROMPT in the environment
+# still wins, so a single shell can run the other prompt without moving the
+# whole machine — which is the one thing the language file cannot express.
+# Setting MIDORI_PROMPT in ~/.zshrc still works too, and still has to come
+# BEFORE the line that sources this fragment.
+#
+# install.sh overwrites this file, so an edit HERE would not survive the next
+# run. That is why neither the language nor the override lives in this file:
+# both are read, never stored.
+#
+# The two prompts are not interchangeable in one respect: midori.omp.json pins
+# 24-bit hex and lemonardo.omp.json names ANSI slots, for reasons recorded in
+# t3/README.md and in lemonardo.omp.json's own header. Inside t3 specifically,
+# slot names are unreadable on a light ground.
+if [ -z "$MIDORI_PROMPT" ] && [ -r "$HOME/.config/midori/language" ]; then
+  MIDORI_PROMPT=$(cat "$HOME/.config/midori/language")
+fi
+: "${MIDORI_PROMPT:=midori}"
 if command -v oh-my-posh >/dev/null 2>&1; then
-  eval "$(oh-my-posh init zsh --config ~/.config/midori.omp.json)"
+  _midori_omp="$HOME/.config/${MIDORI_PROMPT}.omp.json"
+  # Fall back rather than render oh-my-posh's default prompt, which is what a
+  # missing --config gets you: a typo in MIDORI_PROMPT would otherwise replace
+  # the whole prompt silently.
+  if [ ! -f "$_midori_omp" ]; then
+    echo "zshrc.midori: no $_midori_omp — falling back to midori.omp.json" >&2
+    _midori_omp="$HOME/.config/midori.omp.json"
+  fi
+  eval "$(oh-my-posh init zsh --config "$_midori_omp")"
 fi
 
 # fzf on the terminal's own 16-color palette (correct in both modes).

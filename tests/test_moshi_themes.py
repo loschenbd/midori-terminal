@@ -42,7 +42,12 @@ def bad(msg):
 def main():
     print("== moshi themes match the ghostty source ==")
     built = {}
-    for slug, name, mode in gen.THEMES:
+    # gen.THEMES became gen.SETS when a second design language arrived: each set
+    # has its own themes, its own fonts and its own folder on the phone. Flatten
+    # back to (slug, name, mode) here so this test covers EVERY set rather than
+    # the first one -- a loop over one set would have gone green while the other
+    # set's JSON drifted.
+    for slug, name, mode in [t for spec in gen.SETS.values() for t in spec["themes"]]:
         want = gen.build(slug, name, mode)
         built[slug] = want
 
@@ -81,33 +86,51 @@ def main():
         else:
             bad(f"{slug}.url is stale — re-run moshi/build-moshi-themes.py")
 
-    print("== import.html carries the current payloads ==")
-    html = (MOSHI / "import.html").read_text()
-    links = re.findall(r"moshi://theme\?d=([A-Za-z0-9+/]+)", html)
-    if len(links) == len(gen.THEMES):
-        ok(f"{len(links)} deep links present")
-    else:
-        bad(f"expected {len(gen.THEMES)} deep links, found {len(links)}")
-
-    decoded = []
-    for b in links:
-        try:
-            decoded.append(json.loads(base64.b64decode(b + "=" * (-len(b) % 4))))
-        except Exception as e:                                  # noqa: BLE001
-            bad(f"a deep link in import.html does not decode: {e}")
-    for theme in decoded:
-        slug = next((s for s, t in built.items() if t["name"] == theme["name"]), None)
-        if slug is None:
-            bad(f"import.html carries an unknown theme: {theme.get('name')!r}")
-        elif theme == built[slug]:
-            ok(f"import.html payload for {theme['name']} is current")
+    # ONE import PAGE PER SET, so this loops the sets. The page used to be a
+    # single moshi/import.html; with a second design language there is one per
+    # set and a test that read only the old filename would have crashed (it did)
+    # or, worse, passed while a set's page went stale.
+    print("== each set's import page carries the current payloads ==")
+    pages = 0
+    for set_id, spec in sorted(gen.SETS.items()):
+        page = MOSHI / f"import-{set_id}.html"
+        if not page.exists():
+            bad(f"import-{set_id}.html is missing — re-run moshi/build-moshi-themes.py")
+            continue
+        pages += 1
+        html = page.read_text()
+        links = re.findall(r"moshi://theme\?d=([A-Za-z0-9+/]+)", html)
+        if len(links) == len(spec["themes"]):
+            ok(f"import-{set_id}.html: {len(links)} deep link(s) present")
         else:
-            bad(f"import.html payload for {theme['name']} is STALE — the page still "
-                f"imports the previous palette")
+            bad(f"import-{set_id}.html: expected {len(spec['themes'])} deep links, "
+                f"found {len(links)}")
 
-    total = sum(1 for _ in gen.THEMES)
+        decoded = []
+        for b in links:
+            try:
+                decoded.append(json.loads(base64.b64decode(b + "=" * (-len(b) % 4))))
+            except Exception as e:                              # noqa: BLE001
+                bad(f"a deep link in import-{set_id}.html does not decode: {e}")
+        for theme in decoded:
+            slug = next((sl for sl, t in built.items()
+                         if t["name"] == theme["name"]), None)
+            if slug is None:
+                bad(f"import-{set_id}.html carries an unknown theme: "
+                    f"{theme.get('name')!r}")
+            elif theme == built[slug]:
+                ok(f"import-{set_id}.html payload for {theme['name']} is current")
+            else:
+                bad(f"import-{set_id}.html payload for {theme['name']} is STALE — "
+                    f"the page still imports the previous palette")
+
+    # Fail on an empty input set. A drift check that examined no themes is this
+    # repo's documented failure mode, not a pass.
+    total = sum(len(spec["themes"]) for spec in gen.SETS.values())
+    if total == 0 or pages == 0:
+        bad(f"examined {total} theme(s) across {pages} page(s) — nothing was checked")
     print(f"\nmoshi drift check: {'all green' if not FAIL else 'failures above'} "
-          f"({total} themes)")
+          f"({total} themes across {len(gen.SETS)} set(s), {pages} import page(s))")
     return FAIL
 
 

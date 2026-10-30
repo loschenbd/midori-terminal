@@ -5,12 +5,24 @@
    Font roles follow Ben's pattern — Spectral is the NAMING voice (headers,
    labels, wayfinding, identity-of-the-moment), M PLUS is the WORKING voice
    (entries, readings, controls). Size doesn't decide; role does. */
+
+/* The two voices are variables so a second design language can restate the
+   faces without restating the selector lists below. Midori's own values stay
+   here as the defaults on #browser. */
+#browser {
+  --mfont-working: "M PLUS 1p", -apple-system, "Helvetica Neue", sans-serif;
+  --mfont-naming: "Spectral", ui-serif, Georgia, serif;
+  /* 600 not 500: main display is a 1x ultrawide (no subpixel AA on macOS);
+     the SemiBold's thicker strokes keep serifs crisp at ~96 DPI. Measured on
+     that display; a design language with a different naming face sets its own. */
+  --mfont-naming-weight: 600;
+}
 #browser,
 #browser input,
 #browser button,
 #browser select,
 #browser textarea {
-  font-family: "M PLUS 1p", -apple-system, "Helvetica Neue", sans-serif !important;
+  font-family: var(--mfont-working) !important;
 }
 
 /* Naming voice → Spectral */
@@ -32,10 +44,8 @@
 #browser .settings-navigation .category,
 #browser .quick-command-sectionheader,
 #browser .dial-title {
-  font-family: "Spectral", ui-serif, Georgia, serif !important;
-  /* 600 not 500: main display is a 1x ultrawide (no subpixel AA on macOS);
-     the SemiBold's thicker strokes keep serifs crisp at ~96 DPI. */
-  font-weight: 600;
+  font-family: var(--mfont-naming) !important;
+  font-weight: var(--mfont-naming-weight);
 }
 
 /* URL field text → Spectral. Deliberate exception to the working-voice rule:
@@ -46,6 +56,6 @@
 #browser .UrlBar-AddressField input,
 #browser .UrlBar-UrlField,
 #browser .UrlBar-UrlFieldValue {
-  font-family: "Spectral", ui-serif, Georgia, serif !important;
-  font-weight: 600;
+  font-family: var(--mfont-naming) !important;
+  font-weight: var(--mfont-naming-weight);
 }

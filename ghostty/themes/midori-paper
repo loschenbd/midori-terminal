@@ -59,16 +59,18 @@ unfocused-split-fill = #a29f98
 # split boundary: --border composited over --background
 split-divider-color = #e1dfd9
 
-# Midori dot grid (.page-grid-overlay): 24pt step, mint dots, tiled at native px
-# glow + dots baked at 3456x2234 (16" retina): --page-glow washes under the dot grid.
-# fit=none keeps dots at 24pt; position=top-center anchors the site's top halo;
-# smaller windows crop the bottom. Plain-dots fallback:
-#background-image = __HOME__/.config/ghostty/backgrounds/midori-paper-dots.png
-#background-image-repeat = true
-background-image = __HOME__/.config/ghostty/backgrounds/midori-paper-glow.png
-background-image-fit = none
-background-image-position = top-center
-background-image-repeat = false
+# Midori dot grid (.page-grid-overlay) and --page-glow: BOTH are drawn by the
+# custom shader (ghostty/shaders/rounded-cursor.glsl), not by a background
+# image. No background-image is set here, and that is the fix, not an
+# omission. Until 2026-10-17 this block pointed at
+# backgrounds/midori-paper-glow.png, a wash baked per display (@1x 2560x1080,
+# @2x 3456x2234) that Ghostty drew at physical pixels, top-centre, fit=none.
+# Ghostty re-reads that file only on config reload, so after a dock/undock the
+# OTHER display's bake stayed on screen: measured 2026-10-17 on the retina
+# panel, the ultrawide bake sat 448px in from each edge with its right-hand
+# wash centred mid-screen. The shader evaluates the same three ellipses as
+# fractions of the surface, so they fit any display, window or split with
+# nothing to flip or reload. The dots moved the same way in July.
 
 # Derive the 256-color cube + grayscale ramp from the midori base 16 so
 # 256-color apps inherit the palette; harmonious inverts the ramps for light bg.

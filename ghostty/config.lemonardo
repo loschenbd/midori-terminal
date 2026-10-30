@@ -1,0 +1,227 @@
+# Ghostty config — Lemonardo terminal theme
+# The ALTERNATIVE to ghostty/config, which is Midori's. install.sh renders this
+# to config.lemonardo next to the live config; it never becomes the live config
+# on its own. To switch, replace the live config with it (keep a backup) and
+# reload Ghostty's configuration. A full restart is NOT required: every key in
+# this file including adjust-cell-height was measured taking effect on reload
+# (2026-10-11), correcting an earlier note here that claimed otherwise.
+#
+# Theme pair carries the palette per mode and macOS appearance flips it.
+# It carries NO background image, and neither do the Midori themes any more:
+# since 2026-10-17 Midori's glow is drawn by its shader
+# (ghostty/shaders/rounded-cursor.glsl), and ghostty/backgrounds is gone. The
+# separation still holds, one level down: Lemonardo's shader draws no lattice
+# and no glow, and tests/test_lemonardo_shader.py asserts it declares no
+# ground, so Midori's decoration cannot switch itself on under Lemonardo's
+# palette -- which is the one thing the separate ANSI derivation exists to
+# prevent.
+theme = light:lemonardo-paintpot,dark:lemonardo-inkwell
+
+font-size = 14
+# Lemonardo's body weight is 400 (themes/lemonardo.json "weights.body"), which
+# is also Sometype Mono's wght default, so the roman renders with no
+# interpolation. The axis is 400-700 (measured from fvar), so 500 and 600 are
+# real interpolations if more ink is wanted — unlike M PLUS 1 Code, which
+# Midori serves at 400;700 only and which synthesises anything between.
+font-variation = wght=400
+
+# Besley, Lemonardo's own heading serif. This read `Spectral Bold` until
+# 2026-10-11, borrowing Midori's serif because Besley was not vendored; all
+# four Lemonardo faces (Besley, Instrument Sans, Special Elite, Reenie Beanie)
+# are now in fonts/ and installed by install.sh, so the seam is closed.
+#
+# SEMIBOLD, NOT BOLD, and that is the weight rule rather than a preference.
+# themes/lemonardo.json "weights.cap" is 600, re-measured against the rendered
+# DOM of the source site where ZERO of 194 text elements render at 700. Besley
+# ships a wght 400-900 variable axis (fvar, measured from the binary), so 600
+# is a real interpolation, not a synthesis. Ghostty takes a style NAME here,
+# not a number, and resolves "SemiBold" against the named instances.
+#
+# "Besley SemiBold" NEEDS A STATIC INSTANCE, which fonts/Besley-SemiBold.ttf
+# is. This string is resolved as a FULL NAME, not family+weight, and a variable
+# font installed on macOS registers ONE full name -- Besley[wght].ttf registers
+# "Besley Regular Regular" and nothing else, so its SemiBold named instance is
+# unreachable by name even though the axis reaches 600. Measured 2026-10-11
+# through CoreText, which is what AppKit and Ghostty consult:
+#
+#   "Besley SemiBold"  -> Helvetica            BEFORE the static was installed
+#   "Besley SemiBold"  -> Besley SemiBold      after  (ps BesleyRoman-SemiBold)
+#   "Besley"           -> Besley Regular Regular
+#   "Spectral Bold"    -> Spectral Bold        (Spectral ships discrete statics,
+#                                               which is why Midori never hit
+#                                               this and the pattern looked safe)
+#
+# So fonts/ carries BOTH: the variable Besley[wght].ttf, which is what a CSS
+# target should use, and a wght=600 instance generated from it with fontTools
+# instancer(updateFontNames=True) purely so this one string resolves.
+#
+# And it fails SILENTLY: +validate-config exits 0 and the title takes Helvetica,
+# the same class of fallback as font-family (see the block above). Note that
+# `ghostty +show-face --style=` cannot check this -- it accepts only regular,
+# bold, italic, bold_italic, i.e. the slot and not a style name. Check through
+# CoreText instead: ask for the string, read back the FULL name, and require it
+# to equal what you asked for.
+window-title-font-family = Besley SemiBold
+
+# Exact family name required, and the cost of getting it wrong is MEASURED, not
+# supposed. Ghostty substitutes its bundled JetBrains Mono for a family it
+# cannot find, prints nothing, and `ghostty +validate-config` exits 0 — it
+# catches an unknown key and an unknown THEME name, but not this. Measured
+# 2026-10-11 on Ghostty 1.3.1:
+#
+#   ghostty +show-face --config-default-files=false \
+#           --font-family="Sometype Mono" --string=Mg
+#   -> U+4D « M » found in face "Sometype Mono"        correct
+#
+#   ...--font-family="Totally Nonexistent Face 99"
+#   -> U+4D « M » found in face "JetBrains Mono"       the fallback
+#
+# --config-default-files=false is NOT optional. Without it +show-face keeps the
+# live config's own font-family in the fallback chain, so a bogus name resolves
+# to whatever the config names and reads as correct. That is a trap inside the
+# check, and it is how this went unnoticed on the live machine for two months:
+# the config said "M PLUS 1 Code Latin 60" (no such family — the installed
+# names are "M PLUS 1 Code", "M PLUS Code Latin 50", "M PLUS Code Latin 60",
+# with no "1" in the Code Latin ones) and the terminal rendered JetBrains Mono
+# under a comment warning about exactly that.
+#
+# ON THE PROVENANCE OF THAT, because it matters which part is documented and
+# which part is only measured. Ghostty's docs do NOT state what happens to a
+# missing PRIMARY font-family. They state it only for the style variants: if
+# font-family-bold names a font that "cannot be found, Ghostty will use
+# whatever font is set for font-family". And JetBrains Mono being the built-in
+# is a maintainer's statement, not a reference entry -- the embedded font
+# "applies only when a user doesn't specify a font and Ghostty can't find
+# another default font on their system". So the silent-fallback design is
+# documented for the variants and corroborated for the primary by the
+# measurement above, which is the only evidence that covers this case. If a
+# future Ghostty starts warning, the measurement is what dates.
+font-family = "Sometype Mono"
+
+window-padding-x = 12
+window-padding-y = 12
+# Aim rows at the 24pt dot rhythm: one 48px step at 2x.
+#
+# THE ROUNDING MODEL, carried over from the M PLUS measurement in ghostty/config
+# because it is what the number below is derived from. Ghostty integer-izes the
+# BASE cell height BEFORE applying this percentage (measured 2026-07-14: both
+# 38.9% and 38.75% produced a 49px cell — ceil(35 * 1.38x) — even though
+# 34.585 * 1.3875 = 47.99). So the base is ROUNDED, not floored (34.585 -> 35),
+# and the product is CEILED (47.95 -> 48).
+#
+# SOMETYPE MONO, computed 2026-10-11 from the binary. hhea
+# ascent/descent/lineGap = 925/-275/0 over unitsPerEm 1000, so the cell is
+# 1.200em = 33.600px at 14pt on a 2x display, and the base rounds to 34.
+# (hhea is the right source, not OS/2: this model reproduces the M PLUS figure
+# above, 1.235em * 28 = 34.58px against the 34.585px recorded, whereas M PLUS's
+# OS/2 usWin pair gives 1.505em = 42.1px and would be wrong by 8px.) Then:
+#
+#   41%    -> 34 * 1.41   = 47.94   -> ceil 48   <- chosen
+#   41.18% -> 34 * 1.4118 = 48.0004 -> ceil 49   exactly 48/34, and WRONG:
+#             the ceiling tips it one past the target. The clean-looking
+#             quotient is the one to avoid, which is the same trap the 38.9%
+#             measurement above records.
+#   42%    -> 34 * 1.42   = 48.28   -> ceil 49
+#
+# THE UNITS WERE WRONG HERE, corrected 2026-10-11 the same day they were
+# written, and the screen is what caught it. This field first read 141%,
+# because the derivation above produces the MULTIPLIER 1.41 and the multiplier
+# got written into the field. The field does not take a multiplier. ghostty(5)
+# under adjust-cell-width: "the values represent the amount to change the
+# original value. For example, a value of 1 increases the value by 1; it does
+# not set it to literally 1. A value of 20% increases the value by 20%." So
+# 141% asked for 34 * 2.41 = 82px, a 41pt row against the 24 intended.
+#
+# MEASURED, not inferred: on a screenshot of a Ghostty window running that
+# config, the ink-band centres of consecutive text rows sit 41.0 logical px
+# apart and the per-character advance is 8.0 logical px. 8.0 is Sometype's
+# advance at 14pt, which fixes the screenshot at logical scale, so the cell
+# was 41pt = ceil(34 * 2.41) device px. After the correction, the same
+# measurement on the same window reads a 24.00px pitch over a five-row run.
+#
+# WHY IT WAS BELIEVED: Midori's 37% in ghostty/config is correct under BOTH
+# readings, because an additive 37% IS * 1.37 — so the one neighbouring record
+# that could have caught this agrees with the wrong reading. The two readings
+# only separate once the percentage passes 100, which is the first time this
+# repo ever crossed.
+#
+# APPLIES ON CONFIG RELOAD. An earlier note here said app startup only. That
+# was wrong, and the evidence against it was already in hand when it was
+# written: the screenshot above, which measures the 41pt pitch, was taken after
+# a Reload Configuration with no restart in between. Nothing was ever measured
+# for the startup claim.
+#
+# Verify rather than trust the arithmetic: query the terminal for its own cell
+# with CSI 16 t (reply CSI 6 ; height ; width t) from a real tty.
+#
+# Since the dot grid is drawn by the cursor shader anchored to the live cell
+# (see shaders/rounded-cursor-lemonardo.glsl), an off-by-one here no longer
+# breaks
+# alignment — it only nudges the rhythm off 24pt. COUPLED to font-size and
+# font-family.
+adjust-cell-height = 41%
+
+# Rounded cursor + field guide: native cursor hidden (opacity 0), the shader
+# draws a rounded replacement from the cursor uniforms (steady, no blink) and
+# the 24pt lattice anchored to the same cell geometry.
+#
+# LEMONARDO'S OWN SHADER, and the -lemonardo suffix is load-bearing. This line
+# pointed at rounded-cursor.glsl for a day, which is MIDORI'S: it matches the
+# ground by DISTANCE against Midori's two hexes rather than looking up a theme,
+# so Paintpot (0.0372 from Midori Paper, tolerance 0.09) silently took Midori's
+# sage lattice while Inkwell (0.1178 against the same 0.09) took nothing. Light
+# mode wore another brand's art and dark mode had none, and neither was chosen.
+# The lattice is now Lemonardo's non-photo guide blue in BOTH modes; the
+# derivation, the matched alphas and the rejected alternatives are in the
+# shader's own header. tests/test_lemonardo_shader.py holds the two files to
+# identical executable code and fails if either names the other's grounds.
+#
+# To revert to no lattice at all: the shader header says which block to delete.
+# To revert to no shader: delete these two lines, losing the rounded cursor.
+custom-shader = __HOME__/.config/ghostty/shaders/rounded-cursor-lemonardo.glsl
+cursor-opacity = 0
+
+unfocused-split-opacity = 0.9
+# unfocused-split-fill + split-divider-color live per-mode in the
+# lemonardo-paintpot / lemonardo-inkwell themes, as they do in the midori
+# pair — both pairs set them, so switching the theme switches these with it.
+
+focus-follows-mouse = true
+
+desktop-notifications = true
+
+# Suppress the native OSC 9;4 progress bar (the thin blue line at the top of
+# the window that Claude Code and other tools draw while working). Ghostty's
+# progress bar color is not configurable as of 1.3.1 — this is the only knob,
+# and it's all-or-nothing. Remove this line to bring the bar back.
+progress-style = false
+
+# ── Your own settings go in `user-overrides`, not in this file ───────────────
+# midori-theme OVERWRITES this file on every switch, so an edit here is lost
+# the next time the design language changes. The include below is the place
+# that survives: create
+#   ~/Library/Application Support/com.mitchellh.ghostty/user-overrides
+# and put anything of your own in it. The `?` means "no error if absent", which
+# is measured, not assumed: without it `ghostty +validate-config` exits 1 with
+# "error opening config-file ...: error.FileNotFound", and with it exits 0.
+#
+# ONE TRAP, AND IT IS THE ONLY OPTION KIND WHERE IT BITES. `font-family` is a
+# LIST, not a scalar -- repeated entries build a fallback chain and the FIRST
+# one is the primary face. An include is loaded after its parent, so a bare
+# `font-family` in user-overrides lands SECOND and does nothing visible.
+# Measured on Ghostty 1.3.1 with `+show-face --string=A
+# --config-default-files=false`:
+#
+#   parent "M PLUS 1 Code", include "M PLUS Code Latin 60"  -> M PLUS 1 Code
+#   parent "M PLUS 1 Code", include "" then the same family -> M PLUS Code Latin 60
+#
+# So to change the font from user-overrides, clear the list first:
+#
+#   font-family = ""
+#   font-family = "Your Face"
+#
+# (`+show-config` cannot be used to check any of this: in 1.3.1 it exits 1 with
+# no output when given ANY flag, including --config-file. `+validate-config`
+# takes --config-file and works, but `--config-default-files=false` breaks that
+# one too. +show-face accepts both, which is why the measurement above uses it.)
+config-file = ?user-overrides

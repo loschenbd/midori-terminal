@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Midori for Moshi</title>
+<style>
+  :root { --bg:#f3eee2; --fg:#3a4048; --muted:#5c6470; --card:#ffebd4; --border:#a9ecff; --accent:#175cc7; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#2c2a28; --fg:#ede4d3; --muted:#8893a5; --card:#313a48; --border:#004553; --accent:#639dfc; } }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:2rem 1.25rem 3rem; background:var(--bg); color:var(--fg);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;
+    -webkit-text-size-adjust:100%;
+  }
+  main { max-width:30rem; margin:0 auto; }
+  h1 { font-size:1.5rem; margin:0 0 .25rem; letter-spacing:-.01em; }
+  p.sub { margin:0 0 2rem; color:var(--muted); font-size:.95rem; }
+  a.theme {
+    display:block; text-decoration:none; color:inherit; background:var(--card);
+    border:1px solid var(--border); border-radius:14px; padding:1rem 1.15rem;
+    margin-bottom:1rem; -webkit-tap-highlight-color:transparent;
+  }
+  a.theme:active { background:var(--bg); }
+  .row { display:flex; align-items:center; gap:.85rem; }
+  .name { font-weight:600; font-size:1.05rem; }
+  .mode { color:var(--muted); font-size:.85rem; }
+  .go { margin-left:auto; color:var(--accent); font-weight:600; font-size:.9rem; }
+  .swatches { display:flex; gap:5px; margin-top:.85rem; }
+  .swatches i { width:100%; height:22px; border-radius:4px; display:block; }
+  ol { color:var(--muted); font-size:.9rem; padding-left:1.15rem; margin:2rem 0 0; }
+  li { margin-bottom:.4rem; }
+  code { font:13px ui-monospace,SFMono-Regular,Menlo,monospace; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Midori for Moshi</h1>
+  <p class="sub">Tap a theme on the device running Moshi.</p>
+  <a class="theme" href="moshi://theme?d=eyJ2IjoxLCJuYW1lIjoiTGVtb25hcmRvIFBhaW50cG90IiwibW9kZSI6ImxpZ2h0IiwiY29sb3JzIjp7ImJhY2tncm91bmQiOiIjZjNlZWUyIiwiZm9yZWdyb3VuZCI6IiMzYTQwNDgiLCJjdXJzb3IiOiIjMTc1Y2M3IiwiYmxhY2siOiIjMDkxMDFhIiwicmVkIjoiI2FiMzQxNyIsImdyZWVuIjoiIzFjNzYzZiIsInllbGxvdyI6IiNhMzZlMjAiLCJibHVlIjoiIzE3NWNjNyIsIm1hZ2VudGEiOiIjOTEzMzljIiwiY3lhbiI6IiMxYzcxNmUiLCJ3aGl0ZSI6IiNkNGIxODYiLCJicmlnaHRCbGFjayI6IiM1YzY0NzAiLCJicmlnaHRSZWQiOiIjNzUyMTBjIiwiYnJpZ2h0R3JlZW4iOiIjMTA1MDI4IiwiYnJpZ2h0WWVsbG93IjoiIzVhM2IwZCIsImJyaWdodEJsdWUiOiIjMGMzZDhhIiwiYnJpZ2h0TWFnZW50YSI6IiM2ODEzNzIiLCJicmlnaHRDeWFuIjoiIzEwNGM0YSIsImJyaWdodFdoaXRlIjoiI2ZmZWJkNCIsInNlbGVjdGlvbkJhY2tncm91bmQiOiIjYTllY2ZmIn19">
+    <div class="row">
+      <span class="name">Lemonardo Paintpot</span>
+      <span class="mode">light</span>
+      <span class="go">Import &rsaquo;</span>
+    </div>
+    <div class="swatches"><i style="background:#ab3417"></i><i style="background:#1c763f"></i><i style="background:#a36e20"></i><i style="background:#175cc7"></i><i style="background:#91339c"></i><i style="background:#1c716e"></i><i style="background:#f3eee2;border:1px solid #a9ecff"></i></div>
+  </a>
+  <a class="theme" href="moshi://theme?d=eyJ2IjoxLCJuYW1lIjoiTGVtb25hcmRvIElua3dlbGwiLCJtb2RlIjoiZGFyayIsImNvbG9ycyI6eyJiYWNrZ3JvdW5kIjoiIzJjMmEyOCIsImZvcmVncm91bmQiOiIjZWRlNGQzIiwiY3Vyc29yIjoiIzYzOWRmYyIsImJsYWNrIjoiIzMxM2E0OCIsInJlZCI6IiNmOTZjNGIiLCJncmVlbiI6IiMxYWJkNjIiLCJ5ZWxsb3ciOiIjZDU4ZDE1IiwiYmx1ZSI6IiM2MzlkZmMiLCJtYWdlbnRhIjoiI2QzNzJkZSIsImN5YW4iOiIjMTliNWIwIiwid2hpdGUiOiIjZGVjNGE2IiwiYnJpZ2h0QmxhY2siOiIjODg5M2E1IiwiYnJpZ2h0UmVkIjoiI2ZkYWQ5OSIsImJyaWdodEdyZWVuIjoiIzU1ZTQ4NyIsImJyaWdodFllbGxvdyI6IiNmZGIzNGQiLCJicmlnaHRCbHVlIjoiI2EzYzZmZCIsImJyaWdodE1hZ2VudGEiOiIjZjRhMGZkIiwiYnJpZ2h0Q3lhbiI6IiMyMWUwZDkiLCJicmlnaHRXaGl0ZSI6IiNmZmVkZDgiLCJzZWxlY3Rpb25CYWNrZ3JvdW5kIjoiIzAwNDU1MyJ9fQ">
+    <div class="row">
+      <span class="name">Lemonardo Inkwell</span>
+      <span class="mode">dark</span>
+      <span class="go">Import &rsaquo;</span>
+    </div>
+    <div class="swatches"><i style="background:#f96c4b"></i><i style="background:#1abd62"></i><i style="background:#d58d15"></i><i style="background:#639dfc"></i><i style="background:#d372de"></i><i style="background:#19b5b0"></i><i style="background:#2c2a28;border:1px solid #004553"></i></div>
+  </a>
+
+  <ol>
+    <li>If tapping does nothing, Moshi may not be installed on this device.</li>
+    <li>Fallback: open <code>midori-paper.json</code> in Files, select all, copy,
+        then Moshi &rarr; Settings &rarr; Theme &rarr; Import theme &rarr; paste.</li>
+    <li>From another device, scan <code>midori-paper-qr.png</code> instead.</li>
+  </ol>
+</main>
+</body>
+</html>

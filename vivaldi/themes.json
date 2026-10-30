@@ -55,10 +55,73 @@
       "transparencyTabs": false,
       "url": "",
       "version": 1
+    },
+    {
+      "accentFromPage": false,
+      "accentOnWindow": false,
+      "accentSaturationLimit": 1,
+      "alpha": 0.25,
+      "backgroundImage": "",
+      "backgroundPosition": "repeat",
+      "backgroundSource": "",
+      "blur": 0,
+      "colorAccentBg": "#dc931e",
+      "colorBg": "#f3eee2",
+      "colorFg": "#3a4048",
+      "colorHighlightBg": "#a8d7ea",
+      "colorPosition": "unified",
+      "colorWindowBg": "#f3eee2",
+      "contrast": 0,
+      "dimBlurred": false,
+      "engineVersion": 1,
+      "id": "2fdf9990-eed3-4395-aa22-d3ba0c9b6009",
+      "name": "Lemonardo Paintpot",
+      "preferSystemAccent": false,
+      "radius": 8,
+      "simpleScrollbar": true,
+      "transparencyTabBar": true,
+      "transparencyTabs": false,
+      "url": "",
+      "version": 1
+    },
+    {
+      "accentFromPage": false,
+      "accentOnWindow": false,
+      "accentSaturationLimit": 1,
+      "alpha": 0.25,
+      "backgroundImage": "",
+      "backgroundPosition": "repeat",
+      "backgroundSource": "",
+      "blur": 0,
+      "colorAccentBg": "#22b5af",
+      "colorBg": "#2c2a28",
+      "colorFg": "#ede4d3",
+      "colorHighlightBg": "#513e27",
+      "colorPosition": "unified",
+      "colorWindowBg": "#2c2a28",
+      "contrast": 0,
+      "dimBlurred": false,
+      "engineVersion": 1,
+      "id": "12451c2a-ca31-44f3-be00-2ad873dc1154",
+      "name": "Lemonardo Inkwell",
+      "preferSystemAccent": false,
+      "radius": 8,
+      "simpleScrollbar": true,
+      "transparencyTabBar": true,
+      "transparencyTabs": false,
+      "url": "",
+      "version": 1
     }
   ],
   "scheduleOS": {
-    "light": "6e280136-c9ea-49f1-a783-9ce1faf9b2bf",
-    "dark": "b528ef74-c371-4b23-966c-ff1ac093f50c"
+    "_comment": "Keyed by design language, not by mode. install-vivaldi.sh picks the block for MIDORI_LANG (default: ~/.config/midori/language) and writes the inner {light,dark} map -- which is the flat shape Vivaldi itself expects -- to vivaldi.theme.schedule.o_s. Do not flatten this back: a flat map here cannot express two languages, and Vivaldi never reads this file, only the installer does.",
+    "midori": {
+      "light": "6e280136-c9ea-49f1-a783-9ce1faf9b2bf",
+      "dark": "b528ef74-c371-4b23-966c-ff1ac093f50c"
+    },
+    "lemonardo": {
+      "light": "2fdf9990-eed3-4395-aa22-d3ba0c9b6009",
+      "dark": "12451c2a-ca31-44f3-be00-2ad873dc1154"
+    }
   }
 }

@@ -1,0 +1,279 @@
+/* Generate vivaldi/css-mods/lemonardo-palette.css.
+   
+   WHY THIS FILE IS GENERATED AND THE MIDORI MODS ARE NOT. The Midori mods are
+   hand-written and their comments are the design record for Vivaldi's own quirks
+   -- which selector Vivaldi paints, why !important is needed against an inline
+   style attribute, which hooks were found over CDP. None of that is per-language
+   and none of it should be duplicated. This file is only the VALUES, and every
+   value here is derived from themes/lemonardo.json and the pigment anchors in
+   tools/make-lemonardo-ansi.py, so it is generated and the derivation is checked
+   on every run.
+   
+   THE FIRST VERSION OF THIS FILE WAS WRONG, AND THE WAY IT WAS WRONG MATTERS.
+   Every value in it was ported as a measured delta from the corresponding MIDORI
+   value -- same lightness step from the ground, same chroma step, at Lemonardo's
+   hue. Each individual number was defensible and the whole was not: a method that
+   preserves Midori's relationships produces a Midori-shaped theme wearing
+   different paint. Shipped, it read as "Midori but beige", and the giveaway was
+   the active tab, a muted sage-green pill that was literally Midori's accent
+   relationship re-landed on cream.
+   
+   Porting a delta is the right tool when the QUESTION is "how loud should this
+   be" -- a tab bar is a large persistent surface whichever language paints it,
+   and that is a fact about tab bars, not about Midori. It is the wrong tool for
+   "what colour is this", because the answer to that has to come from the
+   language's own material vocabulary or it is not a different language.
+   
+   So the values below are split by which question they answer:
+   
+     IDENTITY -- from Lemonardo's own pigments, no reference to Midori:
+       the chrome accent, the selection, the nine tab-stack colours.
+     LOUDNESS -- still measured against Midori, deliberately:
+       the wash alphas, because "how strongly should a today-column tint the
+       page" is a question about reading, not about brand.
+   
+   THE MOTIF. Lemonardo is an animation studio at the end of the hand-drawn era.
+   Its pipeline is the design: a drawing is roughed in NON-PHOTO BLUE (#a4dded,
+   the drafting blue the graphic-arts camera could not see, so it needed no
+   erasing), construction lines go down in VERMILION, the committed clean-up line
+   is inked in COBALT, and the cel is painted in Paris green, chrome yellow and
+   verdigris.
+   
+   THE TWO MODES ARE TWO BENCHES, NOT ONE HUE AT TWO LIGHTNESSES. The first pass
+   put vermilion in both and dimmed it for dark mode, which made Inkwell read as
+   Paintpot at night -- the same mistake as porting Midori's deltas, one level
+   down. They are named for different objects and the themes' own subtitles say
+   so: Paintpot is "ink and paint by day", Inkwell is "the night shift at the
+   light table".
+   
+     PAINTPOT -- the paint bench by day. The accent is CHROME YELLOW, which the
+     anchor table calls "the paint-pot yellow of the period": wet, opaque cel
+     paint in the pot. The selection is NON-PHOTO BLUE, the rough still showing
+     through under the paint.
+   
+     INKWELL -- the night shift at the light table. The accent is VERDIGRIS, the
+     blue-green of aged copper and of the inks ground from it: the metal of the
+     well itself, not the ink in it (ink is the ground here, and a ground cannot
+     also be the accent). The selection is the WARM GLOW of the light table
+     leaking out from under the page.
+   
+   So each bench carries one warm element and one cool one, and they are swapped:
+   warm paint over a cool rough by day, cool copper over a warm lamp by night.
+   That is what makes them two places instead of one place at two exposures.
+   
+   NOT VERMILION, THOUGH IT IS STILL EVERYWHERE. The construction-line red did
+   not lose an argument; it moved to where a line colour belongs. It is slot 3 of
+   the tab stacks and the `clay` mail label, both of which are marks on a page.
+   An accent here fills a tab, and a filled tab is a surface -- paint, or metal.
+   
+   THE MATERIAL LAYER: ONE SURFACE, LIT FROM OPPOSITE SIDES. The active tab is
+   the one place either bench shows its accent as a filled SURFACE rather than as
+   a mark, so it is the only place a material reading is available. Paintpot gets
+   wet paint under a window: a crisp specular line along the top rim, and the
+   colour deepening as it runs down into the pot. Inkwell is the same surface
+   turned over -- a light table lights from BELOW, so the rim's own shadow falls
+   across the top and the glass glints along the bottom edge.
+   
+   Inkwell's gradient is therefore Paintpot's flipped vertically, the same stops
+   read `to top` instead of `to bottom`, and the two alphas are gated EQUAL. The
+   asymmetry that carries the motif is where the light is, not how much of it
+   there is; if one bench were also brighter, the difference would read as one of
+   them being wrong rather than as two rooms. Equal loudness, swapped position --
+   the same structure as the warm/cool swap above.
+   
+   WHY THE PSEUDO-ELEMENT HANGS OFF .tab-header AND NOT .tab. Measured over CDP
+   against a live 8.2.4133.84: `.tab.active::before` and `::after` are BOTH
+   already Vivaldi's, carrying the concave corner joins that tie the active tab
+   into the toolbar (`mask-image: radial-gradient(circle at 0 0, transparent 70%,
+   #000 73%)`) plus 64ms `leftfade`/`rightfade` animations. They compute to
+   `content: none` in this configuration, which makes them look free and is a
+   trap: setting `content: ""` would switch Vivaldi's own geometry back on under
+   our colours. `.tab.active .tab-header` has no author ::before/::after rule at
+   all, so that is where the layer lives.
+   
+   Z-INDEX -1 PUTS THE LAYER UNDER THE LABEL. .tab-header is position: relative
+   with a transparent background, so a negative-z-index child paints above the
+   accent fill on .tab and below .tab-header's own text. Without it the veil also
+   crosses the glyphs -- the specular line would lighten the top pixel of the
+   title and the field would wash the black label -- which is a different and
+   worse effect than light falling on the paint behind it.
+
+   GENERATED by vivaldi/make-lemonardo-palette.py -- edit that,
+   not this. Every number below is re-derived and gated on each
+   run; the gates are printed, including how far the tab stacks
+   sit from the Midori values they replace.
+
+   The selector repeats the class on purpose:
+   #browser.theme-id-X.theme-id-X is one id plus TWO classes, so
+   it outranks the Midori defaults on #browser.theme-light (one
+   id, one class) outright. A single .theme-id-X would merely tie
+   them, and a tie is settled by the order Vivaldi happens to read
+   the mods directory in -- not a design decision. */
+
+/* ---- Lemonardo Paintpot: ground #f3eee2 ---- */
+#browser.theme-id-2fdf9990-eed3-4395-aa22-d3ba0c9b6009.theme-id-2fdf9990-eed3-4395-aa22-d3ba0c9b6009 {
+  /* typography: Besley names, Instrument Sans works (themes/lemonardo.json `fonts`) */
+  --mfont-working: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --mfont-naming: Besley, ui-serif, Georgia, serif;
+  --mfont-naming-weight: 600;
+
+  /* calendar -- accent is the vermilion construction line */
+  --mcal-sage: #dc931e;
+  --mcal-sage-soft: rgb(220 147 30 / 0.066);
+  --mcal-sage-line: rgb(220 147 30 / 0.5);
+  --mcal-ink: #3a4048;
+  --mcal-muted: #5a616a;
+
+  /* mail */
+  --mmail-sage: #dc931e;
+  --mmail-sage-soft: rgb(220 147 30 / 0.083);
+  --mmail-sage-line: rgb(220 147 30 / 0.55);
+  --mmail-ink: #3a4048;
+  --mmail-muted: #5a616a;
+  --mmail-card: #fbf8f0;
+  --mmail-label-clay: #b03e22;
+  --mmail-label-ochre: #8a5e14;
+  --mmail-label-dijon: #7d6d0c;
+  --mmail-label-moss: #1f6b4d;
+  --mmail-label-slate: #2e5c8a;
+  --mmail-label-purple: #6a4c7c;
+  --mmail-label-taupe: #5a616a;
+
+  /* surfaces -- !important to beat Vivaldi's inline style on #browser */
+  --colorBgIntense: #fbf8f0 !important;
+  --colorBgIntenser: #fffcf5 !important;
+  --colorBgLight: #fbf8f0 !important;
+  --msurf-thumb: rgb(90 97 106 / 0.35);
+  --msurf-thumb-strong: rgb(90 97 106 / 0.6);
+
+  /* start page ink (midori-site-match.css). Ink and muted are this language's
+     own anchors; eyebrow = muted because Lemonardo has no --accent-mythic and
+     deriving one as a delta from Midori is the mistake the header describes. */
+  --msite-ink: #3a4048;
+  --msite-muted: #5a616a;
+  --msite-eyebrow: #5a616a;
+
+  /* tab stacks -- the studio's pigments, at this mode's one accent lightness */
+  --mstack-1: #5d646e; --mstack-1-rgb: 93 100 110; --mstack-1-fg: #fff;   /* gray -- graphite, the pencil barely tinted */
+  --mstack-2: #175cc7; --mstack-2-rgb: 23 92 199; --mstack-2-fg: #fff;   /* blue -- cobalt PB28, the committed line */
+  --mstack-3: #ab3417; --mstack-3-rgb: 171 52 23; --mstack-3-fg: #fff;   /* red -- vermilion/cinnabar, the construction line */
+  --mstack-4: #855918; --mstack-4-rgb: 133 89 24; --mstack-4-fg: #fff;   /* yellow -- chrome yellow, the paint pot */
+  --mstack-5: #1c763f; --mstack-5-rgb: 28 118 63; --mstack-5-fg: #fff;   /* green -- Paris green, the cel paint */
+  --mstack-6: #9f3178; --mstack-6-rgb: 159 49 120; --mstack-6-fg: #fff;   /* pink -- rose madder; no anchor at this hue, placed */
+  --mstack-7: #91339c; --mstack-7-rgb: 145 51 156; --mstack-7-fg: #fff;   /* purple -- mauveine, the first synthetic dye */
+  --mstack-8: #1c716e; --mstack-8-rgb: 28 113 110; --mstack-8-fg: #fff;   /* cyan -- verdigris, aged copper */
+  --mstack-9: #954d1e; --mstack-9-rgb: 149 77 30; --mstack-9-fg: #fff;   /* orange -- red ochre, between vermilion and chrome */
+}
+
+/* Lemonardo Paintpot: the accent read as a SURFACE -- lit from the window above.
+   Same stops in both benches, to bottom: a 1px specular rim at the lit edge
+   (dE 8.0 composited on the accent) and the colour deepening
+   down into the pot (dE 3.5 at its strongest end). Inkwell is Paintpot
+   flipped, because a light table lights from below; the alphas differ only
+   because the same light over verdigris is not the same light over chrome
+   yellow, and they are gated to land on equal dE.
+
+   .tab-header, NOT .tab: both of .tab.active's own pseudo-elements already
+   carry Vivaldi's corner joins (mask-image: radial-gradient) and 64ms fade
+   animations, and they only LOOK free -- they compute to content: none in
+   this configuration, so setting content there would switch Vivaldi's own
+   geometry back on under our colours. Measured over CDP against 8.2.4133.84.
+
+   z-index -1 keeps the layer under the label: .tab-header is position
+   relative with a transparent background, so the veil lands on .tab's accent
+   fill and the glyphs stay on top of it. Without it the specular line
+   lightens the top pixel of the title. */
+#browser.theme-id-2fdf9990-eed3-4395-aa22-d3ba0c9b6009.theme-id-2fdf9990-eed3-4395-aa22-d3ba0c9b6009 .tab.active .tab-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgb(255 255 255 / 0.252) 0 1px, rgb(255 255 255 / 0) 1px),
+    linear-gradient(to bottom, rgb(0 0 0 / 0) 42%, rgb(0 0 0 / 0.065));
+}
+
+/* ---- Lemonardo Inkwell: ground #2c2a28 ---- */
+#browser.theme-id-12451c2a-ca31-44f3-be00-2ad873dc1154.theme-id-12451c2a-ca31-44f3-be00-2ad873dc1154 {
+  /* typography: Besley names, Instrument Sans works (themes/lemonardo.json `fonts`) */
+  --mfont-working: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --mfont-naming: Besley, ui-serif, Georgia, serif;
+  --mfont-naming-weight: 600;
+
+  /* calendar -- accent is the vermilion construction line */
+  --mcal-sage: #22b5af;
+  --mcal-sage-soft: rgb(34 181 175 / 0.054);
+  --mcal-sage-line: rgb(34 181 175 / 0.55);
+  --mcal-ink: #ede4d3;
+  --mcal-muted: #a49d93;
+
+  /* mail */
+  --mmail-sage: #22b5af;
+  --mmail-sage-soft: rgb(34 181 175 / 0.078);
+  --mmail-sage-line: rgb(34 181 175 / 0.6);
+  --mmail-ink: #ede4d3;
+  --mmail-muted: #a49d93;
+  --mmail-card: #363330;
+  --mmail-label-clay: #ff8a6a;
+  --mmail-label-ochre: #f4d896;
+  --mmail-label-dijon: #e9e99c;
+  --mmail-label-moss: #66bb6a;
+  --mmail-label-slate: #87ceeb;
+  --mmail-label-purple: #c9a9d8;
+  --mmail-label-taupe: #a49d93;
+
+  /* surfaces -- !important to beat Vivaldi's inline style on #browser */
+  --colorBgIntense: #363330 !important;
+  --colorBgIntenser: #3e3b38 !important;
+  --colorBgLight: #363330 !important;
+  --msurf-thumb: rgb(164 157 147 / 0.4);
+  --msurf-thumb-strong: rgb(164 157 147 / 0.65);
+
+  /* start page ink (midori-site-match.css). Ink and muted are this language's
+     own anchors; eyebrow = muted because Lemonardo has no --accent-mythic and
+     deriving one as a delta from Midori is the mistake the header describes. */
+  --msite-ink: #ede4d3;
+  --msite-muted: #a49d93;
+  --msite-eyebrow: #a49d93;
+
+  /* tab stacks -- the studio's pigments, at this mode's one accent lightness */
+  --mstack-1: #a0a5ad; --mstack-1-rgb: 160 165 173; --mstack-1-fg: #000;   /* gray -- graphite, the pencil barely tinted */
+  --mstack-2: #72a5f6; --mstack-2-rgb: 114 165 246; --mstack-2-fg: #000;   /* blue -- cobalt PB28, the committed line */
+  --mstack-3: #f77b5d; --mstack-3-rgb: 247 123 93; --mstack-3-fg: #000;   /* red -- vermilion/cinnabar, the construction line */
+  --mstack-4: #da942e; --mstack-4-rgb: 218 148 46; --mstack-4-fg: #000;   /* yellow -- chrome yellow, the paint pot */
+  --mstack-5: #35c26b; --mstack-5-rgb: 53 194 107; --mstack-5-fg: #000;   /* green -- Paris green, the cel paint */
+  --mstack-6: #ed73bd; --mstack-6-rgb: 237 115 189; --mstack-6-fg: #000;   /* pink -- rose madder; no anchor at this hue, placed */
+  --mstack-7: #d979e4; --mstack-7-rgb: 217 121 228; --mstack-7-fg: #000;   /* purple -- mauveine, the first synthetic dye */
+  --mstack-8: #35bbb5; --mstack-8-rgb: 53 187 181; --mstack-8-fg: #000;   /* cyan -- verdigris, aged copper */
+  --mstack-9: #f38138; --mstack-9-rgb: 243 129 56; --mstack-9-fg: #000;   /* orange -- red ochre, between vermilion and chrome */
+}
+
+/* Lemonardo Inkwell: the accent read as a SURFACE -- lit from the light table below.
+   Same stops in both benches, to top: a 1px specular rim at the lit edge
+   (dE 8.0 composited on the accent) and the colour deepening
+   up the sheet from the glass (dE 3.5 at its strongest end). Inkwell is Paintpot
+   flipped, because a light table lights from below; the alphas differ only
+   because the same light over verdigris is not the same light over chrome
+   yellow, and they are gated to land on equal dE.
+
+   .tab-header, NOT .tab: both of .tab.active's own pseudo-elements already
+   carry Vivaldi's corner joins (mask-image: radial-gradient) and 64ms fade
+   animations, and they only LOOK free -- they compute to content: none in
+   this configuration, so setting content there would switch Vivaldi's own
+   geometry back on under our colours. Measured over CDP against 8.2.4133.84.
+
+   z-index -1 keeps the layer under the label: .tab-header is position
+   relative with a transparent background, so the veil lands on .tab's accent
+   fill and the glyphs stay on top of it. Without it the specular line
+   lightens the top pixel of the title. */
+#browser.theme-id-12451c2a-ca31-44f3-be00-2ad873dc1154.theme-id-12451c2a-ca31-44f3-be00-2ad873dc1154 .tab.active .tab-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(to top, rgb(255 255 255 / 0.329) 0 1px, rgb(255 255 255 / 0) 1px),
+    linear-gradient(to top, rgb(0 0 0 / 0) 42%, rgb(0 0 0 / 0.066));
+}
