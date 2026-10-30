@@ -1,0 +1,698 @@
+#!/usr/bin/env python3
+"""Static guards for table and code-block geometry.
+
+SEPARATE FROM test_prose_typography.py BY SUBJECT, NOT BY ACCIDENT. That file
+is 1300+ lines about prose -- measure, leading, the heading ladder, the indent
+rhythm. Tables and code blocks are blocks, and they now carry enough geometry
+of their own to be worth their own file.
+
+HELPERS ARE IMPORTED, NOT COPIED. rules() carries a documented performance trap
+(the obvious rule regex has two unbounded quantifiers around a literal and does
+not finish against this 90KB stylesheet) and theme_var() carries a documented
+correctness trap (this stylesheet's comments quote whole CSS declarations, so a
+guard scanning unstripped text can be satisfied by prose discussing the real
+thing). Copying either would fork those lessons away from their explanation.
+
+WHAT THESE GUARDS CANNOT DO. Every defect here was a rendered one -- a
+specificity contest lost to app.css, text 2.2px from an edge. These prove the
+declarations exist; tests/check_rendered_blocks.py proves they take effect.
+"""
+import re
+import sys
+
+from test_prose_typography import FAIL, bad, ok, rules, theme_var
+
+# Obsidian 1.13.7 re-adds a collapsed table's outer edges from these, all 1px,
+# through app.css rules that out-specify the theme's own border-width: 0.
+BORDER_VARS = ("--table-header-border-width",
+               "--table-row-last-border-width",
+               "--table-column-first-border-width",
+               "--table-column-last-border-width")
+
+
+def test_table_border_vars_are_zero():
+    """All four of Obsidian's table edge widths must be zeroed by the theme.
+
+    MEASURED: with them at their 1px default a five-row table is 122px against
+    a wanted 120 and a dense four-column one is 410 against 408 -- in live
+    preview AND in reading view -- because each 1px edge adds half its width to
+    its row and half to the table in a collapsed-border table. At 0px the same
+    tables measure exactly 120 and 408.
+
+    SABOTAGE-PROVED: restoring any one of the four to 1px fails this test
+    naming that variable, and deleting the body block fails it naming all four.
+    """
+    missing = [v for v in BORDER_VARS if theme_var(v) is None]
+    if missing:
+        bad("the theme never sets " + ", ".join(missing) + "; Obsidian's 1px "
+            "default puts a collapsed table 2px off the grid in both views")
+        return
+    wrong = [(v, theme_var(v)) for v in BORDER_VARS
+             if not re.fullmatch(r"0(px)?", theme_var(v).strip())]
+    if wrong:
+        for name, value in wrong:
+            bad(f"{name} is {value!r}, not 0px; a 1px table edge adds half a "
+                "pixel to its row and half to the table")
+        return
+    ok(f"all {len(BORDER_VARS)} Obsidian table edge widths are zeroed")
+
+
+def test_cells_pad_half_a_row():
+    """A cell pads half a row on all four sides, in both views.
+
+    A cell of n lines is then row x n + 2 x (row / 2) = row x (n + 1), so a
+    table totals whole rows however its cells wrap -- which is the property the
+    old 8px padding lacked: it held on a desktop where every cell is one line
+    and broke on a phone where the same cells wrap to two, because the
+    line-height term scales with wrapping while a constant does not.
+
+    Half a row is always a whole pixel: the theme rounds the row UP TO 2px (see
+    "TWO PIXELS, NOT ONE" in theme.css), so the row is always even.
+
+    THE LIVE-PREVIEW RULE MUST RESTATE IT. .cm-table-widget's own cell rule is
+    (0,3,1) and beats the (0,1,1) reading-view rule, so a single declaration
+    silently applies to reading view only -- the trap the existing comment in
+    theme.css records with !important.
+
+    SABOTAGE-PROVED: changing --midori-cell-pad to 0 fails naming the token;
+    deleting the padding from the widget rule fails naming live preview.
+    """
+    pad = theme_var("--midori-cell-pad")
+    if pad is None:
+        bad("--midori-cell-pad is not set; a cell needs half a row of padding "
+            "on all four sides for a table to total whole rows")
+        return
+    if not re.fullmatch(r"calc\(\s*var\(--midori-row\)\s*/\s*2\s*\)", pad.strip()):
+        bad(f"--midori-cell-pad is {pad!r}; it must be "
+            "calc(var(--midori-row) / 2) so it follows the reader's row")
+        return
+
+    def pads(selector_needle, extra=None):
+        hits = []
+        for sel, decls in rules():
+            if selector_needle not in sel:
+                continue
+            if extra and extra not in sel:
+                continue
+            if re.search(r"(^|;)\s*padding:\s*var\(--midori-cell-pad\)", decls):
+                hits.append(sel)
+        return hits
+
+    reading = [sel for sel in pads(".markdown-rendered td")]
+    if not reading:
+        bad("no .markdown-rendered td rule pads var(--midori-cell-pad); "
+            "reading-view cells keep Obsidian's 8px and fall off the row")
+    widget = [sel for sel in pads(".cm-table-widget td")]
+    if not widget:
+        bad("no .cm-table-widget td rule pads var(--midori-cell-pad); the "
+            "widget's own (0,3,1) cell rule wins and live preview is unfixed")
+    if not reading or not widget:
+        return
+    for sel in widget:
+        for one in sel.split(","):
+            if ".cm-table-widget" in one and "td" in one and "*" not in one:
+                break
+        else:
+            bad(f"a widget padding rule targets no bare cell: {sel[:70]}")
+            return
+    ok(f"cells pad half a row in both views ({len(reading)} reading-view rule(s), "
+       f"{len(widget)} live-preview rule(s))")
+
+
+def test_table_colours_derive_from_theme_vars():
+    """Rules and the header band derive from theme variables, not literals.
+
+    Both modes then follow for free -- --text-normal and --background-primary
+    are already per-mode -- so there is no second copy to forget. theme_vars()
+    exists because this stylesheet declares most colour tokens twice, once per
+    mode, and a guard built on the last one proves at most one mode is wired;
+    deriving instead means there is only ever one declaration to check.
+
+    Cells must also be OPAQUE. --background-primary is the paper the dot grid
+    is painted on, so an opaque cell hides the dots inside the table; a
+    transparent or alpha cell lets them show through every cell, which is the
+    single biggest reason the old tables read as noisy.
+
+    !IMPORTANT IS LOAD-BEARING ON THE WIDGET COPY ONLY. .cm-table-widget's own
+    cell rule is (0,3,1) and beats a plain (0,1,1) declaration at equal
+    specificity -- the exact contest test_cells_pad_half_a_row already guards
+    for padding, and this stylesheet's own comment above the widget's opaque
+    rule records !important as verified there for the same reason. A
+    textual-presence check cannot see this: the declaration can read exactly
+    right and still lose in the running app while the guard prints ok, which
+    is the shape of failure this repo's CLAUDE.md records ("guard tests passed
+    while the rule they named lost a specificity contest and did nothing").
+    Reading view has no such competing rule (see the comment above its cell
+    rule), so !important is checked on the widget's copy only.
+
+    SABOTAGE-PROVED: replacing either token with a hex literal fails naming it;
+    removing !important from the widget's opaque-cell background fails naming
+    it; and removing the READING-VIEW opaque background fails naming reading
+    view (exit 1, message names READING-VIEW, stylesheet restored
+    byte-identical at sha f0cde749).
+
+    That third case is here because the guard once missed it. The opaque check
+    asked whether ANY cell rule was opaque, which the two views satisfied
+    jointly -- so deleting reading view's rule left the widget's live-preview
+    copy answering for it, and this test printed ok while every reading-view
+    cell went transparent and the dot grid showed through. "At least one opaque
+    cell rule exists" is a true sentence that does not mean what this test needs
+    it to mean. The miss was found by running the sabotage, not by reading the
+    code, which is the whole argument for requiring one.
+    """
+    for name, needles in (("--table-border-color", ("color-mix", "var(--text-normal)")),
+                          ("--midori-table-header-bg", ("color-mix", "var(--text-normal)",
+                                                        "var(--background-primary)"))):
+        value = theme_var(name)
+        if value is None:
+            bad(f"{name} is not set; the table rules and header band have no "
+                "derived colour and dark mode needs a second copy")
+            return
+        missing = [n for n in needles if n not in value]
+        if missing:
+            bad(f"{name} is {value!r}, which does not derive from "
+                + ", ".join(missing) + "; a literal here needs a dark-mode copy")
+            return
+
+    # A SUBSTRING TEST WOULD NOT BE A CELL TEST. "th" appears in .theme-light,
+    # .theme-dark, body.theme-dark and a dozen .mermaid selectors: measured on
+    # this stylesheet, 16 selectors contain "td" or "th" and only 3 are cell
+    # selectors. None of the other 13 sets a cell background today, so a
+    # substring guard would pass for the right reason BY LUCK -- exactly the
+    # shape of check this repo has been burned by. Match the element as a token.
+    CELL = re.compile(r"(^|[ ,>+~])(td|th)\b")
+    HEAD = re.compile(r"(^|[ ,>+~])th\b")
+    opaque = [sel for sel, decls in rules()
+              if CELL.search(sel)
+              and re.search(r"background:\s*var\(--background-primary\)", decls)]
+    if not opaque:
+        bad("no cell rule sets background: var(--background-primary); the dot "
+            "grid shows through every cell")
+        return
+
+    # ONE VIEW'S RULE MUST NOT STAND IN FOR BOTH. The check above asks whether
+    # ANY cell rule is opaque, which two rules satisfy jointly -- so deleting
+    # the reading-view rule left the widget's live-preview copy answering for
+    # it, and this guard printed ok while reading-view cells went transparent
+    # and the dot grid showed through every one of them.
+    #
+    # Found by sabotage, not by reading: the run that removed the reading-view
+    # background still passed. That is the whole reason this repo requires a
+    # guard to be broken before it is trusted -- the code looked right, and
+    # "at least one opaque cell rule exists" is a true sentence that does not
+    # mean what the test needs it to mean.
+    #
+    # The widget's own copy is checked separately below (it additionally needs
+    # !important to win a specificity contest). Here we require the OTHER one:
+    # a cell rule that is not the widget's, i.e. reading view's.
+    reading_opaque = [sel for sel in opaque if ".cm-table-widget" not in sel]
+    if not reading_opaque:
+        bad("no READING-VIEW cell rule sets background: "
+            "var(--background-primary) -- only the .cm-table-widget copy does, "
+            "so reading-view cells are transparent and the dot grid shows "
+            "through every one; live preview alone cannot cover both views")
+        return
+
+    # THE WIDGET'S OWN COPY MUST CARRY !important, OR IT LOSES A SPECIFICITY
+    # CONTEST IT CANNOT WIN ANY OTHER WAY. .cm-table-widget's built-in cell
+    # rule is (0,3,1); a plain (0,1,1) declaration reads correctly and still
+    # does nothing in the running app. Reading view has no competing rule at
+    # this location, so this is checked on the widget's copy only.
+    widget_opaque = [(sel, decls) for sel, decls in rules()
+                      if ".cm-table-widget" in sel and CELL.search(sel)
+                      and re.search(r"background:\s*var\(--background-primary\)", decls)]
+    if not widget_opaque:
+        bad("no .cm-table-widget cell rule sets background: "
+            "var(--background-primary); live preview has no opaque-cell rule "
+            "at the widget's own specificity, so the dot grid shows through "
+            "every cell there")
+        return
+    unimportant = [sel for sel, decls in widget_opaque
+                   if not re.search(
+                       r"background:\s*var\(--background-primary\)\s*!important",
+                       decls)]
+    if unimportant:
+        bad("the widget's opaque-cell background is missing !important: "
+            f"{' '.join(unimportant[0].split())[:70]}; the widget's own "
+            "(0,3,1) cell rule can still win the specificity contest and "
+            "cell-opacity would regress silently in live preview")
+        return
+    banded = [sel for sel, decls in rules()
+              if HEAD.search(sel)
+              and re.search(r"background:\s*var\(--midori-table-header-bg\)", decls)]
+    if not banded:
+        bad("no th rule sets background: var(--midori-table-header-bg); the "
+            "header differs from the body by weight alone")
+        return
+    ok(f"table colours derive from theme variables; cells opaque in "
+       f"{len(opaque)} rule(s), header banded in {len(banded)}")
+
+
+def test_blocks_get_a_row_of_air():
+    """A blank line next to a block gets its row back, in live preview.
+
+    The paragraph-indent rhythm collapses blank lines to nothing, so a table or
+    a code block sat directly against the heading or paragraph either side. A
+    CodeMirror line cannot take a margin, so the air has to come from the blank
+    line that is already in the document -- and :has() is what lets a rule see
+    a block that comes AFTER the blank line.
+
+    MEASURED: 0 -> 24px above and below a code block, with block height, corner
+    radius and background untouched.
+
+    TWO CODE SELECTORS, NOT ONE. Forward (:has(+ x)) and backward (x + y) are
+    different selectors, so dropping one leaves a code block touching its
+    neighbour on exactly one side, which reads as a rendering bug rather than a
+    missing rule.
+
+    A TABLE TAKES ITS AIR FROM THE WIDGET, NOT FROM A BLANK LINE, and this test
+    changed when that did. .cm-table-widget is a scroll container: app.css gives
+    it `overflow: auto hidden` together with `padding:
+    var(--table-drag-handle-size)`, and that padding is the room for the
+    affordances the table editor hangs OUTSIDE the table box -- chiefly
+    `.table-row-btn { position: absolute; top: 100% }`. Zeroing padding-block
+    turned that affordance into 16px of scrollable overflow; the engine then
+    scrolled the widget to reveal a focused cell and the table rode up inside
+    its own box. MEASURED: clientHeight 240, scrollHeight 256, scrollTop 12 --
+    a sliced header and all five rows 11.53px off the 24px lattice, from one
+    displacement. Overflow could not simply be relaxed, because per CSS
+    `visible` computes to `auto` when the other axis is auto.
+
+    A whole row of padding-block restores that room, makes scrollHeight equal
+    clientHeight so nothing can scroll, AND is the table's air -- which is why
+    the blank-line rule no longer names a table widget. The declaration is
+    load-bearing twice over and 0 is the value that breaks it, so this test
+    rejects a zero as well as requiring the row. The block totals 24 + 240 + 24
+    either way.
+
+    SABOTAGE-PROVED: deleting either code selector, or setting the widget's
+    padding-block to 0, fails this test naming the block and the side.
+    """
+    WANT = (("codeblock-begin", "before a code block",
+             lambda s: ":has(> br:only-child)" in s and "+ .cm-line.HyperMD-codeblock-begin" in s),
+            ("codeblock-end", "after a code block",
+             lambda s: "HyperMD-codeblock-end + .cm-line" in s and ":has(> br:only-child)" in s))
+    selectors = []
+    for sel, decls in rules():
+        if re.search(r"line-height:\s*var\(--midori-row\)", decls):
+            selectors.extend(" ".join(one.split()) for one in sel.split(","))
+    missing = [where for _, where, match in WANT
+               if not any(match(one) for one in selectors)]
+    if missing:
+        for where in missing:
+            bad(f"no rule gives the blank line {where} a row of air; the block "
+                "sits directly against its neighbour")
+        return
+
+    # The widget ITSELF, not a cell inside it: `.cm-table-widget td` also
+    # contains the string, and padding on a cell says nothing about whether the
+    # widget can scroll.
+    def targets_widget(sel):
+        return any(" ".join(one.split()).endswith(".cm-table-widget")
+                   for one in sel.split(","))
+
+    widget_pad = [sel for sel, decls in rules()
+                  if targets_widget(sel)
+                  and re.search(r"padding-block:\s*var\(--midori-row\)", decls)]
+    if not widget_pad:
+        bad("no .cm-table-widget rule sets padding-block: var(--midori-row); "
+            "the table has no air above or below, and its editing affordance "
+            "hangs outside a scroll container that then rides the table up off "
+            "the lattice and slices the header")
+        return
+    zeroed = [sel for sel, decls in rules()
+              if targets_widget(sel)
+              and re.search(r"padding(-block|-top|-bottom)?:\s*0(px)?\s*(;|$)", decls)]
+    if zeroed:
+        bad(f"a .cm-table-widget rule zeroes the widget's padding "
+            f"({zeroed[0].strip()[:60]}); that is the exact declaration that "
+            "made the widget scrollable and put every row half a row off the "
+            "lattice")
+        return
+
+    # theme.css ALREADY MENTIONS .el-table, and it is not this. At
+    # theme.css:1688 a heading-spacing rule reads
+    # `div:is(.el-blockquote, .el-p, .el-pre, .el-table, .el-ul, .el-ol) + div
+    # > :is(h5, h6)` and sets margin-TOP on the heading that FOLLOWS a block,
+    # not on the block. A grep for .el-table hits both; they are unrelated.
+    # Requiring the sizer-child shape keeps this guard from being answered by
+    # that rule.
+    #
+    # MEASURED, NOT ASSUMED: the two also interact harmlessly. Injected a
+    # synthetic `<div><h5>` sibling directly after the reference note's
+    # rendered .el-table in Reading View (Obsidian 1.13.7, live CDP session,
+    # DOM-only -- the note file was never touched) and read the gap by
+    # getBoundingClientRect(): table margin-bottom 24px, h5 margin-top 24px,
+    # the wrapper div's own margin-top 0px (so the h5's margin transmits
+    # through it), and the actual rendered gap between the table's bottom edge
+    # and the h5's top edge was exactly 24px -- one row, not the 48px two
+    # separate margins would give without collapsing.
+    el_table = [sel for sel, decls in rules()
+                if ".markdown-preview-sizer > .el-table" in " ".join(sel.split())
+                and re.search(r"margin-block:\s*var\(--midori-row\)", decls)]
+    if not el_table:
+        bad("no .markdown-preview-sizer > .el-table rule sets "
+            "margin-block: var(--midori-row); reading view has no air around "
+            "a table")
+        return
+    ok(f"both code-block air selectors present, {len(widget_pad)} table widget "
+       f"rule(s) pad a whole row, and reading view pads {len(el_table)} table "
+       f"block rule(s)")
+
+
+def test_block_width_has_a_query_container():
+    """A cqi unit is only meaningful with a query container, so prove there is one.
+
+    --midori-block-max reads 100cqi to learn the pane width. A container query
+    unit with NO container does not fail loudly -- it silently resolves against
+    the small viewport, which here is the whole 1728px window rather than the
+    1428px pane, so a table would break out past the edge of its own pane and
+    the only symptom would be a clipped last column.
+
+    MEASURED: 100cqi is 1364px with container-type: inline-size on .cm-scroller
+    (live preview) and 1364px with it on .markdown-preview-view (reading view)
+    -- the 1428px pane less 32px of scroller padding each side -- against
+    1728px, the window, with no container. Layout was byte-identical before,
+    during and after in both views.
+
+    BOTH VIEWS NEED THEIR OWN CONTAINER: they have different scrollers, and a
+    container on one says nothing about the other.
+
+    SABOTAGE-PROVED: dropping either scroller from the container-type rule fails
+    this test naming that view.
+    """
+    value = theme_var("--midori-block-max")
+    if value is None:
+        bad("--midori-block-max is not set; blocks have no width ceiling")
+        return
+    if "100cqi" not in value:
+        bad(f"--midori-block-max is {value!r} and never reads 100cqi, so it "
+            "cannot know the pane width")
+        return
+    for needle in ("var(--file-line-width)", "min(", "max("):
+        if needle not in value:
+            bad(f"--midori-block-max is {value!r}, missing {needle}; it must be "
+                "floored at the prose column and capped at the pane less 96px")
+            return
+
+    containers = []
+    for sel, decls in rules():
+        if re.search(r"container-type:\s*inline-size", decls):
+            containers.extend(" ".join(one.split()) for one in sel.split(","))
+    for needle, view in ((".cm-scroller", "live preview"),
+                         (".markdown-preview-view", "reading view")):
+        if not any(needle in one for one in containers):
+            bad(f"no rule makes {needle} a query container, so 100cqi in "
+                f"{view} resolves against the window instead of the pane")
+            return
+    ok(f"--midori-block-max reads 100cqi and both views declare a query "
+       f"container ({len(containers)} selector(s))")
+
+
+CODE_LINE = ".cm-line.HyperMD-codeblock"
+
+
+def code_padding_rules():
+    """Every rule that pads a live-preview code line, selector by selector."""
+    out = []
+    for sel, decls in rules():
+        if CODE_LINE not in sel:
+            continue
+        if re.search(r"padding-inline-(start|end):", decls):
+            out.append((sel, decls))
+    return out
+
+
+def test_code_lines_pad_both_sides():
+    """A code line pads BOTH sides, and the wrap hangs by two characters.
+
+    MEASURED before this rule: padding-left 16px, padding-right 0, and wrapped
+    text ending 2.2px from the right edge of its own background -- which is what
+    "the text overruns" turned out to mean. Nothing overflows; it wraps and then
+    touches the edge. A wrapped line also continued flush left, so a
+    continuation read as a new line of code.
+
+    MEASURED after: first line at 16px, continuations at 30px (2ch = 14px in the
+    code face), right gap >= 21px, every line still a whole number of rows.
+
+    SABOTAGE-PROVED: deleting padding-inline-end fails naming the right edge;
+    dropping the negative text-indent fails naming the hang.
+    """
+    pad = theme_var("--midori-code-pad")
+    if pad is None:
+        bad("--midori-code-pad is not set; a code line's right padding has no "
+            "value to match its left")
+        return
+    found = code_padding_rules()
+    if not found:
+        bad(f"no rule sets padding-inline-start/end on {CODE_LINE}; wrapped "
+            "code text lands against the right edge of its background")
+        return
+    for sel, decls in found:
+        end = re.search(r"padding-inline-end:\s*([^;]+)", decls)
+        start = re.search(r"padding-inline-start:\s*([^;]+)", decls)
+        indent = re.search(r"text-indent:\s*([^;]+)", decls)
+        if not end:
+            bad(f"a code-line rule pads only one side: {sel[:70]}")
+            return
+        if "var(--midori-code-pad)" not in end.group(1):
+            bad(f"padding-inline-end is {end.group(1).strip()!r}, not "
+                "var(--midori-code-pad); the two sides must match")
+            return
+        if not start or "2ch" not in start.group(1):
+            bad("padding-inline-start does not add 2ch, so a wrapped line has "
+                "nothing to hang from")
+            return
+        if not indent or "-2ch" not in indent.group(1).replace(" ", ""):
+            bad("text-indent is not -2ch, so the FIRST line is pushed in with "
+                "the continuations instead of hanging")
+            return
+    ok(f"code lines pad both sides and hang wrapped lines by 2ch "
+       f"({len(found)} rule(s))")
+
+
+def test_hanging_indent_keeps_the_list_exclusion():
+    """:not(.HyperMD-list-line) is load-bearing on every code-padding selector.
+
+    app.css sets padding-inline-start on
+    `.markdown-source-view.mod-cm6 .cm-line.HyperMD-codeblock:not(.HyperMD-list-line)`,
+    which is ONE CLASS more specific than the same selector without the :not().
+    MEASURED without it: the padding never applied (computed 16px) while
+    text-indent did, so the first line moved LEFT to 2px and continuations
+    stayed at 16 -- worse than no rule, and invisible to any guard that only
+    checks the declaration exists.
+
+    CHECK EACH SELECTOR, NOT THE RULE: rules() hands back a comma-separated
+    list as one string, so asking whether the exclusion appears anywhere in
+    it asks whether ANY selector carries it -- the trap
+    test_indent_excludes_non_prose documents.
+
+    SABOTAGE-PROVED: removing the :not() from the selector fails this test.
+    """
+    found = code_padding_rules()
+    if not found:
+        bad("no code-line padding rule to check for the list exclusion")
+        return
+    for sel, _ in found:
+        for one in sel.split(","):
+            if CODE_LINE not in one:
+                continue
+            if ":not(.HyperMD-list-line)" not in one:
+                bad("a code-line padding selector omits "
+                    ":not(.HyperMD-list-line), so app.css out-specifies it and "
+                    f"the padding silently does nothing: {' '.join(one.split())[:80]}")
+                return
+    ok(f"every code-line padding selector keeps :not(.HyperMD-list-line) "
+       f"({len(found)} rule(s))")
+
+
+def test_code_furniture_fits_a_row():
+    """The language label and the copy button are one row tall and top-aligned.
+
+    MEASURED: .code-block-flair is 32px tall (6px top + 4px vertical padding
+    each side on a 24px row) inside a 24px fence row, so it hung 8px into the
+    first line of code and overlapped the end of a long one. The reading-view
+    copy button does the same over the first line of a <pre>.
+
+    Both blocks already have an empty row for them: the fence row carries no
+    code text in live preview, and reading view's <pre> pads a whole row top and
+    bottom. Constraining the furniture to one row and pinning it to the top puts
+    it in that row instead of over the code.
+
+    THE FENCE LINE IS MADE position: relative DELIBERATELY. `top: 0` is only
+    meaningful against a known containing block, and an absolutely positioned
+    label resolves against its nearest positioned ancestor -- which, left to
+    chance, may be .cm-content and would put the label at the top of the
+    document. Positioning the fence line makes the containing block the row we
+    mean.
+
+    SABOTAGE-PROVED: removing the height, or the position: relative, fails this
+    test naming what went missing.
+
+    THE height NEEDLE MUST NOT MATCH line-height. An unanchored "height:"
+    pattern is a substring of "line-height:" too, so it is satisfied by the
+    co-located line-height: var(--midori-row) declaration on the same two
+    rules even after the real height: line is deleted -- found while
+    sabotage-proving this exact test, which is the guard-shaped version of
+    the trap this file's other height/top checks already dodge with an
+    anchored (^|;) prefix. Anchored here the same way.
+    """
+    needed = {"flair-height": False, "flair-top": False, "fence-relative": False,
+              "button-height": False, "button-top": False}
+    for sel, decls in rules():
+        one_row = re.search(r"(^|;)\s*height:\s*var\(--midori-row\)", decls)
+        top0 = re.search(r"(^|;)\s*top:\s*0", decls)
+        if "code-block-flair" in sel:
+            needed["flair-height"] |= bool(one_row)
+            needed["flair-top"] |= bool(top0)
+        if "copy-code-button" in sel:
+            needed["button-height"] |= bool(one_row)
+            needed["button-top"] |= bool(top0)
+        if "HyperMD-codeblock-begin" in sel and re.search(r"position:\s*relative", decls):
+            needed["fence-relative"] = True
+    missing = [k for k, v in needed.items() if not v]
+    if missing:
+        for k in missing:
+            bad(f"code furniture is unconstrained: {k} is missing; a 32px label "
+                "in a 24px row hangs over the first line of code")
+        return
+    ok("the language label and the copy button are one row tall, top-aligned, "
+       "against a positioned fence line")
+
+
+def test_indent_never_reaches_a_table_cell():
+    """The paragraph indent must not reach a table cell's nested content.
+
+    A focused cell is edited in a NESTED .cm-content inside .cm-table-widget,
+    and the cell's line is that content's :first-child -- so the "first line of
+    the note" selector matched it and indented the cell 2em while the user
+    typed. MEASURED: cell line text-indent 32px, and 0px with the exclusion,
+    while the paragraph after the table stayed at 32px.
+
+    THE :not() CHAIN CANNOT CATCH THIS. Every exclusion there names a HyperMD
+    class, and a cell line has none -- its classes are `cm-line cm-active`. The
+    only thing that distinguishes it is WHERE it lives, which is what
+    :not(.cm-table-widget *) says.
+
+    This is the same defect the comment above that rule already records for
+    headings: a selector that matches more than it names. Found again, in a
+    place nobody had looked, by measuring instead of reading.
+
+    CHECK EACH SELECTOR, NOT THE RULE -- the trap
+    test_indent_excludes_non_prose documents: rules() joins a comma-separated
+    list into one string, so asking whether the exclusion appears anywhere in
+    it asks whether ANY selector carries it.
+
+    SABOTAGE-PROVED: removing the exclusion from either half fails this test
+    naming that half.
+    """
+    indented = [sel for sel, decls in rules()
+                if "text-indent: var(--midori-indent)" in decls
+                and ".cm-line" in sel]
+    if not indented:
+        bad("no Live Preview rule applies --midori-indent")
+        return
+    for rule in indented:
+        for selector in rule.split(","):
+            if ".cm-line" not in selector:
+                continue
+            if ":not(.cm-table-widget *)" not in selector:
+                bad("a Live Preview indent selector can still reach a table "
+                    "cell's nested content, which indents the cell while it is "
+                    f"being edited: {' '.join(selector.split())[:90]}")
+                return
+    ok(f"no Live Preview indent selector reaches a table cell "
+       f"({len(indented)} rule(s) checked)")
+
+
+def test_nested_editor_carets_are_not_hidden():
+    """A focused table cell shows the drawn caret, and only that one.
+
+    THIS TEST REPLACES ONE THAT ASSERTED THE OPPOSITE, and the reversal is the
+    point. The old test demanded a carve-out restoring the NATIVE caret inside
+    .cm-table-widget, on the belief that the drawn caret "only covers the outer
+    editor's selection geometry" and could never appear in a cell. That belief
+    was wrong. The plugin registers its layers through registerEditorExtension,
+    so every EditorView gets one -- the nested cell view included -- and each
+    measures against its own scrollDOM. MEASURED with a cell focused: the
+    in-widget marker sat at 773.85/507.0 against a real selection rect at
+    773.83/506.97, i.e. within 0.03px.
+
+    What actually hid it was the focus gate on .midori-cursorLayer, written
+    with a DESCENDANT combinator. A cell's layer has two .cm-editor ancestors:
+    the cell (focused) and the note (NOT focused, because focus moved into the
+    cell), so `.cm-editor:not(.cm-focused) .midori-cursorLayer` matched through
+    the outer one and hid the caret of the editor that had focus. CDP's
+    getMatchedStylesForNode named that single rule as the source of
+    display:none; forcing display:block put the bar on the text at dx 0.00.
+
+    So two things have to hold, and each fails differently:
+
+    1. Every focus gate on .midori-cursorLayer is CHILD-scoped through
+       .cm-scroller, binding it to its own editor's layer. Measured DOM shape:
+       layer -> .cm-scroller -> .cm-editor, in both the nested and the outer
+       editor.
+    2. NOTHING sets caret-color inside .cm-table-widget. With the gate fixed the
+       drawn caret paints there, so restoring the native one gives a cell two
+       carets -- photographed at 8x 620ms apart, one frame the 19px indigo bar,
+       the next the shorter sage native tick at the same x.
+
+    An empty gate set is a FAILURE, not a pass: if no rule gates the layer on
+    focus any more, this test has nothing to check and must say so rather than
+    report green.
+
+    SABOTAGE-PROVED in three arms: restoring the descendant combinator fails
+    naming the loose selector; re-adding the caret-color carve-out fails naming
+    the double caret; deleting the gate entirely fails on the empty set.
+    """
+    gates = [sel for sel, _ in rules()
+             if ".midori-cursorLayer" in sel and ".cm-focused" in sel]
+    if not gates:
+        bad("no rule gates .midori-cursorLayer on .cm-focused any more, so this "
+            "check has no input; the drawn caret is either always visible or "
+            "always hidden, and neither is the intended behaviour")
+        return
+
+    loose = []
+    for sel in gates:
+        for one in sel.split(","):
+            if ".midori-cursorLayer" not in one:
+                continue
+            norm = " ".join(one.split())
+            if not re.search(r"\.cm-editor\S*\s*>\s*\.cm-scroller\s*>\s*"
+                             r"\.midori-cursorLayer", norm):
+                loose.append(norm)
+    if loose:
+        bad("a .midori-cursorLayer focus gate is not child-scoped through "
+            ".cm-scroller, so an unfocused OUTER editor hides the caret of a "
+            "focused nested one -- editing a table cell loses its caret: "
+            f"{loose[0][:100]}")
+        return
+
+    carve = [sel for sel, decls in rules()
+             if ".cm-table-widget" in sel and re.search(r"caret-color\s*:", decls)]
+    if carve:
+        bad("a rule sets caret-color inside .cm-table-widget; with the focus "
+            "gate child-scoped the drawn caret already paints in a cell, so "
+            "this gives it a second, differently-blinking caret: "
+            f"{' '.join(carve[0].split())[:100]}")
+        return
+
+    ok(f"nested-editor carets survive an unfocused ancestor ({len(gates)} focus "
+       "gate(s), all child-scoped; no widget caret-color override)")
+
+
+if __name__ == "__main__":
+    print("== block geometry ==")
+    test_table_border_vars_are_zero()
+    test_cells_pad_half_a_row()
+    test_table_colours_derive_from_theme_vars()
+    test_blocks_get_a_row_of_air()
+    test_block_width_has_a_query_container()
+    test_code_lines_pad_both_sides()
+    test_hanging_indent_keeps_the_list_exclusion()
+    test_code_furniture_fits_a_row()
+    test_indent_never_reaches_a_table_cell()
+    test_nested_editor_carets_are_not_hidden()
+    print("block geometry: all green" if not FAIL else "block geometry: failures above")
+    sys.exit(1 if FAIL else 0)
