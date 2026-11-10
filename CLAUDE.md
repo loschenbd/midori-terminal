@@ -1,5 +1,46 @@
 # Working in this repo
 
+## The repo is public: describe what things do, never whose they are
+
+midori-terminal is a theme set and toolkit for anyone to use. Its history was
+rewritten on 2026-11-09 to take personal details back out, and the GitHub repo
+was deleted and recreated to do it. Write every file, comment, commit message
+and PR as if a stranger will read it, because one will.
+
+Never commit:
+
+- **Names of clients, employers, other people, accounts or private projects.**
+- **Names from the machine you are working on**: Obsidian vaults, browser
+  profiles, herdr workspaces, SilverBullet spaces, user accounts, hostnames,
+  tailnet names. Say what the thing is instead: "a vault", "a second account
+  on this Mac", `other-user@localhost`, `example-host`.
+- **Home paths** (`/Users/<name>/…`). Write `~` or `$HOME`. When a measurement
+  needs a real absolute path (Chrome's unpacked-extension id is a hash of one),
+  take it at a neutral path such as `/Users/Shared/…`, as
+  `tests/test_chrome_install.py` does.
+- **Email addresses** (commits use the GitHub noreply address) and **IP
+  addresses** other than loopback.
+- **Who wanted or approved something.** Record the decision and its reason;
+  say "the maintainer" if a role is needed. A quoted requirement can stay, but
+  not the name beside it.
+
+Wrappers for one particular account or host belong in `~/.zshrc`. What goes
+in the repo is the generic function. `midori-remote` in `shell/zshrc.midori`
+is the model: it tints the window for one remote session, and its example is
+`midori-remote -t 'other account' -- ssh -t other-user@localhost herdr`.
+
+The authorship is deliberate and stays: the copyright line and plugin `author`
+fields, the design credit to benjaminloschen.com (and smartlemon.io for
+Lemonardo), the `com.benjaminloschen.midori-claude-theme` launchd label, the
+VS Code publisher id and the repository URL.
+
+Before committing, check the staged diff against what this machine is
+actually called: the vaults in
+`~/Library/Application Support/obsidian/obsidian.json` and
+`obsidian/extra-vaults.txt` (gitignored for exactly this reason), the accounts
+under `/Users`, the hostname, and the browser profile names. A search that
+finds nothing is evidence only once it has found a term you planted.
+
 ## The comments are the deliverable
 
 `obsidian/theme.css` is 3,397 lines, of which **~2,093 (61%) are comments** in
